@@ -1,0 +1,26 @@
+{
+    "name": "@tomgrv/scripts",
+    "version": "1.0.0",
+    "description": "Reusable POSIX shell scripts shared across tomgrv devcontainer-features and vps",
+    "files": ["*.sh", "config/**/*"],
+    "bin": {
+        "zz_wrap": "zz_wrap.sh",
+        "zz_use": "zz_use.sh",
+        "load-json": "load-json.sh",
+        "merge-json": "merge-json.sh",
+        "normalize-json": "normalize-json.sh",
+        "validate-json": "validate-json.sh",
+        "run-npx": "run-npx.sh",
+        "dispatch-script": "dispatch-script.sh",
+        "resolve-context": "resolve-context.sh",
+        "persist-var": "persist-var.sh",
+        "edit-script": "edit-script.sh",
+        "distribute-utils": "distribute-utils.sh",
+        "install-feature": "install-feature.sh",
+        "configure-feature": "configure-feature.sh"
+    },
+    "scripts": {
+        "test": "bats tests"
+    },
+    "license": "MIT"
+}

@@ -1,0 +1,24 @@
+{
+    "jq": { "apt": "jq" },
+    "git": { "apt": "git" },
+    "curl": { "apt": "curl" },
+    "dos2unix": { "apt": "dos2unix" },
+    "sha1sum": { "apt": "coreutils" },
+    "gh": {
+        "url": "https://github.com/cli/cli/releases/latest/download/gh_{VERSION}_{OS}_{ARCH}.tar.gz",
+        "version": "2.63.2",
+        "archive": "tar.gz",
+        "binpath": "gh_{VERSION}_{OS}_{ARCH}/bin/gh"
+    },
+    "shellcheck": {
+        "url": "https://github.com/koalaman/shellcheck/releases/download/v{VERSION}/shellcheck-v{VERSION}.{OS}.{ARCH}.tar.xz",
+        "version": "0.10.0",
+        "archive": "tar.xz",
+        "binpath": "shellcheck-v{VERSION}/shellcheck"
+    },
+    "reviewdog": {
+        "url": "https://github.com/reviewdog/reviewdog/releases/latest/download/reviewdog_{OS}_{ARCH}.tar.gz",
+        "archive": "tar.gz",
+        "binpath": "reviewdog"
+    }
+}

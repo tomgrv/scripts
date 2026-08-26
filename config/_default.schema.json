@@ -1,0 +1,53 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": ["object", "array", "string"],
+    "additionalProperties": true,
+    "properties": {
+        "id": {
+            "type": "string"
+        },
+        "name": {
+            "type": "string"
+        },
+        "description": {
+            "type": "string"
+        },
+        "version": {
+            "type": ["string", "number"]
+        },
+        "message": {
+            "type": "string"
+        },
+        "label": {
+            "type": "string"
+        },
+        "type": {
+            "type": "string"
+        },
+        "tags": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "dependsOn": {
+            "type": ["array", "object"],
+            "items": {
+                "type": "string"
+            }
+        },
+        "installsAfter": {
+            "type": ["array", "object"],
+            "items": {
+                "type": "string"
+            }
+        },
+        "config": {
+            "type": ["object", "array"]
+        }
+    },
+    "items": {
+        "additionalProperties": true,
+        "type": ["object", "array", "string"]
+    }
+}
