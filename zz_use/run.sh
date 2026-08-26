@@ -271,55 +271,67 @@ _download_install() {
     trap - EXIT
 }
 
-_zz_bundle_installed=0
+# The activator itself: resolve every requested tool, one at a time. Wired
+# up entirely through the _* helpers above (_bindir, _zzu_log,
+# _install_zz_bundle, _install_repo_script, _apt_install, _download_install),
+# every one of which is self-sufficient — none of them require zz_bindir,
+# zz_log, or any other core script to already be on PATH. That's what lets
+# `_use` bootstrap the core zz_* bundle from nothing (e.g. the very first
+# `zz_use zz_colors ...` a freshly downloaded, standalone zz_use ever runs,
+# per setup.sh) without needing any of its own dependencies installed first.
+_use() {
+    _zz_bundle_installed=0
 
-for tool in "$@"; do
-    # Under --force, a zz_* tool already on PATH still goes through the
-    # bundle-refresh branch below (that's the whole point of --force); any
-    # other tool is unaffected by --force and keeps the normal skip.
-    if [ "$FORCE" -eq 0 ] || { [ "$FORCE" -eq 1 ] && [ "${tool#zz_}" = "$tool" ]; }; then
-        if command -v "$tool" >/dev/null 2>&1; then
-            _zzu_log - "{Purple $tool} already available"
-            continue
-        fi
-    fi
-
-    case "$tool" in
-    zz_*)
-        if [ "$_zz_bundle_installed" -eq 0 ]; then
-            _install_zz_bundle
-            _zz_bundle_installed=1
-        fi
-        ;;
-    *)
-        entry=""
-        if [ -f "$ZZ_USE_CONFIG" ] && command -v jq >/dev/null 2>&1; then
-            entry=$(jq -c --arg t "$tool" '.[$t] // empty' "$ZZ_USE_CONFIG" 2>/dev/null)
-        fi
-
-        if [ -n "$entry" ]; then
-            apt_pkg=$(printf '%s' "$entry" | jq -r '.apt // empty')
-            url=$(printf '%s' "$entry" | jq -r '.url // empty')
-
-            if [ -n "$apt_pkg" ]; then
-                _apt_install "$apt_pkg" || _zzu_log w "apt install of {Purple $apt_pkg} failed"
-            elif [ -n "$url" ]; then
-                archive=$(printf '%s' "$entry" | jq -r '.archive // empty')
-                binpath=$(printf '%s' "$entry" | jq -r '.binpath // empty')
-                version=$(printf '%s' "$entry" | jq -r '.version // empty')
-                _download_install "$tool" "$url" "$archive" "$binpath" "$version" \
-                    || _zzu_log w "Download install of {Purple $tool} failed"
+    for tool in "$@"; do
+        # Under --force, a zz_* tool already on PATH still goes through the
+        # bundle-refresh branch below (that's the whole point of --force);
+        # any other tool is unaffected by --force and keeps the normal skip.
+        if [ "$FORCE" -eq 0 ] || { [ "$FORCE" -eq 1 ] && [ "${tool#zz_}" = "$tool" ]; }; then
+            if command -v "$tool" >/dev/null 2>&1; then
+                _zzu_log - "{Purple $tool} already available"
+                continue
             fi
-        elif _install_repo_script "$tool"; then
-            : # a functional (or core, requested by name) script from this repo
-        else
-            _apt_install "$tool" || true
         fi
-        ;;
-    esac
 
-    if ! command -v "$tool" >/dev/null 2>&1; then
-        _zzu_log e "Unable to provide required dependency: {Purple $tool}"
-        exit 1
-    fi
-done
+        case "$tool" in
+        zz_*)
+            if [ "$_zz_bundle_installed" -eq 0 ]; then
+                _install_zz_bundle
+                _zz_bundle_installed=1
+            fi
+            ;;
+        *)
+            entry=""
+            if [ -f "$ZZ_USE_CONFIG" ] && command -v jq >/dev/null 2>&1; then
+                entry=$(jq -c --arg t "$tool" '.[$t] // empty' "$ZZ_USE_CONFIG" 2>/dev/null)
+            fi
+
+            if [ -n "$entry" ]; then
+                apt_pkg=$(printf '%s' "$entry" | jq -r '.apt // empty')
+                url=$(printf '%s' "$entry" | jq -r '.url // empty')
+
+                if [ -n "$apt_pkg" ]; then
+                    _apt_install "$apt_pkg" || _zzu_log w "apt install of {Purple $apt_pkg} failed"
+                elif [ -n "$url" ]; then
+                    archive=$(printf '%s' "$entry" | jq -r '.archive // empty')
+                    binpath=$(printf '%s' "$entry" | jq -r '.binpath // empty')
+                    version=$(printf '%s' "$entry" | jq -r '.version // empty')
+                    _download_install "$tool" "$url" "$archive" "$binpath" "$version" \
+                        || _zzu_log w "Download install of {Purple $tool} failed"
+                fi
+            elif _install_repo_script "$tool"; then
+                : # a functional (or core, requested by name) script from this repo
+            else
+                _apt_install "$tool" || true
+            fi
+            ;;
+        esac
+
+        if ! command -v "$tool" >/dev/null 2>&1; then
+            _zzu_log e "Unable to provide required dependency: {Purple $tool}"
+            return 1
+        fi
+    done
+}
+
+_use "$@"
