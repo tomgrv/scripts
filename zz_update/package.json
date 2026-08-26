@@ -1,0 +1,12 @@
+{
+    "name": "zz_update",
+    "version": "1.0.0",
+    "description": "Force a fresh download of the zz_* bundle, bypassing the local cache",
+    "private": true,
+    "bin": {
+        "zz_update": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

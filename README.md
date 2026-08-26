@@ -28,10 +28,9 @@ shell scripts instead of composite GitHub Actions.
 ## `setup.sh` — root bootstrap
 
 A machine with nothing installed yet needs *something* fetchable with zero
-prerequisites. That's `setup.sh`: it temp-downloads a tarball of this repo,
-links only the core `zz_*` scripts (not the functional ones) onto a
-writable `PATH` directory, and discards the download — no persistent
-checkout is kept.
+prerequisites. That's `setup.sh`: it downloads a tarball of this repo (or
+reuses a cached copy — see caching below), links only the core `zz_*`
+scripts (not the functional ones) onto a writable `PATH` directory.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/tomgrv/scripts/main/setup.sh | sh
@@ -43,11 +42,26 @@ its own further dependencies on demand the same way (see `zz_use` below).
 Functional scripts themselves aren't installed by `setup.sh` or `zz_use`;
 install those directly (`npm install <folder>`, or check out the repo).
 
+## Caching and `zz_update`
+
+Both `setup.sh` and `zz_use`'s zz_* bundle install resolve the same way:
+straight from disk when running inside a checkout of this repo, otherwise
+from a local cache directory (`ZZ_CACHE_DIR`, default
+`~/.cache/zz_scripts`) that's populated on first use and then just linked
+from on every call after that — no repeat network round-trip.
+
+`zz_update` forces a fresh download, bypassing the cache, and re-links the
+core `zz_*` scripts from it:
+
+```sh
+zz_update              # or: zz_use --force <tool...>
+```
+
 ## Naming
 
 - **Core** folders keep the `zz_` prefix — each atomic function is its own
-  dedicated script: `zz_use`, `zz_colors`, `zz_log`, `zz_args`, `zz_prompt`,
-  `zz_ask`, `zz_input`, `zz_bindir`.
+  dedicated script: `zz_use`, `zz_update`, `zz_colors`, `zz_log`, `zz_args`,
+  `zz_prompt`, `zz_ask`, `zz_input`, `zz_bindir`.
 - **Functional** folders use `<verb>-<topic>` naming: `validate-json`,
   `normalize-json`, `merge-json`, `load-json`, `run-npx`, `dispatch-script`,
   `resolve-context`, `persist-var`, `edit-script`, `distribute-utils`,
@@ -89,6 +103,7 @@ the tool isn't already available.
 
 | Script                       | Purpose                                                             |
 | ----------------------------- | --------------------------------------------------------------------- |
+| `zz_update`                     | force a fresh download of the zz_* bundle, bypassing the local cache  |
 | `zz_colors`                    | ANSI color vars (`$Red` `$Green` ... `$End`); source it: `. zz_colors` |
 | `zz_log <lvl> <msg...>`         | colored, leveled log line on stderr (`i`/`w`/`e`/`s`/`-`)              |
 | `zz_args <title> <caller> <<-help ...` | parse `$@` per a spec; `eval $(zz_args ...)` to bind the vars   |

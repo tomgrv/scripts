@@ -12,7 +12,12 @@
 #     together, as a single bundle, the first time any one of them is
 #     missing — not one at a time. (They ship together and are cheap to
 #     install as a set; installing them individually would mean N
-#     downloads/copies for what is really one artifact.)
+#     downloads/copies for what is really one artifact.) When not running
+#     from a local checkout, the bundle is fetched once into a local cache
+#     directory (ZZ_CACHE_DIR, default ~/.cache/zz_scripts) and every
+#     subsequent bundle install links from that cache — no repeat network
+#     round-trip. Use `zz_update` (or `zz_use --force ...`) to force a
+#     fresh download, bypassing the cache.
 #
 #   - Any other tool: looked up in config/zz_use.json (ZZ_USE_CONFIG to
 #     override):
@@ -28,9 +33,17 @@
 # Still not found on PATH afterwards -> error, exit 1.
 #
 # Idempotent: safe to call on every script invocation — resolved tools are
-# skipped in ~0ms via `command -v`.
+# skipped in ~0ms via `command -v`, unless --force is given.
 
 set -e
+
+FORCE=0
+case "${1:-}" in
+--force | -f)
+    FORCE=1
+    shift
+    ;;
+esac
 
 # Follow symlinks (an installed/linked "zz_use" on PATH is a symlink to this
 # file) so SCRIPT_DIR/ROOT_DIR resolve to the real checkout, not the link's
@@ -51,6 +64,7 @@ _zzu_log() {
 
 ZZ_USE_CONFIG="${ZZ_USE_CONFIG:-${SCRIPT_DIR}/config/zz_use.json}"
 ZZ_USE_REPO_URL="${ZZ_USE_REPO_URL:-https://github.com/tomgrv/scripts/archive/refs/heads/main.tar.gz}"
+ZZ_CACHE_DIR="${ZZ_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zz_scripts}"
 
 if [ $# -eq 0 ]; then
     _zzu_log e "Usage: zz_use <tool> [tool...]"
@@ -90,35 +104,59 @@ _ensure_path() {
     esac
 }
 
-# Install every zz_*/ folder's run.sh in this repo at once, as a single
-# bundle, linked onto the bin dir under its folder name (e.g. zz_log/run.sh
-# -> <bindir>/zz_log).
+# Refresh ZZ_CACHE_DIR from ZZ_USE_REPO_URL. Extracts into a sibling temp
+# dir first and swaps it in with `mv`, so a script currently running out of
+# the old cache is never left reading a half-written directory.
+_refresh_cache() {
+    _zzu_log i "Retrieving zz_* bundle from {U ${ZZ_USE_REPO_URL}}..."
+    _tmp="${ZZ_CACHE_DIR}.tmp.$$"
+    rm -rf "$_tmp"
+    mkdir -p "$_tmp"
+    trap 'rm -rf "$_tmp"' EXIT
+    curl -fsSL "$ZZ_USE_REPO_URL" | tar -xz -C "$_tmp" --strip-components=1
+    [ -f "$_tmp/zz_colors/run.sh" ] || { _zzu_log e "Downloaded archive has no zz_* scripts (unexpected repo layout)"; return 1; }
+    mkdir -p "$(dirname "$ZZ_CACHE_DIR")"
+    rm -rf "$ZZ_CACHE_DIR"
+    mv "$_tmp" "$ZZ_CACHE_DIR"
+    trap - EXIT
+}
+
+# Install every zz_*/ folder's run.sh at once, as a single bundle, linked
+# onto the bin dir under its folder name (e.g. zz_log/run.sh ->
+# <bindir>/zz_log). Source is, in order: a local checkout (this repo's own
+# ROOT_DIR, when zz_use is running from within it), the local cache
+# (ZZ_CACHE_DIR, refreshed only when missing or --force/zz_update is used),
+# or a fresh download into that cache.
 _install_zz_bundle() {
     _dir=$(_bindir) || { _zzu_log e "No writable bin directory found for zz_* bundle install"; return 1; }
     _ensure_path "$_dir"
 
     if ls -d "${ROOT_DIR}"/zz_*/ >/dev/null 2>&1 && [ -f "${ROOT_DIR}/zz_colors/run.sh" ]; then
-        _zzu_log i "Installing zz_* bundle from {U ${ROOT_DIR}} to {U ${_dir}}..."
-        for _d in "${ROOT_DIR}"/zz_*/; do
-            [ -f "${_d}run.sh" ] || continue
-            _name=$(basename "$_d")
-            cp "${_d}run.sh" "${_dir}/${_name}"
-            chmod +x "${_dir}/${_name}"
-        done
+        _src="$ROOT_DIR"
+        _zzu_log i "Installing zz_* bundle from {U ${_src}} to {U ${_dir}}..."
     else
-        _zzu_log i "Retrieving zz_* bundle from {U ${ZZ_USE_REPO_URL}}..."
-        _tmp=$(mktemp -d)
-        trap 'rm -rf "$_tmp"' EXIT
-        curl -fsSL "$ZZ_USE_REPO_URL" | tar -xz -C "$_tmp" --strip-components=1
-        for _d in "${_tmp}"/zz_*/; do
-            [ -f "${_d}run.sh" ] || continue
-            _name=$(basename "$_d")
-            cp "${_d}run.sh" "${_dir}/${_name}"
-            chmod +x "${_dir}/${_name}"
-        done
-        rm -rf "$_tmp"
-        trap - EXIT
+        if [ "$FORCE" -eq 1 ] || [ ! -f "${ZZ_CACHE_DIR}/zz_colors/run.sh" ]; then
+            _refresh_cache || return 1
+        else
+            _zzu_log - "Using cached zz_* bundle at {U ${ZZ_CACHE_DIR}}"
+        fi
+        _src="$ZZ_CACHE_DIR"
+        _zzu_log i "Installing zz_* bundle from {U ${_src}} to {U ${_dir}}..."
     fi
+
+    for _d in "${_src}"/zz_*/; do
+        [ -f "${_d}run.sh" ] || continue
+        _name=$(basename "$_d")
+        # Write to a temp file and `mv` it into place rather than `cp`ing
+        # over the target directly: one of these names can be zz_use
+        # itself (e.g. under zz_update, which force-refreshes the whole
+        # core set including zz_use), and an in-place cp can truncate a
+        # script the shell is still mid-read on. mv (same filesystem) is
+        # an atomic rename instead.
+        cp "${_d}run.sh" "${_dir}/.${_name}.$$"
+        chmod +x "${_dir}/.${_name}.$$"
+        mv "${_dir}/.${_name}.$$" "${_dir}/${_name}"
+    done
     _zzu_log s "zz_* bundle installed to {U ${_dir}}"
 }
 
@@ -199,9 +237,14 @@ _download_install() {
 _zz_bundle_installed=0
 
 for tool in "$@"; do
-    if command -v "$tool" >/dev/null 2>&1; then
-        _zzu_log - "{Purple $tool} already available"
-        continue
+    # Under --force, a zz_* tool already on PATH still goes through the
+    # bundle-refresh branch below (that's the whole point of --force); any
+    # other tool is unaffected by --force and keeps the normal skip.
+    if [ "$FORCE" -eq 0 ] || { [ "$FORCE" -eq 1 ] && [ "${tool#zz_}" = "$tool" ]; }; then
+        if command -v "$tool" >/dev/null 2>&1; then
+            _zzu_log - "{Purple $tool} already available"
+            continue
+        fi
     fi
 
     case "$tool" in

@@ -5,6 +5,7 @@
     "license": "MIT",
     "workspaces": [
         "zz_use",
+        "zz_update",
         "zz_colors",
         "zz_log",
         "zz_args",
