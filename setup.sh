@@ -7,6 +7,11 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/tomgrv/scripts/main/setup.sh | sh
 #
+# Pin to a specific tag, branch, or commit instead of main with a
+# positional arg (curl ... | sh -s -- v2) or ZZ_SETUP_REPO_REF=v2:
+#
+#   curl -fsSL .../setup.sh | sh -s -- v2
+#
 # Deliberately dumb and DRY: this script owns none of the bin-dir
 # resolution or linking logic itself — that's zz_use's job, and
 # duplicating it here would just be a second copy to keep in sync. Once
@@ -22,7 +27,14 @@
 
 set -eu
 
-REPO_URL="${ZZ_SETUP_REPO_URL:-https://github.com/tomgrv/scripts/archive/refs/heads/main.tar.gz}"
+REPO_REF="${1:-${ZZ_SETUP_REPO_REF:-main}}"
+# The default is a separate plain assignment, not inlined into
+# ${ZZ_SETUP_REPO_URL:-...}: a literal "}" inside that expansion's default
+# text (from "{REF}") terminates the expansion early at parse time,
+# regardless of quoting — `${X:-a{REF}.b}` evaluates to `a{REF` with
+# literal `.b}` appended after, not the intended default string.
+_REPO_URL_DEFAULT='https://github.com/tomgrv/scripts/archive/{REF}.tar.gz'
+REPO_URL=$(printf '%s' "${ZZ_SETUP_REPO_URL:-$_REPO_URL_DEFAULT}" | sed "s/{REF}/${REPO_REF}/g")
 
 log() { printf '\033[0;34m[zz-setup]\033[0m %s\n' "$*"; }
 die() {

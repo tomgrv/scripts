@@ -6,6 +6,15 @@
 # dependency it needs — including the zz_* utility scripts it sources):
 #   zz_use zz_log zz_args jq git
 #
+# Any tool name accepts an optional @<ref> suffix to pin it to a specific
+# tag, branch, or commit of this repo instead of the default branch (main):
+#   zz_use validate-json@v2
+# A @<ref> request always (re)installs — the existing "already available"
+# skip only applies to unversioned requests, since there's no way to tell
+# from an installed script alone which ref it came from. Each ref gets its
+# own cache slot (see ZZ_CACHE_DIR below), so pinning one script to an
+# older tag doesn't disturb anything already resolved at main.
+#
 # Two install paths:
 #
 #   - zz_* tools: all zz_* scripts in this repo are retrieved and installed
@@ -14,10 +23,10 @@
 #     install as a set; installing them individually would mean N
 #     downloads/copies for what is really one artifact.) When not running
 #     from a local checkout, the bundle is fetched once into a local cache
-#     directory (ZZ_CACHE_DIR, default ~/.cache/zz_scripts) and every
-#     subsequent bundle install links from that cache — no repeat network
-#     round-trip. Use `zz_update` (or `zz_use --force ...`) to force a
-#     fresh download, bypassing the cache.
+#     directory (ZZ_CACHE_DIR/<ref>, default ~/.cache/zz_scripts/main) and
+#     every subsequent bundle install at that ref links from that cache —
+#     no repeat network round-trip. Use `zz_update` (or `zz_use --force
+#     ...`) to force a fresh download, bypassing the cache.
 #
 #   - Any other tool:
 #     1. A functional script from this same repo (e.g. `zz_use load-json`
@@ -34,12 +43,13 @@
 #           support {VERSION}, {OS} (uname -s, lowercased), {ARCH}
 #           (uname -m, mapped to amd64/arm64).
 #     3. No config entry -> fall back to `apt-get install -y <tool>` (same
-#        name) when apt-get is available.
+#        name) when apt-get is available. (@<ref> has no meaning for an
+#        apt package; it's simply ignored if this is the path taken.)
 #
 # Still not found on PATH afterwards -> error, exit 1.
 #
 # Idempotent: safe to call on every script invocation — resolved tools are
-# skipped in ~0ms via `command -v`, unless --force is given.
+# skipped in ~0ms via `command -v`, unless --force or @<ref> is given.
 #
 # DRY by construction: zz_use never reimplements what zz_bindir/zz_log/etc.
 # already do. Bootstrapping them before they're installed doesn't mean
@@ -68,7 +78,17 @@ SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 ZZ_USE_CONFIG="${ZZ_USE_CONFIG:-${SCRIPT_DIR}/config/zz_use.json}"
-ZZ_USE_REPO_URL="${ZZ_USE_REPO_URL:-https://github.com/tomgrv/scripts/archive/refs/heads/main.tar.gz}"
+# {REF} is substituted with the requested tag/branch/commit (default
+# "main") — GitHub's archive endpoint accepts a tag, a branch, or a commit
+# SHA interchangeably in that same position.
+#
+# The default is built as a separate plain assignment, not inlined into
+# ${ZZ_USE_REPO_URL:-...}: a literal "}" inside that expansion's default
+# text (from "{REF}") terminates the expansion early at parse time,
+# regardless of quoting — `${X:-a{REF}.b}` evaluates to `a{REF` with
+# literal `.b}` appended after, not the intended default string.
+_ZZ_USE_REPO_URL_DEFAULT='https://github.com/tomgrv/scripts/archive/{REF}.tar.gz'
+ZZ_USE_REPO_URL="${ZZ_USE_REPO_URL:-$_ZZ_USE_REPO_URL_DEFAULT}"
 ZZ_CACHE_DIR="${ZZ_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zz_scripts}"
 
 # Every temp dir this script creates (a fresh cache download, a
@@ -95,36 +115,43 @@ _zzu_log() {
 }
 
 if [ $# -eq 0 ]; then
-    _zzu_log e "Usage: zz_use <tool> [tool...]"
+    _zzu_log e "Usage: zz_use <tool>[@ref] [tool[@ref]...]"
     exit 1
 fi
 
-# _SRC: the resolved tarball-context directory (set by _resolve_src, once
-# per run). Empty until then.
+# _SRC: the resolved tarball-context directory for _SRC_REF (set by
+# _resolve_src). _SRC_RESOLVED guards against re-resolving the same ref
+# more than once per run; a different ref requested later in the same run
+# re-resolves (and switches _SRC to it).
 _SRC=""
+_SRC_REF=""
 _SRC_RESOLVED=0
 
-# Resolve _SRC — a local checkout (ROOT_DIR, when zz_use is running from
-# within this repo), otherwise the local cache (refreshed first when
+# Resolve _SRC for <ref> (default: main) — a local checkout (ROOT_DIR, when
+# zz_use is running from within this repo and no specific ref was asked
+# for), otherwise the local cache for that ref (refreshed first when
 # missing or under --force) — then expose every zz_*/run.sh in it on PATH
 # under its bare conventional name (zz_colors, zz_log, zz_bindir, ...) via
 # symlinks in a scratch dir. That's what lets `command -v zz_bindir`,
 # `zz_log ...`, and `. zz_colors` (including from *inside* zz_bindir's and
 # zz_log's own source) all just resolve normally from here on, with zero
-# reimplementation of what those scripts do. Runs at most once per
-# invocation — every caller below is free to call this unconditionally.
+# reimplementation of what those scripts do.
 _resolve_src() {
-    [ "$_SRC_RESOLVED" -eq 1 ] && return 0
+    _req_ref="${1:-}"
+    if [ "$_SRC_RESOLVED" -eq 1 ] && [ "$_SRC_REF" = "$_req_ref" ]; then
+        return 0
+    fi
 
-    if ls -d "${ROOT_DIR}"/zz_*/ >/dev/null 2>&1 && [ -f "${ROOT_DIR}/zz_colors/run.sh" ]; then
+    if [ -z "$_req_ref" ] && ls -d "${ROOT_DIR}"/zz_*/ >/dev/null 2>&1 && [ -f "${ROOT_DIR}/zz_colors/run.sh" ]; then
         _SRC="$ROOT_DIR"
     else
-        if [ "$FORCE" -eq 1 ] || [ ! -f "${ZZ_CACHE_DIR}/zz_colors/run.sh" ]; then
-            _refresh_cache || return 1
+        _cache_dir="${ZZ_CACHE_DIR}/${_req_ref:-main}"
+        if [ "$FORCE" -eq 1 ] || [ ! -f "${_cache_dir}/zz_colors/run.sh" ]; then
+            _refresh_cache "$_req_ref" "$_cache_dir" || return 1
         else
-            _zzu_log - "Using cached repo scripts at {U ${ZZ_CACHE_DIR}}"
+            _zzu_log - "Using cached repo scripts at {U ${_cache_dir}}"
         fi
-        _SRC="$ZZ_CACHE_DIR"
+        _SRC="$_cache_dir"
     fi
 
     _bootstrap_dir=$(mktemp -d)
@@ -135,23 +162,28 @@ _resolve_src() {
     done
     export PATH="${_bootstrap_dir}:${PATH}"
 
+    _SRC_REF="$_req_ref"
     _SRC_RESOLVED=1
 }
 
-# Refresh ZZ_CACHE_DIR from ZZ_USE_REPO_URL. Extracts into a sibling temp
-# dir first and swaps it in with `mv`, so a script currently running out of
-# the old cache is never left reading a half-written directory.
+# Refresh <cache_dir> from ZZ_USE_REPO_URL at <ref> (default: main).
+# Extracts into a sibling temp dir first and swaps it in with `mv`, so a
+# script currently running out of the old cache is never left reading a
+# half-written directory.
 _refresh_cache() {
-    _zzu_log i "Retrieving repo scripts from {U ${ZZ_USE_REPO_URL}}..."
-    _tmp="${ZZ_CACHE_DIR}.tmp.$$"
+    _req_ref="${1:-main}"
+    _cache_dir="$2"
+    _url=$(printf '%s' "$ZZ_USE_REPO_URL" | sed "s/{REF}/${_req_ref}/g")
+    _zzu_log i "Retrieving repo scripts ({B ${_req_ref}}) from {U ${_url}}..."
+    _tmp="${_cache_dir}.tmp.$$"
     _add_tmp "$_tmp"
     rm -rf "$_tmp"
     mkdir -p "$_tmp"
-    curl -fsSL "$ZZ_USE_REPO_URL" | tar -xz -C "$_tmp" --strip-components=1
+    curl -fsSL "$_url" | tar -xz -C "$_tmp" --strip-components=1
     [ -f "$_tmp/zz_colors/run.sh" ] || { _zzu_log e "Downloaded archive has no zz_* scripts (unexpected repo layout)"; return 1; }
-    mkdir -p "$(dirname "$ZZ_CACHE_DIR")"
-    rm -rf "$ZZ_CACHE_DIR"
-    mv "$_tmp" "$ZZ_CACHE_DIR"
+    mkdir -p "$(dirname "$_cache_dir")"
+    rm -rf "$_cache_dir"
+    mv "$_tmp" "$_cache_dir"
 }
 
 # Resolve (and create if needed) a writable bin directory. Delegates to
@@ -176,11 +208,12 @@ _ensure_path() {
     esac
 }
 
-# Install every zz_*/ folder's run.sh from _SRC at once, as a single
-# bundle, linked onto the bin dir under its folder name (e.g. zz_log/run.sh
-# -> <bindir>/zz_log).
+# Install every zz_*/ folder's run.sh from _SRC at <ref> (default: main) at
+# once, as a single bundle, linked onto the bin dir under its folder name
+# (e.g. zz_log/run.sh -> <bindir>/zz_log).
 _install_zz_bundle() {
-    _resolve_src || return 1
+    _ref="${1:-}"
+    _resolve_src "$_ref" || return 1
     _dir=$(_bindir) || { _zzu_log e "No writable bin directory found for zz_* bundle install"; return 1; }
     _ensure_path "$_dir"
 
@@ -201,14 +234,15 @@ _install_zz_bundle() {
     _zzu_log s "zz_* bundle installed to {U ${_dir}}"
 }
 
-# Install a single named script from _SRC (functional or core) — used for
-# functional scripts, requested individually, unlike the core zz_* set
+# Install a single named script from _SRC at <ref> (default: main) —
+# functional or core, requested individually, unlike the core zz_* set
 # which always installs as one bundle. Returns non-zero (silently) when
 # <name> isn't a script in this repo at all, so the caller can fall
 # through to the apt/config lookup for genuinely external tools.
 _install_repo_script() {
     _name="$1"
-    _resolve_src || return 1
+    _ref="${2:-}"
+    _resolve_src "$_ref" || return 1
     [ -f "${_SRC}/${_name}/run.sh" ] || return 1
 
     _dir=$(_bindir) || { _zzu_log e "No writable bin directory found for {Purple ${_name}}"; return 1; }
@@ -293,14 +327,31 @@ _download_install() {
 }
 
 # The activator itself: resolve every requested tool, one at a time.
+# "<tool>@<ref>" pins that one tool to a specific tag/branch/commit of this
+# repo; ref is stripped from the name for command lookup/config/case
+# matching and threaded through to the bundle/repo-script installers.
 _use() {
-    _zz_bundle_installed=0
+    _zz_bundle_installed_for="__none__"
 
-    for tool in "$@"; do
-        # Under --force, a zz_* tool already on PATH still goes through the
-        # bundle-refresh branch below (that's the whole point of --force);
-        # any other tool is unaffected by --force and keeps the normal skip.
-        if [ "$FORCE" -eq 0 ] || { [ "$FORCE" -eq 1 ] && [ "${tool#zz_}" = "$tool" ]; }; then
+    for tool_ref in "$@"; do
+        case "$tool_ref" in
+        *@*)
+            tool="${tool_ref%%@*}"
+            ref="${tool_ref#*@}"
+            ;;
+        *)
+            tool="$tool_ref"
+            ref=""
+            ;;
+        esac
+
+        # An unversioned request, not under --force (or --force on a
+        # non-zz_ tool, which --force doesn't apply to), can be skipped if
+        # already on PATH. A @<ref> request always (re)installs: there's
+        # no way to tell from an installed script alone which ref it came
+        # from, so "already available" can't be trusted to mean "at the
+        # requested ref".
+        if [ -z "$ref" ] && { [ "$FORCE" -eq 0 ] || [ "${tool#zz_}" = "$tool" ]; }; then
             if command -v "$tool" >/dev/null 2>&1; then
                 _zzu_log - "{Purple $tool} already available"
                 continue
@@ -309,9 +360,9 @@ _use() {
 
         case "$tool" in
         zz_*)
-            if [ "$_zz_bundle_installed" -eq 0 ]; then
-                _install_zz_bundle
-                _zz_bundle_installed=1
+            if [ "$_zz_bundle_installed_for" != "$ref" ]; then
+                _install_zz_bundle "$ref"
+                _zz_bundle_installed_for="$ref"
             fi
             ;;
         *)
@@ -333,7 +384,7 @@ _use() {
                     _download_install "$tool" "$url" "$archive" "$binpath" "$version" \
                         || _zzu_log w "Download install of {Purple $tool} failed"
                 fi
-            elif _install_repo_script "$tool"; then
+            elif _install_repo_script "$tool" "$ref"; then
                 : # a functional (or core, requested by name) script from this repo
             else
                 _apt_install "$tool" || true

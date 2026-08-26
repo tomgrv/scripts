@@ -38,19 +38,26 @@ uses, not a second copy of it — and discards the temp dir.
 curl -fsSL https://raw.githubusercontent.com/tomgrv/scripts/main/setup.sh | sh
 ```
 
+Pin it to a tag, branch, or commit instead of `main` with a positional arg
+or `ZZ_SETUP_REPO_REF`:
+
+```sh
+curl -fsSL .../setup.sh | sh -s -- v2
+```
+
 That's the only thing that needs fetching up front. Once `zz_use` is on
 `PATH`, every other script — core or functional — resolves and installs
 its own further dependencies on demand the same way (see `zz_use` below).
 Functional scripts themselves aren't installed by `setup.sh` or `zz_use`;
 install those directly (`npm install <folder>`, or check out the repo).
 
-## Caching and `zz_update`
+## Caching, `zz_update`, and pinning a ref
 
 Both `setup.sh` and `zz_use`'s zz_* bundle install resolve the same way:
 straight from disk when running inside a checkout of this repo, otherwise
-from a local cache directory (`ZZ_CACHE_DIR`, default
-`~/.cache/zz_scripts`) that's populated on first use and then just linked
-from on every call after that — no repeat network round-trip.
+from a local cache directory (`ZZ_CACHE_DIR/<ref>`, default
+`~/.cache/zz_scripts/main`) that's populated on first use and then just
+linked from on every call after that — no repeat network round-trip.
 
 `zz_update` forces a fresh download, bypassing the cache, and re-links the
 core `zz_*` scripts from it:
@@ -58,6 +65,19 @@ core `zz_*` scripts from it:
 ```sh
 zz_update              # or: zz_use --force <tool...>
 ```
+
+Any tool name accepts an optional `@<ref>` suffix to pin it to a specific
+tag, branch, or commit instead of `main`:
+
+```sh
+zz_use validate-json@v2
+```
+
+Each ref gets its own cache slot, so pinning one script to an older tag
+doesn't disturb anything already resolved at `main`. A `@<ref>` request
+always (re)installs — unlike an unversioned request, it's never skipped
+just because a same-named command is already on `PATH`, since there's no
+way to tell from an installed script alone which ref it came from.
 
 ## Naming
 
