@@ -19,16 +19,22 @@
 #     round-trip. Use `zz_update` (or `zz_use --force ...`) to force a
 #     fresh download, bypassing the cache.
 #
-#   - Any other tool: looked up in config/zz_use.json (ZZ_USE_CONFIG to
-#     override):
-#       {"apt": "<pkg>"}  -> apt-get install -y <pkg> (sudo if not root)
-#       {"url": "...", "archive": "tar.gz"|"tar.xz"|"zip"|"raw",
-#        "binpath": "..."} -> download, extract if needed, resolve a
-#        writable bin dir, and install the binary as <tool>. Templates
-#        support {VERSION}, {OS} (uname -s, lowercased), {ARCH} (uname -m,
-#        mapped to amd64/arm64).
-#     No config entry -> fall back to `apt-get install -y <tool>` (same
-#     name) when apt-get is available.
+#   - Any other tool:
+#     1. A functional script from this same repo (e.g. `zz_use load-json`
+#        installs load-json/run.sh) — installed individually (not as a
+#        bundle: unlike the core zz_* set, functional scripts aren't all
+#        needed together), from the same local-checkout/cache/download
+#        source a zz_* bundle install would use.
+#     2. Otherwise, looked up in config/zz_use.json (ZZ_USE_CONFIG to
+#        override):
+#          {"apt": "<pkg>"}  -> apt-get install -y <pkg> (sudo if not root)
+#          {"url": "...", "archive": "tar.gz"|"tar.xz"|"zip"|"raw",
+#           "binpath": "..."} -> download, extract if needed, resolve a
+#           writable bin dir, and install the binary as <tool>. Templates
+#           support {VERSION}, {OS} (uname -s, lowercased), {ARCH}
+#           (uname -m, mapped to amd64/arm64).
+#     3. No config entry -> fall back to `apt-get install -y <tool>` (same
+#        name) when apt-get is available.
 #
 # Still not found on PATH afterwards -> error, exit 1.
 #
@@ -108,7 +114,7 @@ _ensure_path() {
 # dir first and swaps it in with `mv`, so a script currently running out of
 # the old cache is never left reading a half-written directory.
 _refresh_cache() {
-    _zzu_log i "Retrieving zz_* bundle from {U ${ZZ_USE_REPO_URL}}..."
+    _zzu_log i "Retrieving repo scripts from {U ${ZZ_USE_REPO_URL}}..."
     _tmp="${ZZ_CACHE_DIR}.tmp.$$"
     rm -rf "$_tmp"
     mkdir -p "$_tmp"
@@ -158,6 +164,37 @@ _install_zz_bundle() {
         mv "${_dir}/.${_name}.$$" "${_dir}/${_name}"
     done
     _zzu_log s "zz_* bundle installed to {U ${_dir}}"
+}
+
+# Install a single named script from this repo (functional or core) —
+# used for functional scripts, requested individually, unlike the core
+# zz_* set which always installs as one bundle. Source resolution mirrors
+# _install_zz_bundle: local checkout first (free), then the cache
+# (refreshed only when missing or under --force), then a fresh download
+# into that cache. Returns non-zero (silently) when <name> isn't a script
+# in this repo at all, so the caller can fall through to the apt/config
+# lookup for genuinely external tools.
+_install_repo_script() {
+    _name="$1"
+
+    if [ -f "${ROOT_DIR}/${_name}/run.sh" ]; then
+        _src_dir="${ROOT_DIR}/${_name}"
+    else
+        if [ "$FORCE" -eq 1 ] || [ ! -f "${ZZ_CACHE_DIR}/zz_colors/run.sh" ]; then
+            _refresh_cache || return 1
+        fi
+        [ -f "${ZZ_CACHE_DIR}/${_name}/run.sh" ] || return 1
+        _src_dir="${ZZ_CACHE_DIR}/${_name}"
+    fi
+
+    _dir=$(_bindir) || { _zzu_log e "No writable bin directory found for {Purple ${_name}}"; return 1; }
+    _ensure_path "$_dir"
+
+    _zzu_log i "Installing {Purple ${_name}} from {U ${_src_dir}} to {U ${_dir}}..."
+    cp "${_src_dir}/run.sh" "${_dir}/.${_name}.$$"
+    chmod +x "${_dir}/.${_name}.$$"
+    mv "${_dir}/.${_name}.$$" "${_dir}/${_name}"
+    _zzu_log s "Installed {Purple ${_name}} to {U ${_dir}/${_name}}"
 }
 
 _apt_install() {
@@ -273,6 +310,8 @@ for tool in "$@"; do
                 _download_install "$tool" "$url" "$archive" "$binpath" "$version" \
                     || _zzu_log w "Download install of {Purple $tool} failed"
             fi
+        elif _install_repo_script "$tool"; then
+            : # a functional (or core, requested by name) script from this repo
         else
             _apt_install "$tool" || true
         fi

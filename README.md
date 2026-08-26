@@ -72,30 +72,37 @@ zz_update              # or: zz_use --force <tool...>
 ## `zz_use` — the activator
 
 `zz_use` is what every other script calls, once, up front, to declare and
-resolve its dependencies — including the `zz_*` core scripts it uses:
+resolve its dependencies — including any other script in this repo, core
+or functional:
 
 ```sh
-zz_use zz_colors zz_args jq git
+zz_use zz_colors zz_args load-json jq git
 ```
 
 For each `<tool>` requested, in order:
 
 1. `command -v <tool>` — already there, no-op.
-2. **`zz_*` tools** — installed together, as a single bundle, the first
-   time any one of them is missing (not one download/copy per script:
-   they ship together and are cheap to install as a set). Source is every
-   sibling `zz_*/run.sh` folder in this repo when running from a
-   checkout/npm install, or a one-shot fetch of the `tomgrv/scripts`
-   tarball otherwise.
-3. **Any other tool** — looked up in `zz_use/config/zz_use.json` (override
-   with `ZZ_USE_CONFIG`):
+2. **`zz_*` core tools** — installed together, as a single bundle, the
+   first time any one of them is missing (not one download/copy per
+   script: they ship together and are cheap to install as a set).
+3. **Any other tool with a `zz_use/config/zz_use.json` entry** (override
+   with `ZZ_USE_CONFIG`) — an explicit mapping always wins if a name
+   happens to collide with a repo script:
    - `{"apt": "<pkg>"}` → `apt-get install -y <pkg>` (via `sudo` if not root).
    - `{"url": ..., "archive": "tar.gz"|"tar.xz"|"zip"|"raw", "binpath": ...}`
      → download, extract if needed, resolve a writable bin dir via
      `zz_bindir`, and install the binary as `<tool>`. Templates support
      `{VERSION}`, `{OS}` (`uname -s`, lowercased), `{ARCH}` (`amd64`/`arm64`).
-   - No config entry → fall back to `apt-get install -y <tool>` (same name).
-4. Still missing afterwards → error, exit 1.
+4. **Any other script from this repo** (a functional script like
+   `load-json`, or a core one requested individually) — installed on its
+   own, not as part of the bundle: unlike the core set, functional
+   scripts aren't all needed together. Source for both 2 and 4 is, in
+   order: a sibling `zz_*/run.sh` folder in this repo when running from a
+   checkout/npm install; otherwise a local cache (see caching below);
+   otherwise a fresh download into that cache.
+5. No config entry, not a script in this repo → fall back to
+   `apt-get install -y <tool>` (same name).
+6. Still missing afterwards → error, exit 1.
 
 Idempotent: safe to call on every invocation — resolved tools are skipped
 via `command -v` in ~0ms. Retrieval or install happens **if and only if**

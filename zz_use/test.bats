@@ -20,3 +20,12 @@ teardown() {
     run zz_use
     [ "$status" -ne 0 ]
 }
+
+@test "zz_use installs a functional script individually, not the whole bundle" {
+    bindir=$(mktemp -d)
+    run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" zz_use load-json
+    [ "$status" -eq 0 ]
+    [ -x "$bindir/load-json" ]
+    [ ! -e "$bindir/validate-json" ]
+    rm -rf "$bindir"
+}
