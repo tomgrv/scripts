@@ -7,8 +7,8 @@
 # are untrusted and skipped (--ignore-scripts) by default. Pass -s to allow
 # them to run.
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-. "${SCRIPT_DIR}/zz_wrap.sh" 2>/dev/null || . zz_wrap
+zz_use zz_colors zz_args
+. zz_colors
 
 eval $(
 	zz_args "Run a local npm binary, falling back to npx" $0 "$@" <<-help

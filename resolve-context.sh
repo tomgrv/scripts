@@ -2,8 +2,8 @@
 # Export source/target folders depending on feature context (which feature's
 # install/configure flow is calling this, and where its files live/deploy to).
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-. "${SCRIPT_DIR}/zz_wrap.sh" 2>/dev/null || . zz_wrap
+zz_use zz_colors zz_args
+. zz_colors
 
 eval $(
     zz_args "Export Source/Targets folders depending on feature context" $0 "$@" <<-help

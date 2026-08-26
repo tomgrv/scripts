@@ -3,8 +3,8 @@
 # run its install-*.sh lifecycle scripts, and symlink bin/ scripts onto a
 # writable PATH directory. Counterpart to configure-feature.sh.
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-. "${SCRIPT_DIR}/zz_wrap.sh" 2>/dev/null || . zz_wrap
+zz_use zz_colors zz_args zz_bindir
+. zz_colors
 
 eval $(
     zz_args "Install a feature" $0 "$@" <<-help
@@ -62,7 +62,8 @@ done
 zz_log i "Installing bin scripts for {Purple $feature}..."
 zz_log i "Finding writable bin directory..."
 
-link_dir=$(zz_bindir -t "$target") || exit 1
+eval "$(zz_bindir -t "$target")"
+link_dir="$dir"
 
 find "$target/bin" -type f -name "*.sh" 2>/dev/null | while IFS= read -r file; do
     link="$link_dir/$(basename "$file" | sed 's/.sh$//')"

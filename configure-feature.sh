@@ -3,9 +3,8 @@
 # (merging into files that already exist there) and run its
 # configure-*.sh lifecycle scripts. Counterpart to install-feature.sh.
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-. "${SCRIPT_DIR}/zz_wrap.sh" 2>/dev/null || . zz_wrap
-zz_use git
+zz_use zz_colors zz_args git
+. zz_colors
 
 eval $(
     zz_args "Configure a feature" $0 "$@" <<-help

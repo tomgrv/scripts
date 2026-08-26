@@ -1,9 +1,8 @@
 #!/bin/sh
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-. "${SCRIPT_DIR}/zz_wrap.sh" 2>/dev/null || . zz_wrap
-zz_use jq
+zz_use zz_colors zz_args jq
+. zz_colors
 
 eval $(
 	zz_args "Distribute zz_* / utility scripts to target directory" $0 "$@" <<-help

@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-. "${SCRIPT_DIR}/zz_wrap.sh" 2>/dev/null || . zz_wrap
+zz_use zz_colors zz_args
+. zz_colors
 
 eval $(
     zz_args "Persist a key=value pair durably" $0 "$@" <<-help
