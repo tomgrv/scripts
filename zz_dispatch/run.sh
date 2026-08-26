@@ -1,6 +1,7 @@
 #!/bin/sh
-# Dispatcher utility used by scripts named with a leading underscore.
-# Example caller: src/gitutils/_git-fix.sh invokes: dispatch-script $0 "$@"
+# zz_dispatch — dispatcher utility used by scripts named with a leading
+# underscore. Example caller: src/gitutils/_git-fix.sh invokes:
+# zz_dispatch $0 "$@"
 # This script finds a counterpart script without the leading underscore
 # in the same directory (or with .sh extension) and executes it.
 

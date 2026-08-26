@@ -63,9 +63,9 @@ zz_update              # or: zz_use --force <tool...>
 
 - **Core** folders keep the `zz_` prefix — each atomic function is its own
   dedicated script: `zz_use`, `zz_update`, `zz_colors`, `zz_log`, `zz_args`,
-  `zz_prompt`, `zz_ask`, `zz_input`, `zz_bindir`.
+  `zz_prompt`, `zz_ask`, `zz_input`, `zz_bindir`, `zz_dispatch`.
 - **Functional** folders use `<verb>-<topic>` naming: `validate-json`,
-  `normalize-json`, `merge-json`, `load-json`, `run-npx`, `dispatch-script`,
+  `normalize-json`, `merge-json`, `load-json`, `run-npx`,
   `resolve-context`, `persist-var`, `edit-script`, `distribute-utils`,
   `install-feature`, `configure-feature`.
 
@@ -120,6 +120,7 @@ the tool isn't already available.
 | `zz_ask <options> <question...>` | interactive single-char confirm                                    |
 | `zz_input [file]`                | read from arg (literal or file) or stdin                            |
 | `zz_bindir [-t target]`          | resolve/create a writable bin dir; `eval $(zz_bindir ...)` to bind `$dir` and extend `PATH` |
+| `zz_dispatch <caller> <subcmd>`  | dispatch an underscore-prefixed caller to a sibling `<name>-<subcmd>` script |
 
 ## Functional scripts
 
@@ -130,7 +131,6 @@ the tool isn't already available.
 | `normalize-json`       | sort JSON keys per schema + alphabetically, optional in-place write     |
 | `merge-json`           | recursively merge one JSON file into another (arrays deduped, unioned)  |
 | `run-npx`              | run a local `node_modules/.bin` binary, falling back to `npx`           |
-| `dispatch-script`      | dispatch `_foo.sh` callers to sibling `foo-<subcmd>` scripts            |
 | `resolve-context`      | resolve a feature's source/target dirs from the calling script         |
 | `persist-var`          | upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`      |
 | `edit-script`          | copy an installed script locally and open it for editing                |
