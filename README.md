@@ -84,7 +84,7 @@ way to tell from an installed script alone which ref it came from.
 - **Core** folders keep the `zz_` prefix — each atomic function is its own
   dedicated script: `zz_use`, `zz_update`, `zz_colors`, `zz_log`, `zz_args`,
   `zz_prompt`, `zz_ask`, `zz_input`, `zz_bindir`, `zz_dispatch`, `zz_npx`,
-  `zz_persist`.
+  `zz_persist`, `zz_wrap`.
 - **Functional** folders use `<verb>-<topic>` naming: `validate-json`,
   `normalize-json`, `merge-json`, `load-json`, `resolve-context`,
   `edit-script`, `distribute-utils`, `install-feature`,
@@ -161,6 +161,7 @@ the tool isn't already available.
 | `zz_dispatch <caller> <subcmd>`  | dispatch an underscore-prefixed caller to a sibling `<name>-<subcmd>` script |
 | `zz_npx [-s] <tool>`             | run a local `node_modules/.bin` binary, falling back to `npx`         |
 | `zz_persist [-f\|-p] <key> <value>` | upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`  |
+| `zz_wrap -v VAR [-q question] [command...]` | ensure an env var is set (ask + persist if missing), then run a command |
 
 ## Functional scripts
 

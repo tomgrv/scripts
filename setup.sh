@@ -55,4 +55,4 @@ curl -fsSL "$REPO_URL" | tar -xz -C "$TMP_DIR" --strip-components=1
 
 log "Installing core zz_* scripts via the downloaded zz_use..."
 sh "$TMP_DIR/zz_use/run.sh" \
-    zz_use zz_update zz_colors zz_log zz_args zz_prompt zz_ask zz_input zz_bindir zz_dispatch zz_npx zz_persist
+    zz_use zz_update zz_colors zz_log zz_args zz_prompt zz_ask zz_input zz_bindir zz_dispatch zz_npx zz_persist zz_wrap

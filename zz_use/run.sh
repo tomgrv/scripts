@@ -97,7 +97,15 @@ ZZ_CACHE_DIR="${ZZ_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zz_scripts}"
 # (which would just clobber each other).
 _TMP_DIRS=""
 _add_tmp() { _TMP_DIRS="${_TMP_DIRS} $1"; }
-_cleanup() { [ -n "$_TMP_DIRS" ] && rm -rf $_TMP_DIRS; }
+# Always returns 0: an EXIT trap's own exit status becomes the shell's
+# final exit code when the script ends by falling off the end rather than
+# an explicit `exit N` — without this, [ -n "$_TMP_DIRS" ] being false
+# (nothing to clean up, the common case) would silently turn every
+# otherwise-successful run into a reported failure.
+_cleanup() {
+    [ -n "$_TMP_DIRS" ] && rm -rf $_TMP_DIRS
+    return 0
+}
 trap _cleanup EXIT
 
 # zz_log may itself not be installed yet, and _SRC (below) may not be
