@@ -40,6 +40,16 @@
 #
 # Idempotent: safe to call on every script invocation — resolved tools are
 # skipped in ~0ms via `command -v`, unless --force is given.
+#
+# DRY by construction: zz_use never reimplements what zz_bindir/zz_log/etc.
+# already do. Bootstrapping them before they're installed doesn't mean
+# hand-rolling fallback versions of their logic — it means resolving the
+# "tarball context" (_resolve_src below: a checkout, a warm cache, or a
+# freshly downloaded tarball are all just a directory of zz_*/run.sh
+# siblings) and exposing those real files on PATH under their conventional
+# names, so every later `command -v zz_bindir`/`zz_log`/`. zz_colors`
+# throughout this script — and inside zz_bindir/zz_log's own source, which
+# itself does `. zz_colors` — just finds and runs the real thing.
 
 set -e
 
@@ -57,8 +67,24 @@ esac
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# zz_log may itself not be installed yet on a first-ever bootstrap: fall
-# back to plain stderr output rather than depending on it circularly.
+ZZ_USE_CONFIG="${ZZ_USE_CONFIG:-${SCRIPT_DIR}/config/zz_use.json}"
+ZZ_USE_REPO_URL="${ZZ_USE_REPO_URL:-https://github.com/tomgrv/scripts/archive/refs/heads/main.tar.gz}"
+ZZ_CACHE_DIR="${ZZ_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zz_scripts}"
+
+# Every temp dir this script creates (a fresh cache download, a
+# _download_install extraction, the bootstrap symlink dir) is cleaned up
+# through this single mechanism instead of each having its own EXIT trap
+# (which would just clobber each other).
+_TMP_DIRS=""
+_add_tmp() { _TMP_DIRS="${_TMP_DIRS} $1"; }
+_cleanup() { [ -n "$_TMP_DIRS" ] && rm -rf $_TMP_DIRS; }
+trap _cleanup EXIT
+
+# zz_log may itself not be installed yet, and _SRC (below) may not be
+# resolved yet either (e.g. this is the very first log line of the run,
+# before any tool has been processed) — that's the one spot with no real
+# script to defer to, so it's the one spot with an actual (trivial,
+# uncolored) fallback.
 _zzu_log() {
     if command -v zz_log >/dev/null 2>&1; then
         zz_log "$@"
@@ -68,35 +94,75 @@ _zzu_log() {
     fi
 }
 
-ZZ_USE_CONFIG="${ZZ_USE_CONFIG:-${SCRIPT_DIR}/config/zz_use.json}"
-ZZ_USE_REPO_URL="${ZZ_USE_REPO_URL:-https://github.com/tomgrv/scripts/archive/refs/heads/main.tar.gz}"
-ZZ_CACHE_DIR="${ZZ_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zz_scripts}"
-
 if [ $# -eq 0 ]; then
     _zzu_log e "Usage: zz_use <tool> [tool...]"
     exit 1
 fi
 
+# _SRC: the resolved tarball-context directory (set by _resolve_src, once
+# per run). Empty until then.
+_SRC=""
+_SRC_RESOLVED=0
+
+# Resolve _SRC — a local checkout (ROOT_DIR, when zz_use is running from
+# within this repo), otherwise the local cache (refreshed first when
+# missing or under --force) — then expose every zz_*/run.sh in it on PATH
+# under its bare conventional name (zz_colors, zz_log, zz_bindir, ...) via
+# symlinks in a scratch dir. That's what lets `command -v zz_bindir`,
+# `zz_log ...`, and `. zz_colors` (including from *inside* zz_bindir's and
+# zz_log's own source) all just resolve normally from here on, with zero
+# reimplementation of what those scripts do. Runs at most once per
+# invocation — every caller below is free to call this unconditionally.
+_resolve_src() {
+    [ "$_SRC_RESOLVED" -eq 1 ] && return 0
+
+    if ls -d "${ROOT_DIR}"/zz_*/ >/dev/null 2>&1 && [ -f "${ROOT_DIR}/zz_colors/run.sh" ]; then
+        _SRC="$ROOT_DIR"
+    else
+        if [ "$FORCE" -eq 1 ] || [ ! -f "${ZZ_CACHE_DIR}/zz_colors/run.sh" ]; then
+            _refresh_cache || return 1
+        else
+            _zzu_log - "Using cached repo scripts at {U ${ZZ_CACHE_DIR}}"
+        fi
+        _SRC="$ZZ_CACHE_DIR"
+    fi
+
+    _bootstrap_dir=$(mktemp -d)
+    _add_tmp "$_bootstrap_dir"
+    for _d in "${_SRC}"/zz_*/; do
+        [ -f "${_d}run.sh" ] || continue
+        ln -s "${_d}run.sh" "${_bootstrap_dir}/$(basename "$_d")"
+    done
+    export PATH="${_bootstrap_dir}:${PATH}"
+
+    _SRC_RESOLVED=1
+}
+
+# Refresh ZZ_CACHE_DIR from ZZ_USE_REPO_URL. Extracts into a sibling temp
+# dir first and swaps it in with `mv`, so a script currently running out of
+# the old cache is never left reading a half-written directory.
+_refresh_cache() {
+    _zzu_log i "Retrieving repo scripts from {U ${ZZ_USE_REPO_URL}}..."
+    _tmp="${ZZ_CACHE_DIR}.tmp.$$"
+    _add_tmp "$_tmp"
+    rm -rf "$_tmp"
+    mkdir -p "$_tmp"
+    curl -fsSL "$ZZ_USE_REPO_URL" | tar -xz -C "$_tmp" --strip-components=1
+    [ -f "$_tmp/zz_colors/run.sh" ] || { _zzu_log e "Downloaded archive has no zz_* scripts (unexpected repo layout)"; return 1; }
+    mkdir -p "$(dirname "$ZZ_CACHE_DIR")"
+    rm -rf "$ZZ_CACHE_DIR"
+    mv "$_tmp" "$ZZ_CACHE_DIR"
+}
+
+# Resolve (and create if needed) a writable bin directory. Delegates to
+# the real zz_bindir — resolving _SRC first (if it isn't already on PATH)
+# makes that possible without reimplementing its candidate-directory logic
+# here too.
 _bindir() {
     _t="$1"
-    if command -v zz_bindir >/dev/null 2>&1; then
-        eval "$(zz_bindir ${_t:+-t "$_t"})"
-        printf '%s\n' "$dir"
-        return 0
-    fi
-    # Bootstrap fallback, mirroring zz_bindir's own default candidate order.
-    for c in "${INSTALL_BIN_DIR:-/usr/local/bin}" "${HOME:-/root}/.local/bin"; do
-        if [ -d "$c" ] && [ -w "$c" ]; then
-            case ":$PATH:" in
-            *":$c:"*) ;;
-            *) export PATH="$c:$PATH" ;;
-            esac
-            printf '%s\n' "$c"
-            return 0
-        fi
-    done
-    mkdir -p "${INSTALL_BIN_DIR:-/usr/local/bin}" 2>/dev/null && printf '%s\n' "${INSTALL_BIN_DIR:-/usr/local/bin}" && return 0
-    return 1
+    command -v zz_bindir >/dev/null 2>&1 || _resolve_src || return 1
+    eval "$(zz_bindir ${_t:+-t "$_t"})"
+    printf '%s\n' "$dir"
 }
 
 # _bindir runs (and exports PATH) inside a subshell whenever it's captured
@@ -110,47 +176,16 @@ _ensure_path() {
     esac
 }
 
-# Refresh ZZ_CACHE_DIR from ZZ_USE_REPO_URL. Extracts into a sibling temp
-# dir first and swaps it in with `mv`, so a script currently running out of
-# the old cache is never left reading a half-written directory.
-_refresh_cache() {
-    _zzu_log i "Retrieving repo scripts from {U ${ZZ_USE_REPO_URL}}..."
-    _tmp="${ZZ_CACHE_DIR}.tmp.$$"
-    rm -rf "$_tmp"
-    mkdir -p "$_tmp"
-    trap 'rm -rf "$_tmp"' EXIT
-    curl -fsSL "$ZZ_USE_REPO_URL" | tar -xz -C "$_tmp" --strip-components=1
-    [ -f "$_tmp/zz_colors/run.sh" ] || { _zzu_log e "Downloaded archive has no zz_* scripts (unexpected repo layout)"; return 1; }
-    mkdir -p "$(dirname "$ZZ_CACHE_DIR")"
-    rm -rf "$ZZ_CACHE_DIR"
-    mv "$_tmp" "$ZZ_CACHE_DIR"
-    trap - EXIT
-}
-
-# Install every zz_*/ folder's run.sh at once, as a single bundle, linked
-# onto the bin dir under its folder name (e.g. zz_log/run.sh ->
-# <bindir>/zz_log). Source is, in order: a local checkout (this repo's own
-# ROOT_DIR, when zz_use is running from within it), the local cache
-# (ZZ_CACHE_DIR, refreshed only when missing or --force/zz_update is used),
-# or a fresh download into that cache.
+# Install every zz_*/ folder's run.sh from _SRC at once, as a single
+# bundle, linked onto the bin dir under its folder name (e.g. zz_log/run.sh
+# -> <bindir>/zz_log).
 _install_zz_bundle() {
+    _resolve_src || return 1
     _dir=$(_bindir) || { _zzu_log e "No writable bin directory found for zz_* bundle install"; return 1; }
     _ensure_path "$_dir"
 
-    if ls -d "${ROOT_DIR}"/zz_*/ >/dev/null 2>&1 && [ -f "${ROOT_DIR}/zz_colors/run.sh" ]; then
-        _src="$ROOT_DIR"
-        _zzu_log i "Installing zz_* bundle from {U ${_src}} to {U ${_dir}}..."
-    else
-        if [ "$FORCE" -eq 1 ] || [ ! -f "${ZZ_CACHE_DIR}/zz_colors/run.sh" ]; then
-            _refresh_cache || return 1
-        else
-            _zzu_log - "Using cached zz_* bundle at {U ${ZZ_CACHE_DIR}}"
-        fi
-        _src="$ZZ_CACHE_DIR"
-        _zzu_log i "Installing zz_* bundle from {U ${_src}} to {U ${_dir}}..."
-    fi
-
-    for _d in "${_src}"/zz_*/; do
+    _zzu_log i "Installing zz_* bundle from {U ${_SRC}} to {U ${_dir}}..."
+    for _d in "${_SRC}"/zz_*/; do
         [ -f "${_d}run.sh" ] || continue
         _name=$(basename "$_d")
         # Write to a temp file and `mv` it into place rather than `cp`ing
@@ -166,32 +201,21 @@ _install_zz_bundle() {
     _zzu_log s "zz_* bundle installed to {U ${_dir}}"
 }
 
-# Install a single named script from this repo (functional or core) —
-# used for functional scripts, requested individually, unlike the core
-# zz_* set which always installs as one bundle. Source resolution mirrors
-# _install_zz_bundle: local checkout first (free), then the cache
-# (refreshed only when missing or under --force), then a fresh download
-# into that cache. Returns non-zero (silently) when <name> isn't a script
-# in this repo at all, so the caller can fall through to the apt/config
-# lookup for genuinely external tools.
+# Install a single named script from _SRC (functional or core) — used for
+# functional scripts, requested individually, unlike the core zz_* set
+# which always installs as one bundle. Returns non-zero (silently) when
+# <name> isn't a script in this repo at all, so the caller can fall
+# through to the apt/config lookup for genuinely external tools.
 _install_repo_script() {
     _name="$1"
-
-    if [ -f "${ROOT_DIR}/${_name}/run.sh" ]; then
-        _src_dir="${ROOT_DIR}/${_name}"
-    else
-        if [ "$FORCE" -eq 1 ] || [ ! -f "${ZZ_CACHE_DIR}/zz_colors/run.sh" ]; then
-            _refresh_cache || return 1
-        fi
-        [ -f "${ZZ_CACHE_DIR}/${_name}/run.sh" ] || return 1
-        _src_dir="${ZZ_CACHE_DIR}/${_name}"
-    fi
+    _resolve_src || return 1
+    [ -f "${_SRC}/${_name}/run.sh" ] || return 1
 
     _dir=$(_bindir) || { _zzu_log e "No writable bin directory found for {Purple ${_name}}"; return 1; }
     _ensure_path "$_dir"
 
-    _zzu_log i "Installing {Purple ${_name}} from {U ${_src_dir}} to {U ${_dir}}..."
-    cp "${_src_dir}/run.sh" "${_dir}/.${_name}.$$"
+    _zzu_log i "Installing {Purple ${_name}} from {U ${_SRC}/${_name}} to {U ${_dir}}..."
+    cp "${_SRC}/${_name}/run.sh" "${_dir}/.${_name}.$$"
     chmod +x "${_dir}/.${_name}.$$"
     mv "${_dir}/.${_name}.$$" "${_dir}/${_name}"
     _zzu_log s "Installed {Purple ${_name}} to {U ${_dir}/${_name}}"
@@ -240,7 +264,7 @@ _download_install() {
 
     _zzu_log i "Downloading {Purple $_tool} from {U $_url}..."
     _tmp=$(mktemp -d)
-    trap 'rm -rf "$_tmp"' EXIT
+    _add_tmp "$_tmp"
 
     case "$_archive" in
     tar.gz | tgz)
@@ -266,19 +290,9 @@ _download_install() {
     chmod +x "$_tmp/$_binpath"
     cp "$_tmp/$_binpath" "$_dir/$_tool"
     _zzu_log s "Installed {Purple $_tool} to {U $_dir/$_tool}"
-
-    rm -rf "$_tmp"
-    trap - EXIT
 }
 
-# The activator itself: resolve every requested tool, one at a time. Wired
-# up entirely through the _* helpers above (_bindir, _zzu_log,
-# _install_zz_bundle, _install_repo_script, _apt_install, _download_install),
-# every one of which is self-sufficient — none of them require zz_bindir,
-# zz_log, or any other core script to already be on PATH. That's what lets
-# `_use` bootstrap the core zz_* bundle from nothing (e.g. the very first
-# `zz_use zz_colors ...` a freshly downloaded, standalone zz_use ever runs,
-# per setup.sh) without needing any of its own dependencies installed first.
+# The activator itself: resolve every requested tool, one at a time.
 _use() {
     _zz_bundle_installed=0
 

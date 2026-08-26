@@ -81,12 +81,20 @@ zz_use zz_colors zz_args load-json jq git
 ```
 
 Internally, `run.sh` is a thin wrapper around a `_use()` function that does
-the actual resolving. Every helper it calls (`_bindir`, `_install_zz_bundle`,
-`_install_repo_script`, ...) is self-sufficient — none of them require
-`zz_bindir`, `zz_log`, or any other core script to already be on `PATH`.
-That's what lets `zz_use` bootstrap the whole core `zz_*` bundle from
-nothing: the very first `zz_use zz_colors ...` a freshly downloaded,
-standalone `zz_use` ever runs (e.g. from `setup.sh`) needs none of its own
+the actual resolving, calling `_bindir`, `_install_zz_bundle`,
+`_install_repo_script`, etc. None of them need `zz_bindir`, `zz_log`, or
+any other core script to already be on `PATH` — but that's not because
+they each carry a fallback reimplementation. It's `_resolve_src` doing the
+one thing that actually has to happen first: figure out the "tarball
+context" (a checkout, a warm cache, or a freshly downloaded tarball — all
+three are just a directory of `zz_*/run.sh` siblings) and symlink every
+script in it onto `PATH` under its real name, in a throwaway scratch dir.
+From that point on, `command -v zz_bindir`, `zz_log ...`, even the
+`. zz_colors` *inside* zz_bindir's and zz_log's own source, all just
+resolve normally — zero reimplementation of what those scripts do. That's
+what lets `zz_use` bootstrap the whole core `zz_*` bundle from nothing:
+the very first `zz_use zz_colors ...` a freshly downloaded, standalone
+`zz_use` ever runs (e.g. from `setup.sh`) needs none of its own
 dependencies installed first.
 
 For each `<tool>` requested, in order:
