@@ -18,11 +18,30 @@ One folder per script (an npm workspace), each self-contained:
                   #   (validate-json/config/, zz_use/config/zz_use.json)
 tests/helpers.bash # shared bats setup: links every <name>/run.sh onto PATH
 package.json       # npm workspaces root, listing every folder above
+setup.sh            # root bootstrapper: temp-downloads the core zz_* scripts
 ```
 
 Modeled on `tomgrv/actions`' one-folder-per-unit convention (`<action>/`
 with its own `action.yml`/`run.sh`/`package.json`), adapted for plain
 shell scripts instead of composite GitHub Actions.
+
+## `setup.sh` — root bootstrap
+
+A machine with nothing installed yet needs *something* fetchable with zero
+prerequisites. That's `setup.sh`: it temp-downloads a tarball of this repo,
+links only the core `zz_*` scripts (not the functional ones) onto a
+writable `PATH` directory, and discards the download — no persistent
+checkout is kept.
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/tomgrv/scripts/main/setup.sh | sh
+```
+
+That's the only thing that needs fetching up front. Once `zz_use` is on
+`PATH`, every other script — core or functional — resolves and installs
+its own further dependencies on demand the same way (see `zz_use` below).
+Functional scripts themselves aren't installed by `setup.sh` or `zz_use`;
+install those directly (`npm install <folder>`, or check out the repo).
 
 ## Naming
 
