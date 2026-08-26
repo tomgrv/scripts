@@ -1,0 +1,12 @@
+{
+    "name": "normalize-json",
+    "version": "1.0.0",
+    "description": "Sort JSON object keys per schema and alphabetically, optional in-place write",
+    "private": true,
+    "bin": {
+        "normalize-json": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

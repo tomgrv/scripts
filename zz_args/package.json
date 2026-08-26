@@ -1,0 +1,12 @@
+{
+    "name": "zz_args",
+    "version": "1.0.0",
+    "description": "Parse $@ per a heredoc spec, print eval-able var=value assignments",
+    "private": true,
+    "bin": {
+        "zz_args": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

@@ -2,31 +2,30 @@
     "name": "@tomgrv/scripts",
     "version": "1.0.0",
     "description": "Reusable POSIX shell scripts shared across tomgrv devcontainer-features and vps",
-    "files": ["*.sh", "config/**/*"],
-    "bin": {
-        "zz_use": "zz_use.sh",
-        "zz_colors": "zz_colors.sh",
-        "zz_log": "zz_log.sh",
-        "zz_args": "zz_args.sh",
-        "zz_prompt": "zz_prompt.sh",
-        "zz_ask": "zz_ask.sh",
-        "zz_input": "zz_input.sh",
-        "zz_bindir": "zz_bindir.sh",
-        "load-json": "load-json.sh",
-        "merge-json": "merge-json.sh",
-        "normalize-json": "normalize-json.sh",
-        "validate-json": "validate-json.sh",
-        "run-npx": "run-npx.sh",
-        "dispatch-script": "dispatch-script.sh",
-        "resolve-context": "resolve-context.sh",
-        "persist-var": "persist-var.sh",
-        "edit-script": "edit-script.sh",
-        "distribute-utils": "distribute-utils.sh",
-        "install-feature": "install-feature.sh",
-        "configure-feature": "configure-feature.sh"
-    },
+    "license": "MIT",
+    "workspaces": [
+        "zz_use",
+        "zz_colors",
+        "zz_log",
+        "zz_args",
+        "zz_prompt",
+        "zz_ask",
+        "zz_input",
+        "zz_bindir",
+        "load-json",
+        "validate-json",
+        "normalize-json",
+        "merge-json",
+        "run-npx",
+        "dispatch-script",
+        "resolve-context",
+        "persist-var",
+        "edit-script",
+        "distribute-utils",
+        "install-feature",
+        "configure-feature"
+    ],
     "scripts": {
-        "test": "bats tests"
-    },
-    "license": "MIT"
+        "test": "bats --recursive ."
+    }
 }

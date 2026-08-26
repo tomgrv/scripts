@@ -1,0 +1,12 @@
+{
+    "name": "dispatch-script",
+    "version": "1.0.0",
+    "description": "Dispatch an underscore-prefixed caller to a sibling <name>-<subcmd> script",
+    "private": true,
+    "bin": {
+        "dispatch-script": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

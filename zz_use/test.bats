@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-load helpers.bash
+load ../tests/helpers.bash
 
 setup() {
     setup_scripts_path

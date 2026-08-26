@@ -1,0 +1,12 @@
+{
+    "name": "configure-feature",
+    "version": "1.0.0",
+    "description": "Deploy a feature's stubs into the cwd (merging), run configure-*.sh",
+    "private": true,
+    "bin": {
+        "configure-feature": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

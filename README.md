@@ -6,32 +6,30 @@ Reusable POSIX `sh` scripts shared across
 
 ## Layout
 
-Flat, one file per atomic function at the repo root — mirrors
-`tomgrv/actions`' one-purpose-per-unit model and `common-utils/bin`'s
-npm-linked `bin` map, minus the per-action `action.yml`/`run.sh` subfolder
-GitHub Actions needs.
+One folder per script (an npm workspace), each self-contained:
 
 ```
-zz_use.sh                # activator: on-demand dependency management
-zz_colors.sh              # core: ANSI color vars (sourced)
-zz_log.sh                  # core: leveled log line
-zz_args.sh                  # core: arg parsing
-zz_prompt.sh                 # core: free-form interactive input
-zz_ask.sh                     # core: single-char confirm
-zz_input.sh                    # core: arg/file/stdin input
-zz_bindir.sh                    # core: resolve a writable bin dir
-<verb>-<topic>.sh        # functional scripts, one per file
-config/zz_use.json        # tool -> apt package / download URL map for zz_use
-config/_default.schema.json
-tests/*.bats
+<name>/
+  run.sh          # the script; linked onto PATH as `<name>`
+  package.json    # {"name": "<name>", "bin": {"<name>": "run.sh"}, ...}
+  README.md       # usage + dependencies for this one script
+  test.bats       # bats tests for this script
+  config/         # optional: resources owned by this script only
+                  #   (validate-json/config/, zz_use/config/zz_use.json)
+tests/helpers.bash # shared bats setup: links every <name>/run.sh onto PATH
+package.json       # npm workspaces root, listing every folder above
 ```
+
+Modeled on `tomgrv/actions`' one-folder-per-unit convention (`<action>/`
+with its own `action.yml`/`run.sh`/`package.json`), adapted for plain
+shell scripts instead of composite GitHub Actions.
 
 ## Naming
 
-- **Core** scripts keep the `zz_` prefix — each atomic function is its own
+- **Core** folders keep the `zz_` prefix — each atomic function is its own
   dedicated script: `zz_use`, `zz_colors`, `zz_log`, `zz_args`, `zz_prompt`,
   `zz_ask`, `zz_input`, `zz_bindir`.
-- **Functional** scripts use `<verb>-<topic>` naming: `validate-json`,
+- **Functional** folders use `<verb>-<topic>` naming: `validate-json`,
   `normalize-json`, `merge-json`, `load-json`, `run-npx`, `dispatch-script`,
   `resolve-context`, `persist-var`, `edit-script`, `distribute-utils`,
   `install-feature`, `configure-feature`.
@@ -50,11 +48,12 @@ For each `<tool>` requested, in order:
 1. `command -v <tool>` — already there, no-op.
 2. **`zz_*` tools** — installed together, as a single bundle, the first
    time any one of them is missing (not one download/copy per script:
-   they ship together and are cheap to install as a set). Source is a
-   sibling `zz_*.sh` in this repo when running from a checkout/npm
-   install, or a one-shot fetch of the `tomgrv/scripts` tarball otherwise.
-3. **Any other tool** — looked up in `config/zz_use.json` (override with
-   `ZZ_USE_CONFIG`):
+   they ship together and are cheap to install as a set). Source is every
+   sibling `zz_*/run.sh` folder in this repo when running from a
+   checkout/npm install, or a one-shot fetch of the `tomgrv/scripts`
+   tarball otherwise.
+3. **Any other tool** — looked up in `zz_use/config/zz_use.json` (override
+   with `ZZ_USE_CONFIG`):
    - `{"apt": "<pkg>"}` → `apt-get install -y <pkg>` (via `sudo` if not root).
    - `{"url": ..., "archive": "tar.gz"|"tar.xz"|"zip"|"raw", "binpath": ...}`
      → download, extract if needed, resolve a writable bin dir via
@@ -96,22 +95,26 @@ the tool isn't already available.
 | `install-feature`      | copy a feature's stubs/config/bin into a target, run `install-*.sh`     |
 | `configure-feature`    | deploy a feature's stubs into the cwd (merging), run `configure-*.sh`   |
 
+See each folder's own `README.md` for its usage line.
+
 ## Usage
 
-Install directly, or via npm:
+Install the whole workspace, or a single script's own package:
 
 ```sh
-npm install --save-dev @tomgrv/scripts
+npm install --save-dev @tomgrv/scripts   # everything
+# or, e.g.:
+npm install --save-dev ./validate-json    # just this one, standalone
 ```
 
 Every functional script is self-contained: `zz_use zz_colors zz_args ...`
 resolves its own dependencies (installing the `zz_*` bundle and any
 external tools on first use), then `. zz_colors` picks up the color vars.
-Any single script can be copied out or symlinked onto `PATH` and still
-work standalone.
+Any single folder can be copied out and still work standalone.
 
 ## Tests
 
 ```sh
-npm test   # bats tests
+npm test                       # bats --recursive . (every */test.bats)
+bats validate-json/test.bats   # a single script's tests
 ```

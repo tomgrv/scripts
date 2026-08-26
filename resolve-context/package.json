@@ -1,0 +1,12 @@
+{
+    "name": "resolve-context",
+    "version": "1.0.0",
+    "description": "Resolve a feature's source/target directories from the calling script",
+    "private": true,
+    "bin": {
+        "resolve-context": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

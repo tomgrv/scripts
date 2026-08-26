@@ -1,0 +1,12 @@
+{
+    "name": "run-npx",
+    "version": "1.0.0",
+    "description": "Run a local node_modules/.bin binary, falling back to npx",
+    "private": true,
+    "bin": {
+        "run-npx": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

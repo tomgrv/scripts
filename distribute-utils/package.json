@@ -1,0 +1,12 @@
+{
+    "name": "distribute-utils",
+    "version": "1.0.0",
+    "description": "Copy zz_*/utility scripts into a project's local scripts directory",
+    "private": true,
+    "bin": {
+        "distribute-utils": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

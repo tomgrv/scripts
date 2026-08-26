@@ -32,7 +32,11 @@
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Follow symlinks (an installed/linked "zz_use" on PATH is a symlink to this
+# file) so SCRIPT_DIR/ROOT_DIR resolve to the real checkout, not the link's
+# directory.
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # zz_log may itself not be installed yet on a first-ever bootstrap: fall
 # back to plain stderr output rather than depending on it circularly.
@@ -75,15 +79,30 @@ _bindir() {
     return 1
 }
 
-# Install every zz_* script in this repo at once, as a single bundle.
+# _bindir runs (and exports PATH) inside a subshell whenever it's captured
+# via $(...), so its PATH extension never reaches this script's own
+# environment. Re-apply it here so a tool installed just now is actually
+# found by this script's own `command -v` checks below.
+_ensure_path() {
+    case ":$PATH:" in
+    *":$1:"*) ;;
+    *) export PATH="$1:$PATH" ;;
+    esac
+}
+
+# Install every zz_*/ folder's run.sh in this repo at once, as a single
+# bundle, linked onto the bin dir under its folder name (e.g. zz_log/run.sh
+# -> <bindir>/zz_log).
 _install_zz_bundle() {
     _dir=$(_bindir) || { _zzu_log e "No writable bin directory found for zz_* bundle install"; return 1; }
+    _ensure_path "$_dir"
 
-    if ls "${SCRIPT_DIR}"/zz_*.sh >/dev/null 2>&1; then
-        _zzu_log i "Installing zz_* bundle from {U ${SCRIPT_DIR}} to {U ${_dir}}..."
-        for _f in "${SCRIPT_DIR}"/zz_*.sh; do
-            _name=$(basename "$_f" .sh)
-            cp "$_f" "${_dir}/${_name}"
+    if ls -d "${ROOT_DIR}"/zz_*/ >/dev/null 2>&1 && [ -f "${ROOT_DIR}/zz_colors/run.sh" ]; then
+        _zzu_log i "Installing zz_* bundle from {U ${ROOT_DIR}} to {U ${_dir}}..."
+        for _d in "${ROOT_DIR}"/zz_*/; do
+            [ -f "${_d}run.sh" ] || continue
+            _name=$(basename "$_d")
+            cp "${_d}run.sh" "${_dir}/${_name}"
             chmod +x "${_dir}/${_name}"
         done
     else
@@ -91,10 +110,10 @@ _install_zz_bundle() {
         _tmp=$(mktemp -d)
         trap 'rm -rf "$_tmp"' EXIT
         curl -fsSL "$ZZ_USE_REPO_URL" | tar -xz -C "$_tmp" --strip-components=1
-        for _f in "${_tmp}"/zz_*.sh; do
-            [ -f "$_f" ] || continue
-            _name=$(basename "$_f" .sh)
-            cp "$_f" "${_dir}/${_name}"
+        for _d in "${_tmp}"/zz_*/; do
+            [ -f "${_d}run.sh" ] || continue
+            _name=$(basename "$_d")
+            cp "${_d}run.sh" "${_dir}/${_name}"
             chmod +x "${_dir}/${_name}"
         done
         rm -rf "$_tmp"
@@ -168,6 +187,7 @@ _download_install() {
     [ -f "$_tmp/$_binpath" ] || { _zzu_log e "Downloaded archive for {Purple $_tool} has no {U $_binpath}"; return 1; }
 
     _dir=$(_bindir)
+    _ensure_path "$_dir"
     chmod +x "$_tmp/$_binpath"
     cp "$_tmp/$_binpath" "$_dir/$_tool"
     _zzu_log s "Installed {Purple $_tool} to {U $_dir/$_tool}"

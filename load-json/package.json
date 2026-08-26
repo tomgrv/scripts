@@ -1,0 +1,12 @@
+{
+    "name": "load-json",
+    "version": "1.0.0",
+    "description": "Load JSON from a file or URL, tagging it with $id",
+    "private": true,
+    "bin": {
+        "load-json": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

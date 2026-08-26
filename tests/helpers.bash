@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
-# Shared bats setup: links repo-root *.sh scripts onto PATH under their
-# public command names (zz_wrap/zz_use are sourced, not linked).
+# Shared bats setup: symlinks every <folder>/run.sh onto PATH under its
+# folder name, the same way an install would. Config/resource files that
+# live alongside a script's run.sh (e.g. validate-json/config/) stay
+# resolvable because dirname(readlink -f "$0")) still finds the real folder.
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 setup_scripts_path() {
-    local file
+    local dir
     TEST_BIN=$(mktemp -d)
-    for file in "$REPO_ROOT"/*.sh; do
-        [ -f "$file" ] || continue
-        chmod +x "$file"
-        ln -sf "$file" "$TEST_BIN/$(basename "$file" | sed 's/\.sh$//')"
+    for dir in "$REPO_ROOT"/*/; do
+        [ -f "${dir}run.sh" ] || continue
+        chmod +x "${dir}run.sh"
+        ln -sf "${dir}run.sh" "$TEST_BIN/$(basename "$dir")"
     done
     export PATH="$TEST_BIN:$PATH"
 }
