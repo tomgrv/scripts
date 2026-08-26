@@ -1,7 +1,7 @@
 #!/bin/sh
-# Run a locally installed npm package binary directly, skipping npx's
-# per-invocation resolution overhead. Falls back to npx only when the
-# binary isn't present locally, and only if npx itself is available.
+# zz_npx — run a locally installed npm package binary directly, skipping
+# npx's per-invocation resolution overhead. Falls back to npx only when
+# the binary isn't present locally, and only if npx itself is available.
 #
 # The npx fallback may install <tool> on the fly, so its lifecycle scripts
 # are untrusted and skipped (--ignore-scripts) by default. Pass -s to allow
@@ -19,7 +19,7 @@ eval $(
 )
 
 if [ -z "$tool" ]; then
-    zz_log e "Usage: run-npx [-s] <tool> [args...]"
+    zz_log e "Usage: zz_npx [-s] <tool> [args...]"
     exit 1
 fi
 

@@ -10,7 +10,7 @@ teardown() {
     teardown_scripts_path
 }
 
-@test "run-npx requires a tool argument" {
-    run run-npx
+@test "zz_npx requires a tool argument" {
+    run zz_npx
     [ "$status" -ne 0 ]
 }

@@ -1,4 +1,7 @@
 #!/bin/sh
+# zz_persist — upsert a KEY=VALUE pair into an env-style file and/or an
+# /etc/profile.d/<profile>.sh snippet, so the value survives a new shell
+# or a script re-run.
 set -e
 
 zz_use zz_colors zz_args
@@ -14,7 +17,7 @@ help
 )
 
 if [ -z "$key" ]; then
-    zz_log e "Usage: persist-var [-f file] [-p profile] <key> <value>"
+    zz_log e "Usage: zz_persist [-f file] [-p profile] <key> <value>"
     exit 1
 fi
 
