@@ -28,9 +28,11 @@ shell scripts instead of composite GitHub Actions.
 ## `setup.sh` — root bootstrap
 
 A machine with nothing installed yet needs *something* fetchable with zero
-prerequisites. That's `setup.sh`: it downloads a tarball of this repo (or
-reuses a cached copy — see caching below), links only the core `zz_*`
-scripts (not the functional ones) onto a writable `PATH` directory.
+prerequisites. That's `setup.sh`, kept deliberately dumb and DRY: it
+downloads a tarball of this repo to a temp dir, then hands off to the
+`zz_use` it just downloaded to install the core `zz_*` bundle from
+there — the same bin-dir resolution and linking logic `zz_use` always
+uses, not a second copy of it — and discards the temp dir.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/tomgrv/scripts/main/setup.sh | sh
