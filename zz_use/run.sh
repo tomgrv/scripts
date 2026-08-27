@@ -250,6 +250,24 @@ _ensure_path() {
     esac
 }
 
+# A handful of scripts (validate-json's "-l true"/"use script folder"
+# fallback schema, in particular) resolve sibling data relative to their
+# own installed location - a bare bindir/config/<file> next to the script,
+# not the run.sh they were copied from. Since several scripts can each
+# ship a config/ dir, merge them all into one shared bindir/config/
+# instead of a single script "owning" it: copy in whatever isn't already
+# there, never overwrite (first script installed wins on a name clash).
+_install_script_config() {
+    _cfg_src="$1" _cfg_dir="$2"
+    [ -d "$_cfg_src" ] || return 0
+    mkdir -p "$_cfg_dir"
+    for _cfg_file in "$_cfg_src"/*; do
+        [ -f "$_cfg_file" ] || continue
+        _cfg_dest="$_cfg_dir/$(basename "$_cfg_file")"
+        [ -e "$_cfg_dest" ] || cp "$_cfg_file" "$_cfg_dest"
+    done
+}
+
 # Install every zz_*/ folder's run.sh from _SRC for <origin>/<ref> at
 # once, as a single bundle, linked onto the bin dir under its folder name
 # (e.g. zz_log/run.sh -> <bindir>/zz_log).
@@ -273,6 +291,7 @@ _install_zz_bundle() {
         cp "${_d}run.sh" "${_dir}/.${_name}.$$"
         chmod +x "${_dir}/.${_name}.$$"
         mv "${_dir}/.${_name}.$$" "${_dir}/${_name}"
+        _install_script_config "${_d}config" "${_dir}/config"
     done
     _zzu_log s "zz_* bundle installed to {U ${_dir}}"
 }
@@ -296,6 +315,7 @@ _install_repo_script() {
     cp "${_SRC}/${_name}/run.sh" "${_dir}/.${_name}.$$"
     chmod +x "${_dir}/.${_name}.$$"
     mv "${_dir}/.${_name}.$$" "${_dir}/${_name}"
+    _install_script_config "${_SRC}/${_name}/config" "${_dir}/config"
     _zzu_log s "Installed {Purple ${_name}} to {U ${_dir}/${_name}}"
 }
 
