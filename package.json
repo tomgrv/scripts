@@ -1,6 +1,6 @@
 {
     "name": "@tomgrv/scripts",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Reusable POSIX shell scripts shared across tomgrv devcontainer-features and vps",
     "license": "MIT",
     "scripts": {
