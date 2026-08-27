@@ -16,7 +16,7 @@
         "zz_dispatch",
         "zz_npx",
         "zz_persist",
-        "zz_wrap",
+        "zz_call",
         "load-json",
         "validate-json",
         "normalize-json",

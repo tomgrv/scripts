@@ -6,14 +6,18 @@
 # dependency it needs — including the zz_* utility scripts it sources):
 #   zz_use zz_log zz_args jq git
 #
-# Any tool name accepts an optional @<ref> suffix to pin it to a specific
-# tag, branch, or commit of this repo instead of the default branch (main):
+# Any tool name accepts an optional [org/repo/] prefix and/or @<ref>
+# suffix, to pull it from a different GitHub repo and/or pin it to a
+# specific tag, branch, or commit instead of this repo's own default
+# (ZZ_ORIGIN, ZZ_ORIGIN_REF — see below):
 #   zz_use validate-json@v2
-# A @<ref> request always (re)installs — the existing "already available"
-# skip only applies to unversioned requests, since there's no way to tell
-# from an installed script alone which ref it came from. Each ref gets its
-# own cache slot (see ZZ_CACHE_DIR below), so pinning one script to an
-# older tag doesn't disturb anything already resolved at main.
+#   zz_use someorg/otherscripts/some-tool@v1
+# A pinned or other-origin request always (re)installs — the existing
+# "already available" skip only applies to a plain, default-origin
+# request, since there's no way to tell from an installed script alone
+# which repo/ref produced it. Each origin+ref gets its own cache slot (see
+# ZZ_CACHE_DIR below), so pinning one script doesn't disturb anything
+# already resolved at the default.
 #
 # Two install paths:
 #
@@ -78,16 +82,22 @@ SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 ZZ_USE_CONFIG="${ZZ_USE_CONFIG:-${SCRIPT_DIR}/config/zz_use.json}"
-# {REF} is substituted with the requested tag/branch/commit (default
-# "main") — GitHub's archive endpoint accepts a tag, a branch, or a commit
-# SHA interchangeably in that same position.
+# ZZ_ORIGIN (org/repo) and ZZ_ORIGIN_REF (tag/branch/commit) are the
+# default source for any tool name that doesn't specify its own — the
+# same two variables setup.sh uses to pick what it bootstraps from, so a
+# zz_use call defaults to wherever this install actually came from.
+ZZ_ORIGIN="${ZZ_ORIGIN:-tomgrv/scripts}"
+ZZ_ORIGIN_REF="${ZZ_ORIGIN_REF:-main}"
+# {ORIGIN} and {REF} are substituted with the requested org/repo and
+# tag/branch/commit — GitHub's archive endpoint accepts a tag, a branch,
+# or a commit SHA interchangeably in the {REF} position.
 #
 # The default is built as a separate plain assignment, not inlined into
 # ${ZZ_USE_REPO_URL:-...}: a literal "}" inside that expansion's default
 # text (from "{REF}") terminates the expansion early at parse time,
 # regardless of quoting — `${X:-a{REF}.b}` evaluates to `a{REF` with
 # literal `.b}` appended after, not the intended default string.
-_ZZ_USE_REPO_URL_DEFAULT='https://github.com/tomgrv/scripts/archive/{REF}.tar.gz'
+_ZZ_USE_REPO_URL_DEFAULT='https://github.com/{ORIGIN}/archive/{REF}.tar.gz'
 ZZ_USE_REPO_URL="${ZZ_USE_REPO_URL:-$_ZZ_USE_REPO_URL_DEFAULT}"
 ZZ_CACHE_DIR="${ZZ_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zz_scripts}"
 
@@ -127,35 +137,39 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-# _SRC: the resolved tarball-context directory for _SRC_REF (set by
-# _resolve_src). _SRC_RESOLVED guards against re-resolving the same ref
-# more than once per run; a different ref requested later in the same run
-# re-resolves (and switches _SRC to it).
+# _SRC: the resolved tarball-context directory for _SRC_ORIGIN/_SRC_REF
+# (set by _resolve_src). _SRC_RESOLVED guards against re-resolving the
+# same origin+ref more than once per run; a different one requested later
+# in the same run re-resolves (and switches _SRC to it).
 _SRC=""
+_SRC_ORIGIN=""
 _SRC_REF=""
 _SRC_RESOLVED=0
 
-# Resolve _SRC for <ref> (default: main) — a local checkout (ROOT_DIR, when
-# zz_use is running from within this repo and no specific ref was asked
-# for), otherwise the local cache for that ref (refreshed first when
-# missing or under --force) — then expose every zz_*/run.sh in it on PATH
-# under its bare conventional name (zz_colors, zz_log, zz_bindir, ...) via
-# symlinks in a scratch dir. That's what lets `command -v zz_bindir`,
-# `zz_log ...`, and `. zz_colors` (including from *inside* zz_bindir's and
-# zz_log's own source) all just resolve normally from here on, with zero
-# reimplementation of what those scripts do.
+# Resolve _SRC for <origin> (default: ZZ_ORIGIN) at <ref> (default:
+# ZZ_ORIGIN_REF) — a local checkout (ROOT_DIR, when zz_use is running from
+# within this repo, the requested origin is this repo's own default, and
+# no specific ref was asked for), otherwise the local cache for that
+# origin+ref (refreshed first when missing or under --force) — then
+# expose every zz_*/run.sh in it on PATH under its bare conventional name
+# (zz_colors, zz_log, zz_bindir, ...) via symlinks in a scratch dir.
+# That's what lets `command -v zz_bindir`, `zz_log ...`, and `. zz_colors`
+# (including from *inside* zz_bindir's and zz_log's own source) all just
+# resolve normally from here on, with zero reimplementation of what those
+# scripts do.
 _resolve_src() {
-    _req_ref="${1:-}"
-    if [ "$_SRC_RESOLVED" -eq 1 ] && [ "$_SRC_REF" = "$_req_ref" ]; then
+    _req_origin="${1:-$ZZ_ORIGIN}"
+    _req_ref="${2:-}"
+    if [ "$_SRC_RESOLVED" -eq 1 ] && [ "$_SRC_ORIGIN" = "$_req_origin" ] && [ "$_SRC_REF" = "$_req_ref" ]; then
         return 0
     fi
 
-    if [ -z "$_req_ref" ] && ls -d "${ROOT_DIR}"/zz_*/ >/dev/null 2>&1 && [ -f "${ROOT_DIR}/zz_colors/run.sh" ]; then
+    if [ "$_req_origin" = "$ZZ_ORIGIN" ] && [ -z "$_req_ref" ] && ls -d "${ROOT_DIR}"/zz_*/ >/dev/null 2>&1 && [ -f "${ROOT_DIR}/zz_colors/run.sh" ]; then
         _SRC="$ROOT_DIR"
     else
-        _cache_dir="${ZZ_CACHE_DIR}/${_req_ref:-main}"
+        _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_req_ref:-$ZZ_ORIGIN_REF}"
         if [ "$FORCE" -eq 1 ] || [ ! -f "${_cache_dir}/zz_colors/run.sh" ]; then
-            _refresh_cache "$_req_ref" "$_cache_dir" || return 1
+            _refresh_cache "$_req_origin" "$_req_ref" "$_cache_dir" || return 1
         else
             _zzu_log - "Using cached repo scripts at {U ${_cache_dir}}"
         fi
@@ -170,19 +184,24 @@ _resolve_src() {
     done
     export PATH="${_bootstrap_dir}:${PATH}"
 
+    _SRC_ORIGIN="$_req_origin"
     _SRC_REF="$_req_ref"
     _SRC_RESOLVED=1
 }
 
-# Refresh <cache_dir> from ZZ_USE_REPO_URL at <ref> (default: main).
-# Extracts into a sibling temp dir first and swaps it in with `mv`, so a
-# script currently running out of the old cache is never left reading a
-# half-written directory.
+# Refresh <cache_dir> from ZZ_USE_REPO_URL for <origin> (default:
+# ZZ_ORIGIN) at <ref> (default: ZZ_ORIGIN_REF). Extracts into a sibling
+# temp dir first and swaps it in with `mv`, so a script currently running
+# out of the old cache is never left reading a half-written directory.
 _refresh_cache() {
-    _req_ref="${1:-main}"
-    _cache_dir="$2"
-    _url=$(printf '%s' "$ZZ_USE_REPO_URL" | sed "s/{REF}/${_req_ref}/g")
-    _zzu_log i "Retrieving repo scripts ({B ${_req_ref}}) from {U ${_url}}..."
+    _req_origin="${1:-$ZZ_ORIGIN}"
+    _req_ref="${2:-$ZZ_ORIGIN_REF}"
+    _cache_dir="$3"
+    # {ORIGIN} can itself contain "/" (org/repo), so substituting it with
+    # sed needs a delimiter that isn't "/" — {REF} doesn't, but shares the
+    # same sed call for one substitution pass either way.
+    _url=$(printf '%s' "$ZZ_USE_REPO_URL" | sed -e "s|{ORIGIN}|${_req_origin}|g" -e "s/{REF}/${_req_ref}/g")
+    _zzu_log i "Retrieving repo scripts ({B ${_req_origin}@${_req_ref}}) from {U ${_url}}..."
     _tmp="${_cache_dir}.tmp.$$"
     _add_tmp "$_tmp"
     rm -rf "$_tmp"
@@ -216,12 +235,13 @@ _ensure_path() {
     esac
 }
 
-# Install every zz_*/ folder's run.sh from _SRC at <ref> (default: main) at
+# Install every zz_*/ folder's run.sh from _SRC for <origin>/<ref> at
 # once, as a single bundle, linked onto the bin dir under its folder name
 # (e.g. zz_log/run.sh -> <bindir>/zz_log).
 _install_zz_bundle() {
-    _ref="${1:-}"
-    _resolve_src "$_ref" || return 1
+    _origin="${1:-$ZZ_ORIGIN}"
+    _ref="${2:-}"
+    _resolve_src "$_origin" "$_ref" || return 1
     _dir=$(_bindir) || { _zzu_log e "No writable bin directory found for zz_* bundle install"; return 1; }
     _ensure_path "$_dir"
 
@@ -242,15 +262,16 @@ _install_zz_bundle() {
     _zzu_log s "zz_* bundle installed to {U ${_dir}}"
 }
 
-# Install a single named script from _SRC at <ref> (default: main) —
-# functional or core, requested individually, unlike the core zz_* set
-# which always installs as one bundle. Returns non-zero (silently) when
-# <name> isn't a script in this repo at all, so the caller can fall
-# through to the apt/config lookup for genuinely external tools.
+# Install a single named script from _SRC for <origin>/<ref> — functional
+# or core, requested individually, unlike the core zz_* set which always
+# installs as one bundle. Returns non-zero (silently) when <name> isn't a
+# script in that repo at all, so the caller can fall through to the
+# apt/config lookup for genuinely external tools.
 _install_repo_script() {
     _name="$1"
-    _ref="${2:-}"
-    _resolve_src "$_ref" || return 1
+    _origin="${2:-$ZZ_ORIGIN}"
+    _ref="${3:-}"
+    _resolve_src "$_origin" "$_ref" || return 1
     [ -f "${_SRC}/${_name}/run.sh" ] || return 1
 
     _dir=$(_bindir) || { _zzu_log e "No writable bin directory found for {Purple ${_name}}"; return 1; }
@@ -335,31 +356,45 @@ _download_install() {
 }
 
 # The activator itself: resolve every requested tool, one at a time.
-# "<tool>@<ref>" pins that one tool to a specific tag/branch/commit of this
-# repo; ref is stripped from the name for command lookup/config/case
-# matching and threaded through to the bundle/repo-script installers.
+# "[org/repo/]<tool>[@ref]" pulls that one tool from a specific GitHub
+# repo and/or pins it to a specific tag/branch/commit instead of this
+# repo's own default (ZZ_ORIGIN/ZZ_ORIGIN_REF); the origin/ref are
+# stripped from the name for command lookup/config/case matching and
+# threaded through to the bundle/repo-script installers.
 _use() {
     _zz_bundle_installed_for="__none__"
 
     for tool_ref in "$@"; do
         case "$tool_ref" in
         *@*)
-            tool="${tool_ref%%@*}"
+            _name_part="${tool_ref%%@*}"
             ref="${tool_ref#*@}"
             ;;
         *)
-            tool="$tool_ref"
+            _name_part="$tool_ref"
             ref=""
             ;;
         esac
 
-        # An unversioned request, not under --force (or --force on a
-        # non-zz_ tool, which --force doesn't apply to), can be skipped if
-        # already on PATH. A @<ref> request always (re)installs: there's
-        # no way to tell from an installed script alone which ref it came
-        # from, so "already available" can't be trusted to mean "at the
-        # requested ref".
-        if [ -z "$ref" ] && { [ "$FORCE" -eq 0 ] || [ "${tool#zz_}" = "$tool" ]; }; then
+        case "$_name_part" in
+        */*/*)
+            _rest="${_name_part#*/}"
+            origin="${_name_part%%/*}/${_rest%%/*}"
+            tool="${_rest#*/}"
+            ;;
+        *)
+            origin="$ZZ_ORIGIN"
+            tool="$_name_part"
+            ;;
+        esac
+
+        # A plain, default-origin, unversioned request, not under --force
+        # (or --force on a non-zz_ tool, which --force doesn't apply to),
+        # can be skipped if already on PATH. A pinned ref and/or a
+        # non-default origin always (re)installs: there's no way to tell
+        # from an installed script alone which repo/ref produced it, so
+        # "already available" can't be trusted to mean "the requested one".
+        if [ -z "$ref" ] && [ "$origin" = "$ZZ_ORIGIN" ] && { [ "$FORCE" -eq 0 ] || [ "${tool#zz_}" = "$tool" ]; }; then
             if command -v "$tool" >/dev/null 2>&1; then
                 _zzu_log - "{Purple $tool} already available"
                 continue
@@ -368,9 +403,10 @@ _use() {
 
         case "$tool" in
         zz_*)
-            if [ "$_zz_bundle_installed_for" != "$ref" ]; then
-                _install_zz_bundle "$ref"
-                _zz_bundle_installed_for="$ref"
+            _bundle_key="${origin}@${ref}"
+            if [ "$_zz_bundle_installed_for" != "$_bundle_key" ]; then
+                _install_zz_bundle "$origin" "$ref"
+                _zz_bundle_installed_for="$_bundle_key"
             fi
             ;;
         *)
@@ -392,8 +428,8 @@ _use() {
                     _download_install "$tool" "$url" "$archive" "$binpath" "$version" \
                         || _zzu_log w "Download install of {Purple $tool} failed"
                 fi
-            elif _install_repo_script "$tool" "$ref"; then
-                : # a functional (or core, requested by name) script from this repo
+            elif _install_repo_script "$tool" "$origin" "$ref"; then
+                : # a functional (or core, requested by name) script from this or another repo
             else
                 _apt_install "$tool" || true
             fi

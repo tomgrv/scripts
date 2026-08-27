@@ -39,11 +39,17 @@ curl -fsSL https://raw.githubusercontent.com/tomgrv/scripts/main/setup.sh | sh
 ```
 
 Pin it to a tag, branch, or commit instead of `main` with a positional arg
-or `ZZ_SETUP_REPO_REF`:
+or `ZZ_ORIGIN_REF`, or bootstrap from a different org/repo entirely with
+`ZZ_ORIGIN`:
 
 ```sh
 curl -fsSL .../setup.sh | sh -s -- v2
 ```
+
+Both are exported for the `zz_use` this hands off to (and anything it
+execs), so every `zz_use` call afterwards defaults to this same origin —
+wherever this install actually came from — rather than a hardcoded
+`tomgrv/scripts`.
 
 That's the only thing that needs fetching up front. Once `zz_use` is on
 `PATH`, every other script — core or functional — resolves and installs
@@ -51,13 +57,14 @@ its own further dependencies on demand the same way (see `zz_use` below).
 Functional scripts themselves aren't installed by `setup.sh` or `zz_use`;
 install those directly (`npm install <folder>`, or check out the repo).
 
-## Caching, `zz_update`, and pinning a ref
+## Caching, `zz_update`, and pinning an origin/ref
 
 Both `setup.sh` and `zz_use`'s zz_* bundle install resolve the same way:
 straight from disk when running inside a checkout of this repo, otherwise
-from a local cache directory (`ZZ_CACHE_DIR/<ref>`, default
-`~/.cache/zz_scripts/main`) that's populated on first use and then just
-linked from on every call after that — no repeat network round-trip.
+from a local cache directory (`ZZ_CACHE_DIR/<org>/<repo>/<ref>`, default
+`~/.cache/zz_scripts/tomgrv/scripts/main`) that's populated on first use
+and then just linked from on every call after that — no repeat network
+round-trip.
 
 `zz_update` forces a fresh download, bypassing the cache, and re-links the
 core `zz_*` scripts from it:
@@ -66,25 +73,29 @@ core `zz_*` scripts from it:
 zz_update              # or: zz_use --force <tool...>
 ```
 
-Any tool name accepts an optional `@<ref>` suffix to pin it to a specific
-tag, branch, or commit instead of `main`:
+Any tool name accepts an optional `[org/repo/]` prefix and/or `@<ref>`
+suffix, to pull it from a different GitHub repo and/or pin it to a
+specific tag, branch, or commit instead of this repo's own default
+(`ZZ_ORIGIN`, default `tomgrv/scripts`; `ZZ_ORIGIN_REF`, default `main`):
 
 ```sh
 zz_use validate-json@v2
+zz_use someorg/otherscripts/some-tool@v1
 ```
 
-Each ref gets its own cache slot, so pinning one script to an older tag
-doesn't disturb anything already resolved at `main`. A `@<ref>` request
-always (re)installs — unlike an unversioned request, it's never skipped
-just because a same-named command is already on `PATH`, since there's no
-way to tell from an installed script alone which ref it came from.
+Each origin+ref gets its own cache slot, so pinning one script doesn't
+disturb anything already resolved at the default. A pinned or
+other-origin request always (re)installs — unlike a plain, default-origin
+request, it's never skipped just because a same-named command is already
+on `PATH`, since there's no way to tell from an installed script alone
+which repo/ref produced it.
 
 ## Naming
 
 - **Core** folders keep the `zz_` prefix — each atomic function is its own
   dedicated script: `zz_use`, `zz_update`, `zz_colors`, `zz_log`, `zz_args`,
   `zz_prompt`, `zz_ask`, `zz_input`, `zz_bindir`, `zz_dispatch`, `zz_npx`,
-  `zz_persist`, `zz_wrap`.
+  `zz_persist`, `zz_call`.
 - **Functional** folders use `<verb>-<topic>` naming: `validate-json`,
   `normalize-json`, `merge-json`, `load-json`, `resolve-context`,
   `edit-script`, `distribute-utils`, `install-feature`,
@@ -161,7 +172,7 @@ the tool isn't already available.
 | `zz_dispatch <caller> <subcmd>`  | dispatch an underscore-prefixed caller to a sibling `<name>-<subcmd>` script |
 | `zz_npx [-s] <tool>`             | run a local `node_modules/.bin` binary, falling back to `npx`         |
 | `zz_persist [-f\|-p] <key> <value>` | upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`  |
-| `zz_wrap -v VAR [-q question] [command...]` | ensure an env var is set (ask + persist if missing), then run a command |
+| `zz_call [-p package.json] [command...]` | resolve a caller's declared env vars (`config.input`/`config.output` in `package.json`; ask + persist if missing), then run a command |
 
 ## Functional scripts
 
