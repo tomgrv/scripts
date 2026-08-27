@@ -18,7 +18,8 @@ zz_call [-p package.json] [command [args...]]
 
 What to check/ask/set, and what to print back, is declared in a
 `package.json` (default: `./package.json` — the caller's own, since every
-script in this repo has one right next to its `run.sh`) under `config`:
+script in this repo has one right next to its `run.sh`) under `config`.
+`input` and `output` entries share one schema:
 
 ```json
 {
@@ -26,23 +27,35 @@ script in this repo has one right next to its `run.sh`) under `config`:
         "file": ".env",
         "input": [
             { "var": "DB_HOST", "question": "Database host?", "default": "localhost" },
-            { "var": "DB_PASSWORD", "question": "Database password?" }
+            { "var": "DB_PASSWORD", "question": "Database password?", "as": "PGPASSWORD" }
         ],
-        "output": ["DB_HOST", { "var": "DB_PASSWORD", "as": "PGPASSWORD" }]
+        "output": [{ "var": "DB_HOST" }, { "var": "DB_PASSWORD", "as": "PGPASSWORD" }]
     }
 }
 ```
 
-- **`input`** — one entry per env var to ensure is set. Each is checked
-  against the environment first; only a missing (unset/empty) one is
-  asked for (`question`, offering `default`) and persisted (to `file`,
-  default `.env`). An already-set var is used as-is: nothing is asked,
-  and nothing new is persisted for it.
-- **`output`** — which resolved vars to print as `export NAME='value'`
-  lines, and under what name. Each entry is either a plain var name
-  (string) or `{"var": "<source>", "as": "<exported-as>"}` to rename on
-  the way out. Defaults to every `input` var, printed under its own name,
-  when `output` is omitted.
+Each entry is `{"var": "<name>", "as": "<export-name>", "question": "...", "default": "..."}`:
+
+- **`var`** (required) — the env var checked, prompted for, and persisted.
+- **`as`** (optional, default: `var`) — the name it's exported/printed
+  under, letting a command see a differently-named var than the one that
+  was actually asked/persisted (e.g. ask for `DB_PASSWORD`, export it to a
+  `psql`-invoked command as `PGPASSWORD`).
+- **`question`**/**`default`** — only meaningful on an `input` entry,
+  offered to `zz_prompt` when `var` is missing.
+
+`input` is checked against the environment first; only a missing
+(unset/empty) `var` is asked for and persisted (to `file`, default
+`.env`) — always under `var`, regardless of `as`. An already-set var is
+used as-is: nothing is asked, and nothing new is persisted for it. Every
+input entry is exported under `var`, and additionally under `as` when the
+two differ (so a wrapped command sees both names).
+
+`output` — which resolved vars to print as `export <as>='value'` lines,
+reading each one's current value from `var`. Defaults to the `input` list
+itself when `output` is omitted (so a lone `as` on an input entry, as
+above, already renames the eval'd output with no separate `output` array
+needed).
 
 With a command, `zz_call` `exec`s it with every input var exported:
 

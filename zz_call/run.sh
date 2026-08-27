@@ -9,29 +9,40 @@
 #
 # What to check/ask/set, and what to print back, is declared in a
 # package.json (default: ./package.json — the caller's own, since every
-# script in this repo has one right next to its run.sh) under `config`:
+# script in this repo has one right next to its run.sh) under `config`.
+# "input" and "output" entries share one schema:
+#
+#   {"var": "<name>", "as": "<export-name>", "question": "...", "default": "..."}
+#
+# - "var" (required): the env var checked, prompted for, and persisted.
+# - "as" (optional, default: var): the name it's exported/printed under —
+#   lets a command see a differently-named var than the one that was
+#   actually asked/persisted (e.g. ask for "DB_PASSWORD", export it to a
+#   psql-invoked command as "PGPASSWORD").
+# - "question"/"default": only meaningful on an "input" entry — offered to
+#   zz_prompt when "var" is missing.
 #
 #   {
 #     "config": {
 #       "file": ".env",
 #       "input": [
 #         {"var": "DB_HOST", "question": "Database host?", "default": "localhost"},
-#         {"var": "DB_PASSWORD", "question": "Database password?"}
+#         {"var": "DB_PASSWORD", "question": "Database password?", "as": "PGPASSWORD"}
 #       ],
-#       "output": ["DB_HOST", {"var": "DB_PASSWORD", "as": "PGPASSWORD"}]
+#       "output": [{"var": "DB_HOST"}, {"var": "DB_PASSWORD", "as": "PGPASSWORD"}]
 #     }
 #   }
 #
 # - "input": one entry per env var to ensure is set. Each is checked
 #   against the environment first; only a missing (unset/empty) one is
 #   asked for (via "question", offering "default") and persisted (to
-#   "file", default ".env"). An already-set var is used as-is — nothing
-#   is asked, and nothing new is persisted for it.
-# - "output": which resolved vars to print as `export NAME='value'` lines,
-#   and under what name. Each entry is either a plain var name (string) or
-#   {"var": "<source>", "as": "<exported-as>"} to rename on the way out.
-#   Defaults to every "input" var, printed under its own name, when
-#   "output" is omitted.
+#   "file", default ".env") — always under "var", regardless of "as". An
+#   already-set var is used as-is — nothing is asked, and nothing new is
+#   persisted for it. Every input entry is exported under "var", and
+#   additionally under "as" when the two differ.
+# - "output": which resolved vars to print as `export <as>='value'` lines,
+#   reading each one's current value from "var". Defaults to the "input"
+#   list itself when "output" is omitted.
 #
 # Usage:
 #   zz_call [-p package.json] [command [args...]]
@@ -53,6 +64,23 @@ pkg="${package:-./package.json}"
 
 file=$(jq -r '.config.file // ".env"' "$pkg")
 
+# Sets var/as/question/default from one config.input/config.output entry.
+# "as" defaults to "var" so every caller can rely on it being set.
+_parse_entry() {
+    var=$(printf '%s' "$1" | jq -r '.var')
+    as=$(printf '%s' "$1" | jq -r '.as // .var')
+    question=$(printf '%s' "$1" | jq -r '.question // empty')
+    default=$(printf '%s' "$1" | jq -r '.default // empty')
+
+    case "$var" in
+    [A-Za-z_][A-Za-z0-9_]*) ;;
+    *)
+        zz_log e "Invalid variable name in {U $pkg}: {Purple $var}"
+        exit 1
+        ;;
+    esac
+}
+
 # jq's own output is looped over via a captured command substitution, not
 # a pipe: `jq ... | while read ...` would run the loop in a subshell, and
 # the `export`s inside it would be lost the moment that subshell exits.
@@ -62,17 +90,7 @@ IFS='
 '
 for _entry in $_input_entries; do
     IFS="$_old_ifs"
-    var=$(printf '%s' "$_entry" | jq -r '.var')
-    question=$(printf '%s' "$_entry" | jq -r '.question // empty')
-    default=$(printf '%s' "$_entry" | jq -r '.default // empty')
-
-    case "$var" in
-    [A-Za-z_][A-Za-z0-9_]*) ;;
-    *)
-        zz_log e "Invalid variable name in {U $pkg} config.input: {Purple $var}"
-        exit 1
-        ;;
-    esac
+    _parse_entry "$_entry"
 
     eval "_current=\${$var:-}"
     if [ -z "$_current" ]; then
@@ -80,6 +98,7 @@ for _entry in $_input_entries; do
         zz_persist -f "$file" "$var" "$_current"
     fi
     export "$var=$_current"
+    [ "$as" != "$var" ] && export "$as=$_current"
     IFS='
 '
 done
@@ -90,20 +109,14 @@ if [ -n "$cmd" ]; then
     exit 0
 fi
 
-_outputs=$(jq -c '.config.output // (.config.input // [] | map(.var))' "$pkg")
-_output_entries=$(printf '%s' "$_outputs" | jq -c '.[]')
+_output_entries=$(jq -c '(.config.output // .config.input // []) | .[]' "$pkg")
 IFS='
 '
 for _entry in $_output_entries; do
     IFS="$_old_ifs"
-    if printf '%s' "$_entry" | jq -e 'type == "string"' >/dev/null 2>&1; then
-        src=$(printf '%s' "$_entry" | jq -r '.')
-        as="$src"
-    else
-        src=$(printf '%s' "$_entry" | jq -r '.var')
-        as=$(printf '%s' "$_entry" | jq -r '.as // .var')
-    fi
-    eval "_val=\${$src:-}"
+    _parse_entry "$_entry"
+
+    eval "_val=\${$var:-}"
     echo "export ${as}='$(printf '%s' "$_val" | sed "s/'/'\\\\''/g")'"
     IFS='
 '
