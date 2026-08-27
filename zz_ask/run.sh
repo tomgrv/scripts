@@ -5,18 +5,18 @@
 
 . zz_colors
 
-default=$(echo "$1" | grep -oP '[A-Z]' | tr '[:upper:]' '[:lower:]')
+default=$(printf '%s' "$1" | tr -dc 'A-Z' | tr '[:upper:]' '[:lower:]')
 options=$1
 shift
 
-echo "${BBlue}#${None} $* ${BBlue}[${options}]${End}"
+echo "${BBlue}#${None} $* ${BBlue}[${options}]${End}" >&2
 
 while true; do
 
     read -r confirm
 
     if [ -z "$confirm" ]; then
-        echo $default
+        echo "$default"
         break
     fi
 
@@ -26,4 +26,4 @@ while true; do
     fi
 
     zz_log w "Please enter a valid option from [${options}] (default: ${default}):"
-done | grep -q -i "$default"
+done

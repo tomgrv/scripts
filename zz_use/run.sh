@@ -197,10 +197,11 @@ _refresh_cache() {
     _req_origin="${1:-$ZZ_ORIGIN}"
     _req_ref="${2:-$ZZ_ORIGIN_REF}"
     _cache_dir="$3"
-    # {ORIGIN} can itself contain "/" (org/repo), so substituting it with
-    # sed needs a delimiter that isn't "/" — {REF} doesn't, but shares the
-    # same sed call for one substitution pass either way.
-    _url=$(printf '%s' "$ZZ_USE_REPO_URL" | sed -e "s|{ORIGIN}|${_req_origin}|g" -e "s/{REF}/${_req_ref}/g")
+    # {ORIGIN} always contains "/" (org/repo), and {REF} can too (a branch
+    # name like "feature/foo") — both substitutions use "|" as the sed
+    # delimiter instead of "/" so a "/" in either value can't break the
+    # s/// syntax.
+    _url=$(printf '%s' "$ZZ_USE_REPO_URL" | sed -e "s|{ORIGIN}|${_req_origin}|g" -e "s|{REF}|${_req_ref}|g")
     _zzu_log i "Retrieving repo scripts ({B ${_req_origin}@${_req_ref}}) from {U ${_url}}..."
     _tmp="${_cache_dir}.tmp.$$"
     _add_tmp "$_tmp"

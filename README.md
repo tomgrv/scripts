@@ -1,8 +1,12 @@
 # scripts
 
-Reusable POSIX `sh` scripts shared across
+Reusable shell scripts shared across
 [`tomgrv/devcontainer-features`](https://github.com/tomgrv/devcontainer-features)
 (`common-utils` feature) and [`tomgrv/vps`](https://github.com/tomgrv/vps).
+Every core `zz_*` script and most functional scripts are POSIX `sh`; a
+few functional scripts ported from the original bash implementation
+(`validate-json`, `normalize-json`) keep `#!/bin/bash` for now, since
+they rely on bash-only features (arrays, `<<<`, `${var//pat/rep}`).
 
 ## Layout
 

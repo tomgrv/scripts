@@ -9,7 +9,7 @@ input="$1"
 if [ -n "$input" ]; then
     if [ -f "$input" ]; then
         zz_log - "Reading from file: $input"
-        cat $input
+        cat -- "$input"
     else
         echo "$input"
     fi

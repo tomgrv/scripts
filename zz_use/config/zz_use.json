@@ -5,7 +5,7 @@
     "dos2unix": { "apt": "dos2unix" },
     "sha1sum": { "apt": "coreutils" },
     "gh": {
-        "url": "https://github.com/cli/cli/releases/latest/download/gh_{VERSION}_{OS}_{ARCH}.tar.gz",
+        "url": "https://github.com/cli/cli/releases/download/v{VERSION}/gh_{VERSION}_{OS}_{ARCH}.tar.gz",
         "version": "2.63.2",
         "archive": "tar.gz",
         "binpath": "gh_{VERSION}_{OS}_{ARCH}/bin/gh"

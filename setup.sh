@@ -39,8 +39,12 @@ export ZZ_ORIGIN_REF="${1:-${ZZ_ORIGIN_REF:-main}}"
 # text (from "{ORIGIN}"/"{REF}") terminates the expansion early at parse
 # time, regardless of quoting — `${X:-a{REF}.b}` evaluates to `a{REF`
 # with literal `.b}` appended after, not the intended default string.
+# Both substitutions use "|" as the sed delimiter instead of "/": ORIGIN
+# always contains "/" (org/repo), and REF can too (a branch name like
+# "feature/foo") — either would break the s/// syntax with "/" as the
+# delimiter.
 _REPO_URL_DEFAULT='https://github.com/{ORIGIN}/archive/{REF}.tar.gz'
-REPO_URL=$(printf '%s' "${ZZ_SETUP_REPO_URL:-$_REPO_URL_DEFAULT}" | sed -e "s|{ORIGIN}|${ZZ_ORIGIN}|g" -e "s/{REF}/${ZZ_ORIGIN_REF}/g")
+REPO_URL=$(printf '%s' "${ZZ_SETUP_REPO_URL:-$_REPO_URL_DEFAULT}" | sed -e "s|{ORIGIN}|${ZZ_ORIGIN}|g" -e "s|{REF}|${ZZ_ORIGIN_REF}|g")
 
 log() { printf '\033[0;34m[zz-setup]\033[0m %s\n' "$*"; }
 die() {

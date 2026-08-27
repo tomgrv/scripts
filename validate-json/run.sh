@@ -137,7 +137,7 @@ validate() {
     fi
 
     if test -f "$schema" || test -n "$(echo $schema | grep -E '^http')"; then
-        zz_log "${lvl} -" "Loading ${Yellow}${uri}${None}..."
+        zz_log "${lvl} -" "Loading ${Yellow}${schema}${None}..."
         schema=$(load-json -s $schema)
     fi
 
