@@ -1,3 +1,42 @@
 node_modules/
 package-lock.json
 .env
+## Modules
+/node_modules
+**/node_modules
+
+## Storage
+/public/storage
+./storage
+
+## Composer
+/vendor
+**/vendor
+_ide_helper.php
+
+## DotEnv
+.env*
+!.env.project
+!.env.vault
+
+## Logs
+*.log
+*.cache
+
+## Feature Skills
+.github/skills/feature-*/*.md
+
+## Homestead
+Homestead.json
+Homestead.yaml
+
+## Misc
+.history
+.version.json
+/.mono
+
+## Vite
+/public/build
+/public/hot
+/public/css
+/public/js
