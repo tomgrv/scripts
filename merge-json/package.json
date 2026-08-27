@@ -1,0 +1,12 @@
+{
+    "name": "merge-json",
+    "version": "1.0.0",
+    "description": "Recursively merge one JSON file into another, arrays deduped and unioned",
+    "private": true,
+    "bin": {
+        "merge-json": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

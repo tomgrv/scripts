@@ -1,0 +1,12 @@
+{
+    "name": "zz_bindir",
+    "version": "1.0.0",
+    "description": "Resolve (and create if needed) a writable bin directory on PATH",
+    "private": true,
+    "bin": {
+        "zz_bindir": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

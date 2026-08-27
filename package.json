@@ -1,0 +1,33 @@
+{
+    "name": "@tomgrv/scripts",
+    "version": "1.0.0",
+    "description": "Reusable POSIX shell scripts shared across tomgrv devcontainer-features and vps",
+    "license": "MIT",
+    "workspaces": [
+        "zz_use",
+        "zz_update",
+        "zz_colors",
+        "zz_log",
+        "zz_args",
+        "zz_prompt",
+        "zz_ask",
+        "zz_input",
+        "zz_bindir",
+        "zz_dispatch",
+        "zz_npx",
+        "zz_persist",
+        "zz_call",
+        "load-json",
+        "validate-json",
+        "normalize-json",
+        "merge-json",
+        "resolve-context",
+        "edit-script",
+        "distribute-utils",
+        "install-feature",
+        "configure-feature"
+    ],
+    "scripts": {
+        "test": "bats --recursive ."
+    }
+}

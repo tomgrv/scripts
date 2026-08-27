@@ -1,0 +1,12 @@
+{
+    "name": "install-feature",
+    "version": "1.0.0",
+    "description": "Copy a feature's stubs/config/bin into a target, run install-*.sh",
+    "private": true,
+    "bin": {
+        "install-feature": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

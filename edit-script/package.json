@@ -1,0 +1,12 @@
+{
+    "name": "edit-script",
+    "version": "1.0.0",
+    "description": "Copy an installed script locally and open it for editing",
+    "private": true,
+    "bin": {
+        "edit-script": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

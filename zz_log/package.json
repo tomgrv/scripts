@@ -1,0 +1,12 @@
+{
+    "name": "zz_log",
+    "version": "1.0.0",
+    "description": "Colored, leveled log line on stderr (i/w/e/s/-)",
+    "private": true,
+    "bin": {
+        "zz_log": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

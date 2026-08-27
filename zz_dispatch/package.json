@@ -1,0 +1,12 @@
+{
+    "name": "zz_dispatch",
+    "version": "1.0.0",
+    "description": "Dispatch an underscore-prefixed caller to a sibling <name>-<subcmd> script",
+    "private": true,
+    "bin": {
+        "zz_dispatch": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

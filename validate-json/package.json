@@ -1,0 +1,12 @@
+{
+    "name": "validate-json",
+    "version": "1.0.0",
+    "description": "Validate JSON against a local/inferred/remote JSON Schema",
+    "private": true,
+    "bin": {
+        "validate-json": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

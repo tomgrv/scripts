@@ -1,0 +1,12 @@
+{
+    "name": "zz_persist",
+    "version": "1.0.0",
+    "description": "Upsert a KEY=VALUE pair into an env file and/or /etc/profile.d",
+    "private": true,
+    "bin": {
+        "zz_persist": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

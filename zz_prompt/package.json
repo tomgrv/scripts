@@ -1,0 +1,12 @@
+{
+    "name": "zz_prompt",
+    "version": "1.0.0",
+    "description": "Interactive free-form input with an optional default",
+    "private": true,
+    "bin": {
+        "zz_prompt": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "name": "zz_input",
+    "version": "1.0.0",
+    "description": "Read from a literal argument, a file argument, or stdin",
+    "private": true,
+    "bin": {
+        "zz_input": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}
