@@ -3,7 +3,7 @@
 # (merging into files that already exist there) and run its
 # configure-*.sh lifecycle scripts. Counterpart to install-feature.sh.
 
-zz_use zz_colors zz_args git
+zz_use zz_colors zz_args git sha1sum
 . zz_colors
 
 eval $(
@@ -77,7 +77,7 @@ if [ -d $source/stubs ]; then
             # rather than two additions to union. Keep a per-(feature,
             # fragment) snapshot of what was last deployed and diff the
             # incoming file against it.
-            snapshot_dir=$(git rev-parse --git-path info 2>/dev/null || echo .git/info)/zz_feature/state
+            snapshot_dir=$(git rev-parse --git-path info 2>/dev/null || echo .git/info)/configure-feature/state
             snapshot=$snapshot_dir/$(echo -n "$feature/${file#$source/stubs/}" | sha1sum | cut -d' ' -f1)
             mkdir -p $snapshot_dir
             base=$snapshot

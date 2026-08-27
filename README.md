@@ -161,6 +161,7 @@ the tool isn't already available.
 
 | Script                       | Purpose                                                             |
 | ----------------------------- | --------------------------------------------------------------------- |
+| `zz_use <tool>[@ref]`           | the activator: resolve/install a dependency, if and only if missing (see below) |
 | `zz_update`                     | force a fresh download of the zz_* bundle, bypassing the local cache  |
 | `zz_colors`                    | ANSI color vars (`$Red` `$Green` ... `$End`); source it: `. zz_colors` |
 | `zz_log <lvl> <msg...>`         | colored, leveled log line on stderr (`i`/`w`/`e`/`s`/`-`)              |

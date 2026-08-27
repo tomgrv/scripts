@@ -11,13 +11,13 @@ teardown() {
 }
 
 @test "zz_prompt returns the default when input is empty" {
-    run bash -c 'echo "" | zz_prompt "Question?" "fallback"'
+    run bash -c 'echo "" | zz_prompt "Question?" "fallback" 2>/dev/null'
     [ "$status" -eq 0 ]
     [ "$output" = "fallback" ]
 }
 
 @test "zz_prompt returns the entered value" {
-    run bash -c 'echo "typed" | zz_prompt "Question?" "fallback"'
+    run bash -c 'echo "typed" | zz_prompt "Question?" "fallback" 2>/dev/null'
     [ "$status" -eq 0 ]
     [ "$output" = "typed" ]
 }
