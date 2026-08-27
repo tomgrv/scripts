@@ -72,10 +72,19 @@ sh "$TMP_DIR/zz_use/run.sh" \
 # run with the downloaded checkout as cwd-equivalent; anything else, this
 # script's job (install the core bundle) is already done, so it stops.
 MAIN=$(sed -n 's/^[[:space:]]*"main"[[:space:]]*:[[:space:]]*"\(.*\)"[,]*[[:space:]]*$/\1/p' "$TMP_DIR/package.json" 2>/dev/null | head -n1)
+# Reject anything that could point outside $TMP_DIR (absolute paths, ".."
+# segments) - "main" comes straight from a downloaded, possibly untrusted,
+# repo's package.json.
+case "$MAIN" in
+    /* | *..*)
+        log "Ignoring unsafe package.json \"main\" value: ${MAIN}"
+        MAIN=""
+        ;;
+esac
 if [ -n "$MAIN" ] && [ -f "$TMP_DIR/$MAIN" ]; then
     log "Running ${MAIN} (package.json \"main\")..."
-    sh "$TMP_DIR/$MAIN" "$@"
+    sh -- "$TMP_DIR/$MAIN" "$@"
 elif [ -f "$TMP_DIR/main.sh" ]; then
     log "Running main.sh..."
-    sh "$TMP_DIR/main.sh" "$@"
+    sh -- "$TMP_DIR/main.sh" "$@"
 fi
