@@ -1,0 +1,5 @@
+# Standard ignores
+node_modules/
+dist/
+build/
+.git/
