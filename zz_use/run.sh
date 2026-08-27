@@ -168,7 +168,7 @@ _resolve_src() {
         _SRC="$ROOT_DIR"
     else
         _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_req_ref:-$ZZ_ORIGIN_REF}"
-        if [ "$FORCE" -eq 1 ] || [ ! -f "${_cache_dir}/zz_colors/run.sh" ]; then
+        if [ "$FORCE" -eq 1 ] || ! _has_script_layout "$_cache_dir"; then
             _refresh_cache "$_req_origin" "$_req_ref" "$_cache_dir" || return 1
         else
             _zzu_log - "Using cached repo scripts at {U ${_cache_dir}}"
@@ -187,6 +187,20 @@ _resolve_src() {
     _SRC_ORIGIN="$_req_origin"
     _SRC_REF="$_req_ref"
     _SRC_RESOLVED=1
+}
+
+# True if <dir> looks like a one-folder-per-script repo (this repo, or any
+# other repo laid out the same way — e.g. perspikapps/vps's feature
+# folders): at least one <name>/run.sh directly under it. Used both to
+# decide whether a cache dir is already warm, and to sanity-check a fresh
+# download before trusting it — deliberately generic (not "has zz_colors",
+# which only this repo itself does) since _resolve_src/_refresh_cache
+# serve any origin, not just ZZ_ORIGIN's own repo.
+_has_script_layout() {
+    for _d in "$1"/*/; do
+        [ -f "${_d}run.sh" ] && return 0
+    done
+    return 1
 }
 
 # Refresh <cache_dir> from ZZ_USE_REPO_URL for <origin> (default:
@@ -208,7 +222,7 @@ _refresh_cache() {
     rm -rf "$_tmp"
     mkdir -p "$_tmp"
     curl -fsSL "$_url" | tar -xz -C "$_tmp" --strip-components=1
-    [ -f "$_tmp/zz_colors/run.sh" ] || { _zzu_log e "Downloaded archive has no zz_* scripts (unexpected repo layout)"; return 1; }
+    _has_script_layout "$_tmp" || { _zzu_log e "Downloaded archive from {B ${_req_origin}@${_req_ref}} has no <name>/run.sh scripts (unexpected repo layout)"; return 1; }
     mkdir -p "$(dirname "$_cache_dir")"
     rm -rf "$_cache_dir"
     mv "$_tmp" "$_cache_dir"
