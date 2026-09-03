@@ -1,0 +1,12 @@
+{
+    "name": "git-align",
+    "version": "1.0.0",
+    "description": "Align the current branch with its remote counterpart",
+    "private": true,
+    "bin": {
+        "git-align": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

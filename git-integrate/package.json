@@ -1,0 +1,12 @@
+{
+    "name": "git-integrate",
+    "version": "1.0.0",
+    "description": "Integrate modifications from the remote repository",
+    "private": true,
+    "bin": {
+        "git-integrate": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

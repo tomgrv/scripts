@@ -1,0 +1,12 @@
+{
+    "name": "git-fix-mode",
+    "version": "1.0.0",
+    "description": "Fix file mode changes from diff",
+    "private": true,
+    "bin": {
+        "git-fix-mode": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

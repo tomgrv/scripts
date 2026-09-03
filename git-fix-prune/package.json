@@ -1,0 +1,12 @@
+{
+    "name": "git-fix-prune",
+    "version": "1.0.0",
+    "description": "Prune remote-tracking references that no longer exist on the remote",
+    "private": true,
+    "bin": {
+        "git-fix-prune": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

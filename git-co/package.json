@@ -1,0 +1,12 @@
+{
+    "name": "git-co",
+    "version": "1.0.0",
+    "description": "Git enhanced commit",
+    "private": true,
+    "bin": {
+        "git-co": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

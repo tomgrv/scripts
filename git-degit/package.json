@@ -1,0 +1,12 @@
+{
+    "name": "git-degit",
+    "version": "1.0.0",
+    "description": "Clone and degit a repository",
+    "private": true,
+    "bin": {
+        "git-degit": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "name": "git-fix-last",
+    "version": "1.0.0",
+    "description": "Edit the last commit message and content",
+    "private": true,
+    "bin": {
+        "git-fix-last": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

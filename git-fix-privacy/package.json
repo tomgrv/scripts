@@ -1,0 +1,12 @@
+{
+    "name": "git-fix-privacy",
+    "version": "1.0.0",
+    "description": "Fix privacy in history",
+    "private": true,
+    "bin": {
+        "git-fix-privacy": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

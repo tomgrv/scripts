@@ -1,0 +1,12 @@
+{
+    "name": "git-autorebase",
+    "version": "1.0.0",
+    "description": "Automatically handle non-interactive rebasing with conflict resolution",
+    "private": true,
+    "bin": {
+        "git-autorebase": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

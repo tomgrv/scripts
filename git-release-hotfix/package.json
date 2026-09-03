@@ -1,0 +1,12 @@
+{
+    "name": "git-release-hotfix",
+    "version": "1.0.0",
+    "description": "Create a hotfix branch using Git Flow",
+    "private": true,
+    "bin": {
+        "git-release-hotfix": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}
