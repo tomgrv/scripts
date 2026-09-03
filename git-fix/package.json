@@ -1,0 +1,12 @@
+{
+    "name": "git-fix",
+    "version": "1.0.0",
+    "description": "Dispatch to git-fix-<subcommand> utilities",
+    "private": true,
+    "bin": {
+        "git-fix": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

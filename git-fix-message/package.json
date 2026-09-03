@@ -1,0 +1,12 @@
+{
+    "name": "git-fix-message",
+    "version": "1.0.0",
+    "description": "Rewrite an arbitrary commit message",
+    "private": true,
+    "bin": {
+        "git-fix-message": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

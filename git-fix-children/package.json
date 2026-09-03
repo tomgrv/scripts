@@ -1,0 +1,12 @@
+{
+    "name": "git-fix-children",
+    "version": "1.0.0",
+    "description": "Delete all descendant tags and branches of a commit",
+    "private": true,
+    "bin": {
+        "git-fix-children": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

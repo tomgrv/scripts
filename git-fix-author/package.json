@@ -1,0 +1,12 @@
+{
+    "name": "git-fix-author",
+    "version": "1.0.0",
+    "description": "Set user.name and user.email to a specified commit's author",
+    "private": true,
+    "bin": {
+        "git-fix-author": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "name": "git-fix-emoji",
+    "version": "1.0.0",
+    "description": "Fix git emoji",
+    "private": true,
+    "bin": {
+        "git-fix-emoji": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

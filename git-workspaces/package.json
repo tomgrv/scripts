@@ -1,0 +1,12 @@
+{
+    "name": "git-workspaces",
+    "version": "1.0.0",
+    "description": "List workspace directories and affected workspaces",
+    "private": true,
+    "bin": {
+        "git-workspaces": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}
