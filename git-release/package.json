@@ -1,0 +1,12 @@
+{
+    "name": "git-release",
+    "version": "1.0.0",
+    "description": "Dispatch to git-release-<subcommand> utilities",
+    "private": true,
+    "bin": {
+        "git-release": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

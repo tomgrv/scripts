@@ -1,0 +1,12 @@
+{
+    "name": "git-fix-base",
+    "version": "1.0.0",
+    "description": "Rebase commits from one branch onto another",
+    "private": true,
+    "bin": {
+        "git-fix-base": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

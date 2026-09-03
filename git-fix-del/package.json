@@ -1,0 +1,12 @@
+{
+    "name": "git-fix-del",
+    "version": "1.0.0",
+    "description": "Delete a specified commit and rebase subsequent history",
+    "private": true,
+    "bin": {
+        "git-fix-del": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

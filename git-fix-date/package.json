@@ -1,0 +1,12 @@
+{
+    "name": "git-fix-date",
+    "version": "1.0.0",
+    "description": "Fix commit dates and times in git history",
+    "private": true,
+    "bin": {
+        "git-fix-date": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

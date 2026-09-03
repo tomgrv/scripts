@@ -1,0 +1,12 @@
+{
+    "name": "git-release-prod",
+    "version": "1.0.0",
+    "description": "Finish a release or hotfix branch using Git Flow",
+    "private": true,
+    "bin": {
+        "git-release-prod": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

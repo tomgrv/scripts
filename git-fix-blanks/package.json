@@ -1,0 +1,12 @@
+{
+    "name": "git-fix-blanks",
+    "version": "1.0.0",
+    "description": "Discard changes made only of whitespace, blanks, quote/slash swaps",
+    "private": true,
+    "bin": {
+        "git-fix-blanks": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

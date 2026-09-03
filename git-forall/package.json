@@ -1,0 +1,12 @@
+{
+    "name": "git-forall",
+    "version": "1.0.0",
+    "description": "Execute a command for all files in the repository",
+    "private": true,
+    "bin": {
+        "git-forall": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

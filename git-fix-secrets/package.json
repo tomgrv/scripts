@@ -1,0 +1,12 @@
+{
+    "name": "git-fix-secrets",
+    "version": "1.0.0",
+    "description": "Redact a secret from files, commit messages and/or tag annotations across all git history",
+    "private": true,
+    "bin": {
+        "git-fix-secrets": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

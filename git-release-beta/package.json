@@ -1,0 +1,12 @@
+{
+    "name": "git-release-beta",
+    "version": "1.0.0",
+    "description": "Start a new release branch using Git Flow",
+    "private": true,
+    "bin": {
+        "git-release-beta": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

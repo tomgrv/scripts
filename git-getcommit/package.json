@@ -1,0 +1,12 @@
+{
+    "name": "git-getcommit",
+    "version": "1.0.0",
+    "description": "List git history and ask for a commit to fix up",
+    "private": true,
+    "bin": {
+        "git-getcommit": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}

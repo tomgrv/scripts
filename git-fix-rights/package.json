@@ -1,0 +1,12 @@
+{
+    "name": "git-fix-rights",
+    "version": "1.0.0",
+    "description": "Set appropriate permissions for files and directories",
+    "private": true,
+    "bin": {
+        "git-fix-rights": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    }
+}
