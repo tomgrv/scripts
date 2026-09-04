@@ -21,3 +21,11 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- help/usage output and exit code
+- sorts keys and prints to stdout without touching the file (no `-w`)
+- `-w` writes the normalized result back to the file
+- refuses `-w` when reading from stdin
+- reads from stdin and normalizes multiple file arguments
+- reports (without crashing) a file that does not exist
+- errors when the file fails schema validation

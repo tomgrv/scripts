@@ -29,7 +29,7 @@ fi
 zz_log i "Deleting all local branches that are descendants of $sha (except current, main, master)"
 
 current=$(git rev-parse --abbrev-ref HEAD)
-branches=$(git branch --contains "$sha" | sed "s/^[* ]*//" | grep -vE "^($current|main|master)$")
+branches=$(git branch --contains "$sha" | sed "s/^[* ]*//" | grep -vE "^($current|main|master)$" || true)
 if [ -n "$branches" ]; then
     echo "$branches" | xargs -r git branch -D
 else

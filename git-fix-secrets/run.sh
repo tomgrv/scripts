@@ -94,7 +94,7 @@ if [ -n "$dryrun" ]; then
 fi
 
 zz_log w "This will rewrite git history. Make sure you understand the consequences."
-if ! zz_ask "Yn" "Do you want to proceed?"; then
+if [ "$(zz_ask "Yn" "Do you want to proceed?")" != "y" ]; then
 	zz_log i "Operation cancelled by user."
 	exit 1
 fi

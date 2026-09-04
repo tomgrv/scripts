@@ -18,3 +18,10 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- help/usage output and exit code
+- prints the resolved full sha for a given commit
+- resolves an abbreviated sha to the full sha
+- treats sha `0` as the very first commit in history
+- `-p` prints the parent of the given commit
+- prints nothing (without crashing) for an unresolvable sha

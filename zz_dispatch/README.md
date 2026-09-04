@@ -24,3 +24,10 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- errors without a subcommand argument
+- executes the matching sibling `<name>-<subcmd>` executable
+- passes remaining arguments through to the target script
+- falls back to running a non-executable target through `sh`
+- no matching target reports "No dispatch target found" and lists available utilities
+- derives the family name from the caller basename, stripping leading `_` and extension

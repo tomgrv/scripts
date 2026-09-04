@@ -18,3 +18,10 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- `-h` prints usage and exits non-zero
+- fails cleanly outside a git repository
+- refuses to delete the initial (parentless) commit
+- fails on an invalid/unknown sha
+- deletes a middle commit and rebases descendants in auto mode, preserving
+  surviving commits' order and content

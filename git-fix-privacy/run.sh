@@ -24,7 +24,7 @@ if [ -z "$old" ]; then
 	old=$(git log -1 --pretty=format:'%ae')
 
 	# Asks for confirmation to proceed with the old email
-	zz_ask Yn "Do you want to proceed with this <$old> as old email?" || exit 1
+	[ "$(zz_ask Yn "Do you want to proceed with this <$old> as old email?")" = "y" ] || exit 1
 fi
 
 # Check if the new option is set

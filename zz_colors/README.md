@@ -21,3 +21,8 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- sourcing exports every documented base, bold, and underline variable
+- color codes are real ANSI escape sequences (`ESC [`)
+- safe to source twice with no errors
+- distinct variables carry distinct codes
