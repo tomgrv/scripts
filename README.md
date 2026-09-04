@@ -265,3 +265,13 @@ Any single folder can be copied out and still work standalone.
 npm test                     # bats --recursive . (every */test.bats)
 bats validate-json/test.bats # a single script's tests
 ```
+
+Each `test.bats` is a behavioral suite, not just a syntax check: it exercises
+the script's documented options and arguments, `-h`/help output, error paths
+(missing/invalid arguments, running outside a git repo where relevant), and
+success paths against a throwaway git repo or temp directory created in
+`setup()`/`teardown()` (via `tests/helpers.bash`). Suites are hermetic — no
+network access and no writes outside a temp dir — except where a script's own
+purpose requires reaching a real tool (e.g. `zz_npx`/`zz_update` fall back to
+a local fixture and assert no network call is made). 417 tests currently pass
+across all 53 script folders.
