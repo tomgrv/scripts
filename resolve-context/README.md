@@ -21,3 +21,10 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- help/usage output and exit code
+- resolves source/feature/target from an explicit caller path
+- strips a trailing `_NNN` suffix from the feature name
+- `-s` overrides the source derived from the caller path
+- creates the target directory when it doesn't already exist
+- defaults target under `/usr/local/share` when writable

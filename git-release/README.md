@@ -18,3 +18,8 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- fails with no subcommand
+- reports no dispatch target for an unknown subcommand
+- dispatches to git-release-alpha/beta/hotfix/prod, forwarding arguments
+- lists available utilities when no subcommand matches

@@ -22,3 +22,7 @@ disk there, ignoring the cache entirely.
 ```sh
 bats test.bats
 ```
+
+- re-links the zz_* bundle from a local checkout without touching the network
+- force re-installs every core zz_* script, bypassing the already-available skip
+- makes no `curl` call at all when run from a local checkout

@@ -21,3 +21,10 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- empty input returns the given default
+- entered input is returned as typed
+- no default and empty input returns an empty string
+- question and bracketed default are written to stderr, not stdout
+- with no default, the bracketed default is omitted from the prompt text
+- stdout carries only the value, cleanly separated from the prompt

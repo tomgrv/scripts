@@ -18,3 +18,10 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- help/usage output and exit code
+- falls back to listing all top-level directories with no `package.json`
+- lists directories matching `package.json` workspaces globs
+- lists a literal (non-glob) workspace entry
+- `-r` reports only workspaces touched within a commit range
+- `-r` prints nothing when the range touches no workspace

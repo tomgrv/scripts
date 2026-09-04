@@ -18,3 +18,8 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- no subcommand exits non-zero and lists available utilities
+- unknown subcommand warns and lists utilities without erroring the shell
+- dispatches to `git-fix-author` with remaining args
+- dispatches to `git-fix-blanks` with remaining args

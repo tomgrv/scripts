@@ -18,3 +18,10 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- forces `core.autocrlf` to false
+- reverts a modified file whose only diff is whitespace/CRLF
+- stages a modified file with real content changes
+- stages a new untracked file
+- leaves a clean working tree untouched
+- fails cleanly outside a git repository

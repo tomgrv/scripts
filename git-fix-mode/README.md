@@ -18,3 +18,7 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- does nothing (exit 0) when there is no mode diff
+- reverts a tracked file's mode change back to what git recorded
+- leaves deleted files alone

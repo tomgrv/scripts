@@ -18,3 +18,10 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- no arguments and `-h` both print usage (no args exits non-zero)
+- an unsupported host is rejected without attempting a download
+- degits a github repo URL into the current directory by default
+- degits into a given target directory, creating it if needed
+- recognizes gitlab.com and bitbucket.org hosts
+- strips a trailing `.git` suffix from the reported repository name

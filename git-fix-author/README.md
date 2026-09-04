@@ -18,3 +18,9 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- `-h` prints usage without touching any config
+- fails cleanly outside a git repository
+- copies user.name/user.email from a given commit's author into local config
+- always removes the global user section, even before setting the local one
+- an invalid sha leaves existing local config untouched

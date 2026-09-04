@@ -21,3 +21,9 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- writes to stderr, never stdout
+- each of i/w/e/s/- picks the right pictogram (→, !, ✕, ✔, none)
+- an unknown level falls back to printing the level string itself
+- multiple message words are joined with spaces
+- `{Color text}` inline highlight syntax is supported

@@ -18,3 +18,12 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- `-h` prints usage and exits non-zero
+- fails when there is no release or hotfix branch to finish
+- finishes the current release branch: bumps changelog, merges, tags and cleans up
+- fails when the working directory is not clean
+- refuses to pick a branch when multiple release branches exist
+- prefers a checked-out hotfix branch over an ambiguous discovery
+- is idempotent: resuming after the finish tag already exists only runs cleanup
+- fails cleanly outside a git repository

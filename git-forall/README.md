@@ -18,3 +18,9 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- runs the command against every tracked and untracked (non-ignored) file
+- excludes gitignored files
+- invokes the command once per file, with the file as the final argument
+- produces no output when there are no matching files
+- fails cleanly outside a git repository

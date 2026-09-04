@@ -21,3 +21,10 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- resolves a writable dir and prints `dir=...`
+- prefers a dir already on PATH over creating a new one, skipping the `export PATH` line
+- emits `export PATH=...` when the chosen dir isn't already on PATH
+- `-t target` creates and uses `<target>/bin` when nothing writable already exists
+- `eval "$(zz_bindir)"` usage extends `PATH` and sets `$dir`
+- fails with a non-zero exit when no writable dir can be found or created
