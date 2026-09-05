@@ -1,0 +1,12 @@
+{
+    "image": "mcr.microsoft.com/devcontainers/base:noble",
+    "name": "scripts",
+    "features": {
+        "ghcr.io/tomgrv/devcontainer-features/githooks:8": {},
+        "ghcr.io/tomgrv/devcontainer-features/gitutils:8": {}
+    },
+    "postStartCommand": {
+        "safe": "git config --global --add safe.directory \"${containerWorkspaceFolder:-.}\""
+    },
+    "customizations": {}
+}
