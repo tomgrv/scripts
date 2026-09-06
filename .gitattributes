@@ -9,3 +9,5 @@ CHANGELOG.md export-ignore
 .devcontainer export-ignore
 .github export-ignore
 .vscode export-ignore
+*.{cmd,[cC][mM][dD]} text eol=crlf
+*.{bat,[bB][aA][tT]} text eol=crlf

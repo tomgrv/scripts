@@ -42,3 +42,9 @@ Homestead.yaml
 /public/js
 # devcontainer
 .devcontainer/devcontainer-lock.json
+.mono
+.toolkit
+bin
+obj
+## Gitversion
+VERSION
