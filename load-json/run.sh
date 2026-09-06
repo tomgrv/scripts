@@ -30,4 +30,4 @@ else
     zz_log e "No source provided" && exit 1
 fi
 
-echo "$content" | sed -e 's:^[[:blank:]]*//.*$::g' 2>/dev/null | jq --arg source "$source" --arg schema "${schema:+true}" 'if . == null then {} else . end | if  (type != "object" or ($source != "" and has("$id")) or $schema == "") then . else . + {"$id": $source} end'
+printf '%s\n' "$content" | sed -e 's:^[[:blank:]]*//.*$::g' 2>/dev/null | jq --arg source "$source" --arg schema "${schema:+true}" 'if . == null then {} else . end | if  (type != "object" or ($source != "" and has("$id")) or $schema == "") then . else . + {"$id": $source} end'
