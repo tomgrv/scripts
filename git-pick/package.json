@@ -1,12 +1,12 @@
 {
     "name": "git-pick",
-    "version": "1.0.0",
+    "version": "0.4.0",
     "description": "Pick files from a specific commit",
-    "private": true,
     "bin": {
         "git-pick": "run.sh"
     },
     "scripts": {
         "test": "bats test.bats"
-    }
+    },
+    "private": true
 }
