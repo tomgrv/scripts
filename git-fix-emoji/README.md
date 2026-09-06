@@ -18,3 +18,7 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- `-h` prints usage and exits non-zero
+- fails cleanly outside a git repository
+- refuses to run with uncommitted changes, leaving the working tree untouched

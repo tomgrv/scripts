@@ -18,3 +18,8 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- `-h` prints usage and exits non-zero
+- fails cleanly outside a git repository
+- `-m` rewrites the last commit's message without adding a new commit
+- rewriting the message leaves the commit's tree and file content intact

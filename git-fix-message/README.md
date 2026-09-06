@@ -18,3 +18,12 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- `-h` prints usage and exits non-zero
+- fails cleanly outside a git repository
+- refuses to run with uncommitted changes
+- rejects an invalid commit sha
+- errors when the given commit isn't an ancestor of HEAD
+- rewrites the message of an arbitrary (non-HEAD) commit, preserving
+  history length and file content
+- aborts when the user declines the confirmation prompt

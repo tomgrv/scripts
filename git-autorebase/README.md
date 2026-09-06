@@ -18,3 +18,10 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- `-h` prints usage; fails cleanly outside a git repository
+- rebases the current branch onto an explicit sha with no conflicts
+- resolves a real content conflict using the default "theirs" strategy
+- `-b` rebases a named branch instead of the current one
+- `-o` rebases onto a named branch instead of the sha argument
+- `-p` pushes the rebased branch to origin; omitted, nothing is pushed

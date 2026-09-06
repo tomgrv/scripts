@@ -24,3 +24,11 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- upserts `KEY=VALUE` into an env file, replacing an existing value on re-run
+- appends a new key without disturbing existing entries
+- creates the target file if it doesn't exist
+- requires a key argument, and rejects an invalid variable name
+- requires at least one of `-f`/`-p`
+- writes an `export KEY=value` line to a `/etc/profile.d` snippet via `-p`
+- can write to `-f` and `-p` simultaneously, and upsert replaces the profile.d export line

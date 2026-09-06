@@ -4,7 +4,7 @@
 eval $(
 	zz_args "Fix git base - rebase commits from one branch to another" $0 "$@" <<-help
 		    p -      push      push changes to remote
-		    n -      dry-run   show what would be done without making changes
+		    n -      dryrun    show what would be done without making changes
 		    - target target    target branch to rebase commits onto
 		    - source source    source branch to take commits from (default: current branch)
 help
@@ -90,7 +90,7 @@ zz_log - " 3. Cherry-pick commits from '$source'"
 zz_log - " 4. Reset '$source' to the merge base"
 zz_log - " 5. Fast-forward '$target' to include the rebased commits"
 echo ""
-if ! zz_ask "Yn" "Continue?"; then
+if [ "$(zz_ask "Yn" "Continue?")" != "y" ]; then
 	zz_log e "Operation cancelled"
 	exit 1
 fi

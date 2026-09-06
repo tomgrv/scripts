@@ -21,3 +21,11 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- help/usage output and exit code
+- errors with no arguments, only a target, or a missing target file
+- errors when the target file is not valid JSON
+- merges a source object into the target file in place
+- merges from stdin when source is `-`
+- unions and dedupes array values, recursively merges nested objects
+- `-t` sets the written indentation size

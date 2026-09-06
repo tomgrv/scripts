@@ -80,3 +80,12 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- prompts, persists to `.env`, and an `as` entry renames the eval'd export
+- already-set env vars are used as-is: no prompt, nothing new persisted
+- with a wrapped command, both `var` and its `as` alias are exported to it
+- an explicit `output` array filters which vars get printed
+- errors when no `package.json` is found
+- a missing var's default is offered, and persisted when accepted
+- `-p` points at a non-default `package.json` path
+- `config.file` redirects persistence to a non-`.env` target

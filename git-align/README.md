@@ -18,3 +18,9 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- fails cleanly outside a git repository
+- with no remote configured, logs a failure and leaves branch/history intact
+- aligns the current branch to a newer remote commit, restoring stashed local edits
+- preserves the branch name and leaves no leftover temp/stash branch
+- aligns cleanly when there are no uncommitted changes to stash/pop

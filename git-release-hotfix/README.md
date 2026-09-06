@@ -18,3 +18,12 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- `-h` prints usage and exits non-zero
+- fails when main has no version tag
+- creates a hotfix branch without rebasing when commits are not all `fix:`
+- creates a hotfix branch and rebases `fix:` commits from develop onto it, resetting develop to the tag
+- is idempotent: resumes an already-created hotfix branch instead of failing
+- refuses to rebase when develop has already been pushed to remote
+- `-r` forces a rebase even when commits are not all `fix:`
+- fails cleanly outside a git repository

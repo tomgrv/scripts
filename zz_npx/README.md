@@ -25,3 +25,10 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- errors without a tool argument
+- runs a locally installed `node_modules/.bin` binary directly, bypassing npx
+- resolves the project via `INIT_CWD`, falling back to `PWD` when unset
+- errors clearly when the tool is neither local nor is npx available
+- remaining arguments are passed through to the local binary
+- `-s` is accepted without affecting the local-binary fast path

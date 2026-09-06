@@ -1,16 +1,21 @@
 {
     "name": "@tomgrv/scripts",
-    "version": "0.2.0",
+    "version": "0.4.0",
     "description": "Reusable POSIX shell scripts shared across tomgrv devcontainer-features and vps",
     "license": "MIT",
     "scripts": {
         "lint": "npx --yes lint-staged -p false",
-        "test": "bats --recursive ."
+        "test": "bats --recursive .",
+        "update": "npm-check-updates -i -u",
+        "update-all": "npm run update -w --root"
     },
     "config": {
         "commitizen": {
             "path": "@commitlint/cz-commitlint"
         }
+    },
+    "devDependencies": {
+        "npm-check-updates": "*"
     },
     "optionalDependencies": {
         "@tomgrv/devcontainer-features-common-utils": ">=5"
@@ -107,6 +112,47 @@
         "singleQuote": true,
         "tabWidth": 4,
         "trailingComma": "es5"
+    },
+    "bump-changelog": {
+        "types": [
+            {
+                "type": "feat",
+                "section": "Features"
+            },
+            {
+                "type": "fix",
+                "section": "Bug Fixes"
+            }
+        ]
+    },
+    "bump-version": {
+        "files": [
+            {
+                "filename": "composer.json",
+                "type": "json"
+            },
+            {
+                "filename": "package.json",
+                "type": "json"
+            },
+            {
+                "filename": "package.json",
+                "type": "json@ws"
+            },
+            {
+                "filename": "devcontainer-feature.json",
+                "type": "json@ws"
+            },
+            {
+                "filename": "VERSION",
+                "type": "plain-text"
+            }
+        ]
+    },
+    "commit-and-tag-version": {
+        "scripts": {
+            "prebump": "gitversion -config .gitversion -showvariable SemVer"
+        }
     },
     "commitlint": {
         "extends": [

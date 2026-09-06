@@ -18,3 +18,13 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- `-h` prints usage and exits non-zero
+- fails cleanly outside a git repository
+- requires a glob pattern and a secret value
+- refuses to run with uncommitted changes
+- reports no occurrences when the secret is absent, leaving files unchanged
+- `-d` dry-run lists matches without modifying anything
+- redacts a planted secret from tracked file content across all history
+- aborts the rewrite when the user declines the confirmation prompt
+- `-m` also redacts the secret from commit messages

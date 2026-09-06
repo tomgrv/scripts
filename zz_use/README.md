@@ -21,3 +21,11 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- skips a tool already on PATH, reporting "already available"
+- requires at least one tool argument
+- installs a functional script individually, not the whole bundle
+- installing any one missing zz_* tool installs the full zz_* bundle at once
+- errors with "Unable to provide required dependency" when a tool can't be resolved
+- `--force` re-installs the bundle even when already on PATH
+- resolves a functional script's `config/` folder alongside it
