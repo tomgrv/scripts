@@ -114,3 +114,8 @@ teardown() {
     run bash -c 'GITHUB_ACTIONS=true zz_log e "{Purple special} rest" 2>&1'
     [[ "$output" == *"::error::special rest"* ]]
 }
+
+@test "zz_log GHA annotation line percent-escapes %, CR, and LF" {
+    run bash -c 'GITHUB_ACTIONS=true zz_log e $'"'"'100% done\rline1\nline2'"'"' 2>&1'
+    [[ "$output" == *"::error::100%25 done%0Dline1%0Aline2"* ]]
+}

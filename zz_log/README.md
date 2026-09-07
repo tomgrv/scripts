@@ -13,10 +13,10 @@ zz_log <i|w|e|s|-> <message...>
 
 Inside a GitHub Actions run (`GITHUB_ACTIONS=true`), `w`/`e` also emit a
 leading `::warning::`/`::error::` workflow-command line (message only,
-`{Color text}` markup stripped) ahead of the usual colored job-log line, so
-the message surfaces as a PR/checks-UI annotation too. `i`/`s`/`-` are
-never annotated, and outside Actions the annotation line is skipped
-entirely.
+`{Color text}` markup stripped, `%`/CR/LF percent-escaped per GitHub's
+workflow-command syntax) ahead of the usual colored job-log line, so the
+message surfaces as a PR/checks-UI annotation too. `i`/`s`/`-` are never
+annotated, and outside Actions the annotation line is skipped entirely.
 
 ## Dependencies
 
@@ -35,4 +35,5 @@ bats test.bats
 - multiple message words are joined with spaces
 - `{Color text}` inline highlight syntax is supported
 - `e`/`w` prepend `::error::`/`::warning::` when `GITHUB_ACTIONS=true`, stripped of `{Color text}` markup
+- the annotation line percent-escapes `%`, CR, and LF per GitHub's workflow-command syntax
 - no `::error::`/`::warning::` line outside GitHub Actions, or for `i`/`s`/`-`

@@ -42,7 +42,15 @@ esac
 # below) -- these must lead the line for GitHub to recognize them, so they
 # are emitted as their own printf, ahead of the colored one.
 if [ -n "$gha" ]; then
-    plain=$(printf '%s' "$*" | sed -E 's/\{[A-Za-z]+ ([^}]*)\}/\1/g')
+    # GitHub requires %, CR, and LF to be percent-escaped in a workflow-command
+    # message -- unescaped they can truncate the annotation or be parsed as
+    # the start of another command. % must be escaped first, before the %25/
+    # %0D/%0A this introduces are themselves mistaken for input.
+    plain=$(
+        printf '%s' "$*" | sed -E 's/\{[A-Za-z]+ ([^}]*)\}/\1/g' | awk '
+            { gsub(/%/, "%25"); gsub(/\r/, "%0D"); printf "%s%s", (NR > 1 ? "%0A" : ""), $0 }
+        '
+    )
     printf '%s%s\n' "$gha" "$plain" >&2
 fi
 
