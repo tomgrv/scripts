@@ -170,7 +170,7 @@ if [ -z "$finished" ]; then
     # git flow finish prepends gitflow.prefix.versiontag to --tagname itself,
     # so pass the bare version here -- prefixing it ourselves would tag "vv$GBV".
     if git flow "$flow" finish "$name" --push --tagname "$GBV" --message "$GBV" ; then
-        zz_log s "Release finished: {B $GBV}"
+        zz_log n "Release finished: {B $GBV}"
     else
         zz_log e "Cannot finish release. Please fix the issues, commit any pending changes, then re-run this command to retry -- or finish manually with:"
         zz_log - "   git flow $flow finish $name --push --tagname $GBV --message $GBV"
