@@ -1,6 +1,6 @@
 #!/bin/sh
 # zz_log <level> <msg...> — colored, leveled log line on stderr.
-# level: i(nfo) w(arning) e(rror) s(uccess) -(plain).
+# level: i(nfo) n(otice) w(arning) e(rror) s(uccess) -(plain).
 
 . zz_colors
 
@@ -12,6 +12,11 @@ case $lvl in
 i*)
     picto="{BBlue →} "
     base="White"
+    ;;
+n*)
+    picto="{BCyan i} "
+    base="Cyan"
+    [ "${GITHUB_ACTIONS:-}" = "true" ] && gha="::notice::"
     ;;
 w*)
     picto="{BYellow !} "
@@ -37,10 +42,10 @@ s*)
     ;;
 esac
 
-# Inside a GitHub Actions run, w/e also surface as ::warning::/::error::
-# workflow-command annotations (in addition to the colored job-log line
-# below) -- these must lead the line for GitHub to recognize them, so they
-# are emitted as their own printf, ahead of the colored one.
+# Inside a GitHub Actions run, n/w/e also surface as ::notice::/::warning::/
+# ::error:: workflow-command annotations (in addition to the colored job-log
+# line below) -- these must lead the line for GitHub to recognize them, so
+# they are emitted as their own printf, ahead of the colored one.
 if [ -n "$gha" ]; then
     # GitHub requires %, CR, and LF to be percent-escaped in a workflow-command
     # message -- unescaped they can truncate the annotation or be parsed as
