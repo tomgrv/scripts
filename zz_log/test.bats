@@ -83,3 +83,34 @@ teardown() {
     [[ "$output" == *"ZZZ"* ]]
     [[ "$output" == *"custom"* ]]
 }
+
+@test "zz_log error level prepends ::error:: when GITHUB_ACTIONS=true" {
+    run bash -c 'GITHUB_ACTIONS=true zz_log e "boom" 2>&1'
+    [[ "$output" == *"::error::boom"* ]]
+    [[ "$output" == *"✕"* ]]
+}
+
+@test "zz_log warning level prepends ::warning:: when GITHUB_ACTIONS=true" {
+    run bash -c 'GITHUB_ACTIONS=true zz_log w "careful" 2>&1'
+    [[ "$output" == *"::warning::careful"* ]]
+    [[ "$output" == *"!"* ]]
+}
+
+@test "zz_log error/warning do not add ::error::/::warning:: outside GitHub Actions" {
+    run bash -c 'unset GITHUB_ACTIONS; zz_log e "boom" 2>&1'
+    [[ "$output" != *"::error::"* ]]
+    run bash -c 'unset GITHUB_ACTIONS; zz_log w "careful" 2>&1'
+    [[ "$output" != *"::warning::"* ]]
+}
+
+@test "zz_log info/success levels never add ::error::/::warning:: even when GITHUB_ACTIONS=true" {
+    run bash -c 'GITHUB_ACTIONS=true zz_log i "hi" 2>&1'
+    [[ "$output" != *"::"* ]]
+    run bash -c 'GITHUB_ACTIONS=true zz_log s "done" 2>&1'
+    [[ "$output" != *"::"* ]]
+}
+
+@test "zz_log GHA annotation line strips {Color text} markup to plain text" {
+    run bash -c 'GITHUB_ACTIONS=true zz_log e "{Purple special} rest" 2>&1'
+    [[ "$output" == *"::error::special rest"* ]]
+}

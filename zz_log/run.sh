@@ -6,6 +6,8 @@
 
 lvl="$1" && shift
 
+gha=""
+
 case $lvl in
 i*)
     picto="{BBlue →} "
@@ -14,10 +16,12 @@ i*)
 w*)
     picto="{BYellow !} "
     base="Yellow"
+    [ "${GITHUB_ACTIONS:-}" = "true" ] && gha="::warning::"
     ;;
 e*)
     picto="{BRed ✕} "
     base="Red"
+    [ "${GITHUB_ACTIONS:-}" = "true" ] && gha="::error::"
     ;;
 s*)
     picto="{Green ✔} "
@@ -32,6 +36,15 @@ s*)
     base="White"
     ;;
 esac
+
+# Inside a GitHub Actions run, w/e also surface as ::warning::/::error::
+# workflow-command annotations (in addition to the colored job-log line
+# below) -- these must lead the line for GitHub to recognize them, so they
+# are emitted as their own printf, ahead of the colored one.
+if [ -n "$gha" ]; then
+    plain=$(printf '%s' "$*" | sed -E 's/\{[A-Za-z]+ ([^}]*)\}/\1/g')
+    printf '%s%s\n' "$gha" "$plain" >&2
+fi
 
 eval "$(
     echo "printf '%b\n' \"$picto$*\${End}\"" | sed -E "s/\{([A-Z]) /{\1${base} /g;s/\{([a-zA-Z]+) ([^}]*)\}/\${\1}\2\${${base}}/g; s/\r//g; "
