@@ -1,6 +1,18 @@
-<!-- @format -->
-
 # Changelog
+
+## 0.5.0 (2026-09-07)
+
+*Commits from: v0.4.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Features
+
+- ✨ zz_log emits ::warning::/::error:: annotations in GitHub Actions (#8)
+
+#### Other changes
+
+- Merge tag 'v0.4.0' into develop
 
 ## 0.4.0 (2026-09-06)
 
@@ -70,6 +82,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 - install a script's config/ dir alongside it in the bin dir
 
----
 
-_Generated on 2026-09-06 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)_
+---
+*Generated on 2026-09-07 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
