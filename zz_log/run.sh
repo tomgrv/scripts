@@ -42,10 +42,11 @@ s*)
     ;;
 esac
 
-# Inside a GitHub Actions run, n/w/e also surface as ::notice::/::warning::/
-# ::error:: workflow-command annotations (in addition to the colored job-log
-# line below) -- these must lead the line for GitHub to recognize them, so
-# they are emitted as their own printf, ahead of the colored one.
+# Inside a GitHub Actions run, n/w/e surface as ::notice::/::warning::/
+# ::error:: workflow-command annotations instead of the colored job-log line
+# -- GitHub already renders the annotation inline in the step log (as well as
+# in the Checks/PR annotations UI), so printing the colored line too would
+# just duplicate the same message right below it.
 if [ -n "$gha" ]; then
     # GitHub requires %, CR, and LF to be percent-escaped in a workflow-command
     # message -- unescaped they can truncate the annotation or be parsed as
@@ -57,8 +58,8 @@ if [ -n "$gha" ]; then
         '
     )
     printf '%s%s\n' "$gha" "$plain" >&2
+else
+    eval "$(
+        echo "printf '%b\n' \"$picto$*\${End}\"" | sed -E "s/\{([A-Z]) /{\1${base} /g;s/\{([a-zA-Z]+) ([^}]*)\}/\${\1}\2\${${base}}/g; s/\r//g; "
+    )" >&2
 fi
-
-eval "$(
-    echo "printf '%b\n' \"$picto$*\${End}\"" | sed -E "s/\{([A-Z]) /{\1${base} /g;s/\{([a-zA-Z]+) ([^}]*)\}/\${\1}\2\${${base}}/g; s/\r//g; "
-)" >&2

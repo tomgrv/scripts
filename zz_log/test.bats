@@ -92,21 +92,22 @@ teardown() {
     [[ "$output" == *"custom"* ]]
 }
 
-@test "zz_log notice level prepends ::notice:: when GITHUB_ACTIONS=true" {
+@test "zz_log notice level emits only the ::notice:: annotation when GITHUB_ACTIONS=true, not the colored line too" {
     run bash -c 'GITHUB_ACTIONS=true zz_log n "heads up" 2>&1'
     [[ "$output" == *"::notice::heads up"* ]]
+    [ "$(printf '%s\n' "$output" | wc -l)" -eq 1 ]
 }
 
-@test "zz_log error level prepends ::error:: when GITHUB_ACTIONS=true" {
+@test "zz_log error level emits only the ::error:: annotation when GITHUB_ACTIONS=true, not the colored line too" {
     run bash -c 'GITHUB_ACTIONS=true zz_log e "boom" 2>&1'
     [[ "$output" == *"::error::boom"* ]]
-    [[ "$output" == *"✕"* ]]
+    [ "$(printf '%s\n' "$output" | wc -l)" -eq 1 ]
 }
 
-@test "zz_log warning level prepends ::warning:: when GITHUB_ACTIONS=true" {
+@test "zz_log warning level emits only the ::warning:: annotation when GITHUB_ACTIONS=true, not the colored line too" {
     run bash -c 'GITHUB_ACTIONS=true zz_log w "careful" 2>&1'
     [[ "$output" == *"::warning::careful"* ]]
-    [[ "$output" == *"!"* ]]
+    [ "$(printf '%s\n' "$output" | wc -l)" -eq 1 ]
 }
 
 @test "zz_log notice/error/warning do not add ::notice::/::error::/::warning:: outside GitHub Actions" {
