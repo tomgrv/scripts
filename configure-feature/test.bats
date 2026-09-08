@@ -119,6 +119,40 @@ teardown() {
     [ -L linked.txt ]
 }
 
+@test "configure-feature .clean RMV untracks a file but keeps it on disk" {
+    echo "legacy" >legacy.txt
+    git add legacy.txt
+    git commit -q -m "add legacy"
+
+    mkdir -p src/stubs
+    echo "RMV legacy.txt" >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ -f legacy.txt ]
+    ! git ls-files --error-unmatch legacy.txt >/dev/null 2>&1
+}
+
+@test "configure-feature .clean DEL deletes a file and untracks it" {
+    echo "obsolete" >obsolete.txt
+    git add obsolete.txt
+    git commit -q -m "add obsolete"
+
+    mkdir -p src/stubs
+    echo "DEL obsolete.txt" >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ ! -f obsolete.txt ]
+    ! git ls-files --error-unmatch obsolete.txt >/dev/null 2>&1
+}
+
+@test "configure-feature does not deploy .clean itself as a stub" {
+    mkdir -p src/stubs
+    echo "RMV foo.txt" >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ ! -f .clean ]
+}
+
 @test "configure-feature runs configure-*.sh scripts from source when at repo top level" {
     cat >src-configure.sh <<'EOF'
 EOF
