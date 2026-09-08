@@ -10,6 +10,7 @@ setup() {
     cd "$REPO_DIR"
     git config user.email "test@example.com"
     git config user.name "Test"
+    git config commit.gpgsign false
 
     mkdir -p src/pkg-a
     cat >package.json <<'EOF'
@@ -57,5 +58,20 @@ teardown() {
 @test "bump-version -m only bumps workspaces affected by the given range" {
     run bump-version -m -r "v1.0.0..HEAD" --version 2.0.0
     [ "$status" -eq 0 ]
+    [ "$(jq -r .version src/pkg-a/package.json)" = "2.0.0" ]
+}
+
+@test "bump-version -r is honored instead of being overridden by the latest-tag range" {
+    # Add a second tag past the pkg-a change, so the latest-tag-derived
+    # range (v1.1.0..HEAD) differs from the explicit range we pass in
+    # (v1.0.0..HEAD, which still covers the pkg-a change).
+    echo "more" >untouched-file
+    git add -A
+    git commit -q -m "unrelated"
+    git tag v1.1.0
+
+    run bump-version -m -r "v1.0.0..HEAD" --version 2.0.0
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Git range: v1.0.0..HEAD"* ]]
     [ "$(jq -r .version src/pkg-a/package.json)" = "2.0.0" ]
 }

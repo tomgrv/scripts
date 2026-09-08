@@ -10,6 +10,7 @@ setup() {
     cd "$REPO_DIR"
     git config user.email "test@example.com"
     git config user.name "Test"
+    git config commit.gpgsign false
     echo '{"name": "root", "version": "1.0.0"}' >package.json
     git add -A
     git commit -q -m "init"
