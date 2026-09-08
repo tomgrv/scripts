@@ -257,8 +257,11 @@ else
     zz_log s "Using provided version: $version"
 fi
 
-# Calculate git range for minimal mode and output
-range=$(get_latest_range)
+# Calculate git range for minimal mode and output, unless the caller
+# already supplied one via -r/--range
+if [ -z "$range" ]; then
+    range=$(get_latest_range)
+fi
 zz_log i "Git range: $range"
 
 # Output version and range for script chaining

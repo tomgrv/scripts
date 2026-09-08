@@ -1,12 +1,12 @@
 {
-    "name": "bump-version",
-    "version": "1.0.0",
-    "description": "Update version numbers in files (root and/or per-workspace) per package.json's bump-version config",
-    "bin": {
-        "bump-version": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "private": true
+  "name": "bump-version",
+  "version": "0.10.0",
+  "description": "Update version numbers in files (root and/or per-workspace) per package.json's bump-version config",
+  "bin": {
+    "bump-version": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "private": true
 }
