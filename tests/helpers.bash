@@ -17,6 +17,18 @@ setup_scripts_path() {
     export PATH="$TEST_BIN:$PATH"
 }
 
+# Replace a real script already symlinked onto $TEST_BIN (by
+# setup_scripts_path) with a stub. Plain `cat >"$TEST_BIN/<name>"` would
+# instead follow that pre-existing symlink and overwrite the real run.sh
+# it points to (corrupting the actual script on disk) -- this removes the
+# symlink first so the write lands on a fresh regular file. Takes the stub
+# content on stdin, same as `cat >"$TEST_BIN/<name>"` would.
+stub_script() {
+    rm -f "$TEST_BIN/$1"
+    cat >"$TEST_BIN/$1"
+    chmod +x "$TEST_BIN/$1"
+}
+
 teardown_scripts_path() {
     rm -rf "$TEST_BIN"
 }
