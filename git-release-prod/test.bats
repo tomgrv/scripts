@@ -6,27 +6,26 @@ setup() {
     setup_scripts_path
 
     # Stub the external tools git-release-prod shells out to (GitVersion
-    # `gv`, git-flow, and the sibling bump-tag/bump-changelog helpers), none
-    # of which are installed here, so its own resolution/guard logic runs
-    # for real against a real git repo.
-    cat >"$TEST_BIN/gv" <<'EOF'
+    # `gv`, git-flow, and the sibling bump-tag/bump-changelog helpers) --
+    # gv/bump-tag/bump-changelog are also real packages in this repo
+    # (setup_scripts_path already symlinked them onto $TEST_BIN), so use
+    # stub_script rather than a plain `cat >"$TEST_BIN/<name>"`, which
+    # would follow that symlink and overwrite the real run.sh it points to.
+    stub_script gv <<'EOF'
 #!/bin/sh
 echo "${GBV_STUB:-1.2.3}"
 EOF
-    chmod +x "$TEST_BIN/gv"
 
-    cat >"$TEST_BIN/bump-changelog" <<'EOF'
+    stub_script bump-changelog <<'EOF'
 #!/bin/sh
 echo "changelog bumped" >>CHANGELOG.md
 git add CHANGELOG.md
 EOF
-    chmod +x "$TEST_BIN/bump-changelog"
 
-    cat >"$TEST_BIN/bump-tag" <<'EOF'
+    stub_script bump-tag <<'EOF'
 #!/bin/sh
 echo "bump-tag $1" >>"$BATS_TEST_TMPDIR/bump-tag.log"
 EOF
-    chmod +x "$TEST_BIN/bump-tag"
 
     cat >"$TEST_BIN/git-flow" <<'EOF'
 #!/bin/sh
