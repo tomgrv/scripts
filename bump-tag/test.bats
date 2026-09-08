@@ -12,6 +12,7 @@ setup() {
     cd "$REPO_DIR"
     git config user.email "test@example.com"
     git config user.name "Test"
+    git config commit.gpgsign false
     git remote add origin "$REMOTE_DIR"
     git commit -q --allow-empty -m "init"
     git push -q -u origin HEAD:main
