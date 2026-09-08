@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.10.0 (2026-09-08)
+
+*Commits from: v0.9.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Bug Fixes
+
+- 🐛 honor bump-version's -r/--range instead of overriding it (#15)
+
+#### Other changes
+
+- Merge tag 'v0.9.0' into develop
+- 🔧 bump stale release-promote/scripts-ref pins (#14)
+
 ## 0.9.0 (2026-09-08)
 
 *Commits from: v0.8.0..HEAD*
@@ -135,6 +150,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 
