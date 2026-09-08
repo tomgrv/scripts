@@ -1,0 +1,12 @@
+{
+    "name": "bump-tag",
+    "version": "1.0.0",
+    "description": "Create or move a version tag (and its dependent major/minor tags), then push it",
+    "bin": {
+        "bump-tag": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    },
+    "private": true
+}

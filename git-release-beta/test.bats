@@ -7,12 +7,15 @@ setup() {
 
     # Stub external dependencies (GitVersion `gv` and git-flow) that
     # git-release-beta shells out to, so its own branch/state logic can be
-    # exercised hermetically without either tool actually installed.
-    cat >"$TEST_BIN/gv" <<'EOF'
+    # exercised hermetically without either tool actually installed. `gv`
+    # is also a real package in this repo (setup_scripts_path already
+    # symlinked it onto $TEST_BIN), so use stub_script rather than a plain
+    # `cat >"$TEST_BIN/gv"`, which would follow that symlink and overwrite
+    # the real run.sh it points to.
+    stub_script gv <<'EOF'
 #!/bin/sh
 echo "${GBV_STUB:-1.2.3}"
 EOF
-    chmod +x "$TEST_BIN/gv"
 
     cat >"$TEST_BIN/git-flow" <<'EOF'
 #!/bin/sh
@@ -79,12 +82,10 @@ teardown() {
 }
 
 @test "fails cleanly when the version cannot be computed" {
-    rm -f "$TEST_BIN/gv"
-    cat >"$TEST_BIN/gv" <<'EOF'
+    stub_script gv <<'EOF'
 #!/bin/sh
 exit 1
 EOF
-    chmod +x "$TEST_BIN/gv"
     run git-release-beta
     [ "$status" -eq 1 ]
     [[ "$output" == *"Cannot compute release version"* ]]

@@ -85,7 +85,11 @@
     "git-release-hotfix",
     "git-release-prod",
     "git-unset",
-    "git-workspaces"
+    "git-workspaces",
+    "gv",
+    "bump-tag",
+    "bump-changelog",
+    "bump-version"
   ],
   "prettier": {
     "insertPragma": true,
