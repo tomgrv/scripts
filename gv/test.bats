@@ -118,7 +118,7 @@ EOF
     stub_docker_unreachable
     run gv -showvariable SemVer
     [ "$status" -ne 0 ]
-    [[ "$output" == *"Could not run GitVersion via Docker or dotnet"* ]]
+    [[ "$output" == *"Could not run GitVersion --"* ]]
 }
 
 @test "gv errors clearly (not silently) when the dotnet tool install itself fails" {
@@ -131,5 +131,5 @@ EOF
     chmod +x "$TEST_BIN/dotnet"
     run gv -showvariable SemVer
     [ "$status" -ne 0 ]
-    [[ "$output" == *"Could not run GitVersion via Docker or dotnet"* ]]
+    [[ "$output" == *"Could not run GitVersion --"* ]]
 }

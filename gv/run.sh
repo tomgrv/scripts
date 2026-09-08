@@ -1,70 +1,54 @@
 #!/bin/sh
 
-# Call GitVersion against this repo's .gitversion configuration, preferring
-# the Docker-based CLI when Docker is actually usable and falling back to
-# the dotnet-tool CLI otherwise. Installs whichever backend it needs to use,
-# on demand, the first time it's needed -- so nothing has to pre-decide
-# which one a given environment gets.
+# Call GitVersion against this repo's .gitversion configuration. Tries each
+# backend in $steps, in order: if its run command isn't already on PATH,
+# runs that backend's own config/install-<name>.sh (which decides for
+# itself whether it even *can* install -- e.g. install-docker.sh no-ops
+# out when Docker isn't actually usable) and re-checks; the first backend
+# whose run command resolves is the one gv uses.
 #
-# Both backends are tried the same way (resolve on PATH, install if
-# missing, re-check) and neither branch exits on its own -- $backend is set
-# only once a tool is confirmed actually resolvable, and the single case at
-# the end is what invokes it or fails loudly. That keeps a failed install
-# (network down, no GitVersion.Tool feed, etc.) from aborting silently
-# mid-script via `set -e`: it just leaves $backend unset, so the run falls
-# through to the same clear error every other "nothing worked" case hits.
+# Adding a backend is: one more "name:run-command" entry in $steps, a
+# config/install-<name>.sh next to this file, and a run_<name> function
+# below with that backend's own calling convention (docker-gitversion and
+# dotnet-gitversion don't take the same arguments, so this only unifies
+# the *dispatch* across backends, not their individual CLIs).
+#
+# Neither step exits on its own -- nothing is invoked until a run command
+# is confirmed actually resolvable, and the one call after the loop is
+# what runs it or fails loudly. That keeps a failed install (network down,
+# no GitVersion.Tool feed, etc.) from aborting silently mid-script via
+# `set -e`: it just leaves that backend's run command unresolved, so the
+# loop moves on to the next one, or falls through to the same clear error
+# every "nothing worked" case hits.
 
 set -eu
 
-GITVERSION_VERSION="${GITVERSION_VERSION:-6.5.1}"
-INSTALL_BIN_DIR="${INSTALL_BIN_DIR:-/usr/local/bin}"
+dir=$(dirname "$(readlink -f "$0")")
 
-backend=""
-
-# `docker info` (not just `command -v docker`) confirms a daemon is actually
-# reachable -- the CLI can be on PATH with no daemon behind it (e.g. no
-# docker-in-docker in this container), which would otherwise hang or fail
-# on the first real `docker run`.
-if command -v docker > /dev/null 2>&1 && docker info > /dev/null 2>&1; then
-    if ! command -v docker-gitversion > /dev/null 2>&1; then
-        zz_log i "Installing docker-gitversion wrapper (gittools/gitversion:${GITVERSION_VERSION})..."
-        cat > "${INSTALL_BIN_DIR}/docker-gitversion" << DOCKERWRAP || true
-#!/bin/sh
-cd "\$(git rev-parse --show-toplevel)" && \\
-docker run --rm -v "\$(git rev-parse --show-toplevel):/repo" gittools/gitversion:${GITVERSION_VERSION} /repo "\$@"
-DOCKERWRAP
-        chmod +x "${INSTALL_BIN_DIR}/docker-gitversion" 2> /dev/null || true
-    fi
-    if command -v docker-gitversion > /dev/null 2>&1; then
-        backend="docker"
-        zz_log s "Using docker-gitversion"
-    else
-        zz_log w "Docker is available but docker-gitversion could not be installed to {U $INSTALL_BIN_DIR}"
-    fi
-fi
-
-if [ -z "$backend" ] && command -v dotnet > /dev/null 2>&1; then
-    if ! command -v dotnet-gitversion > /dev/null 2>&1; then
-        zz_log i "Installing GitVersion.Tool ${GITVERSION_VERSION} via dotnet..."
-        dotnet tool install GitVersion.Tool --version "${GITVERSION_VERSION}" --tool-path "${INSTALL_BIN_DIR}" > /dev/null 2>&1 || true
-    fi
-    if command -v dotnet-gitversion > /dev/null 2>&1; then
-        backend="dotnet"
-        zz_log s "Using dotnet-gitversion"
-    else
-        zz_log w "dotnet is available but GitVersion.Tool could not be installed to {U $INSTALL_BIN_DIR}"
-    fi
-fi
-
-case "$backend" in
-docker)
+run_docker() {
     exec docker-gitversion -config ".gitversion" "$@"
-    ;;
-dotnet)
+}
+
+run_dotnet() {
     exec dotnet-gitversion "$(git rev-parse --show-toplevel)" -config ".gitversion" "$@"
-    ;;
-*)
-    zz_log e "Could not run GitVersion via Docker or dotnet -- neither backend is available/installable (docker-gitversion, dotnet-gitversion)"
-    exit 1
-    ;;
-esac
+}
+
+# <name>:<run-command-to-check-on-PATH>, tried in this order.
+steps="docker:docker-gitversion dotnet:dotnet-gitversion"
+
+for step in $steps; do
+    name=${step%%:*}
+    check=${step#*:}
+
+    if ! command -v "$check" > /dev/null 2>&1; then
+        sh "$dir/config/install-$name.sh" || true
+    fi
+
+    if command -v "$check" > /dev/null 2>&1; then
+        zz_log s "Using $name ($check)"
+        run_"$name" "$@"
+    fi
+done
+
+zz_log e "Could not run GitVersion -- none of these backends resolved: $steps"
+exit 1
