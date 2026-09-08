@@ -11,11 +11,11 @@ and linked onto `PATH` as `configure-feature`.
 configure-feature [-s source] <feature>
 ```
 
-## `.clean` files
+## `.clean`
 
-A `.clean` file placed anywhere under a feature's `stubs/` directory lists
-legacy files to retire on deployment, one directive per line, paths relative
-to the repo root (same addressing as any other stub target):
+A `.clean` file at a feature's root (alongside `stubs/`, `config/`, `bin/`)
+lists legacy files to retire on deployment, one directive per line, paths
+relative to the repo root:
 
 ```
 RMV path/to/legacy-file
@@ -26,8 +26,9 @@ DEL path/to/obsolete-file
   on disk (e.g. it moved from tracked to `.gitignore`d).
 - `DEL <path>` — delete the file from disk and untrack it from git.
 
-Blank lines and lines starting with `#` are ignored. `.clean` itself is never
-deployed as a stub.
+Blank lines and lines starting with `#` are ignored. `install-feature`
+copies `.clean` alongside `stubs/`/`config/`/`bin/`; `configure-feature`
+processes it after deploying stubs.
 
 ## Dependencies
 
@@ -46,5 +47,5 @@ bats test.bats
 - reconciles a text fragment additively into an existing file
 - strips leading `_` prefix and `.gitignore`s `#`-prefixed stub destinations
 - preserves executable bits and symlinks stub targets
-- processes `.clean` RMV/DEL directives, skips deploying `.clean` itself
+- processes `.clean` RMV/DEL directives from the feature root
 - runs `configure-*.sh` scripts only from the repo top level

@@ -86,6 +86,15 @@ EOF
     [ "$found" -eq 1 ]
 }
 
+@test "install-feature copies .clean from source root into the target" {
+    mkdir -p src
+    echo "DEL legacy.txt" >src/.clean
+
+    run install-feature -s "$WORK_DIR/src" -t "$WORK_DIR/target" caller
+    [ "$status" -eq 0 ]
+    [ -f "$WORK_DIR/target/.clean" ]
+}
+
 @test "install-feature warns but succeeds when source has no stubs/config" {
     mkdir -p src
     touch src/somefile

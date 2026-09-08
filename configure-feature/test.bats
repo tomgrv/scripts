@@ -124,8 +124,8 @@ teardown() {
     git add legacy.txt
     git commit -q -m "add legacy"
 
-    mkdir -p src/stubs
-    echo "RMV legacy.txt" >src/stubs/.clean
+    mkdir -p src
+    echo "RMV legacy.txt" >src/.clean
     run configure-feature -s "$WORK_DIR/src" myfeature
     [ "$status" -eq 0 ]
     [ -f legacy.txt ]
@@ -137,17 +137,17 @@ teardown() {
     git add obsolete.txt
     git commit -q -m "add obsolete"
 
-    mkdir -p src/stubs
-    echo "DEL obsolete.txt" >src/stubs/.clean
+    mkdir -p src
+    echo "DEL obsolete.txt" >src/.clean
     run configure-feature -s "$WORK_DIR/src" myfeature
     [ "$status" -eq 0 ]
     [ ! -f obsolete.txt ]
     ! git ls-files --error-unmatch obsolete.txt >/dev/null 2>&1
 }
 
-@test "configure-feature does not deploy .clean itself as a stub" {
+@test "configure-feature does not deploy .clean as a stub" {
     mkdir -p src/stubs
-    echo "RMV foo.txt" >src/stubs/.clean
+    echo "RMV foo.txt" >src/.clean
     run configure-feature -s "$WORK_DIR/src" myfeature
     [ "$status" -eq 0 ]
     [ ! -f .clean ]

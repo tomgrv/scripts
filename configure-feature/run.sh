@@ -36,7 +36,7 @@ if [ -d $source/stubs ]; then
 
     zz_log i "Deploying stubs..."
 
-    find $source/stubs -type f -name ".*" -not -name ".clean" -o -type f -not -name ".clean" | sort | while read file; do
+    find $source/stubs -type f -name ".*" -o -type f | sort | while read file; do
 
         folder=$(dirname ${file#$source/stubs/})
 
@@ -122,42 +122,6 @@ if [ -d $source/stubs ]; then
 
     done
 
-    zz_log i "Processing .clean files if existing..."
-
-    find "$source/stubs" -type f -name ".clean" | sort | while read cleanfile; do
-        while IFS= read -r line || [ -n "$line" ]; do
-            line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-            [ -z "$line" ] && continue
-            case "$line" in
-            \#*) continue ;;
-            esac
-
-            op=$(echo "$line" | awk '{print $1}')
-            path=$(echo "$line" | cut -d' ' -f2-)
-
-            case "$op" in
-            RMV)
-                if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
-                    zz_log - "Untracking {U $path} (kept on disk)..."
-                    git rm --cached -q -- "$path"
-                fi
-                ;;
-            DEL)
-                if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
-                    zz_log - "Deleting {U $path} and untracking..."
-                    git rm -f -q -- "$path"
-                elif [ -e "$path" ]; then
-                    zz_log - "Deleting {U $path}..."
-                    rm -f -- "$path"
-                fi
-                ;;
-            *)
-                zz_log w "Unknown .clean directive {U $line}, skipping"
-                ;;
-            esac
-        done <"$cleanfile"
-    done
-
     zz_log i "Deploying stubs symlinks if existing..."
 
     find "$source/stubs" -type l | while IFS= read -r link; do
@@ -172,6 +136,45 @@ if [ -d $source/stubs ]; then
     done
 
     zz_log s "Done deploying stubs."
+fi
+
+if [ -f $source/.clean ]; then
+
+    zz_log i "Processing .clean..."
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        [ -z "$line" ] && continue
+        case "$line" in
+        \#*) continue ;;
+        esac
+
+        op=$(echo "$line" | awk '{print $1}')
+        path=$(echo "$line" | cut -d' ' -f2-)
+
+        case "$op" in
+        RMV)
+            if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
+                zz_log - "Untracking {U $path} (kept on disk)..."
+                git rm --cached -q -- "$path"
+            fi
+            ;;
+        DEL)
+            if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
+                zz_log - "Deleting {U $path} and untracking..."
+                git rm -f -q -- "$path"
+            elif [ -e "$path" ]; then
+                zz_log - "Deleting {U $path}..."
+                rm -f -- "$path"
+            fi
+            ;;
+        *)
+            zz_log w "Unknown .clean directive {U $line}, skipping"
+            ;;
+        esac
+    done <$source/.clean
+
+    zz_log s "Done processing .clean."
 fi
 
 if [ "$(pwd)" = "$(git rev-parse --show-toplevel)" ]; then

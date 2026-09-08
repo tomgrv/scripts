@@ -25,6 +25,6 @@ bats test.bats
 - help/usage output and exit code
 - errors without a caller argument
 - copies stubs/config/bin from source to target
-- copies `configure-*.sh` lifecycle scripts, runs `install-*.sh` ones
+- copies `configure-*.sh` lifecycle scripts and `.clean`, runs `install-*.sh` ones
 - symlinks `bin/*.sh` scripts (stripping `.sh`) onto a writable PATH dir
 - warns but still succeeds when source has no stubs/config

@@ -48,6 +48,7 @@ if [ -d $source/bin ]; then
 fi
 
 find $source -maxdepth 1 -name "configure-*.sh" -type f -exec cp {} $target \;
+[ -f $source/.clean ] && cp $source/.clean $target
 find $target -type f -name "*.sh" -exec chmod +x {} \;
 
 find $source -maxdepth 1 -type f -name "install-*.sh" | while read script; do
