@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.11.0 (2026-09-11)
+
+*Commits from: v0.10.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Bug Fixes
+
+- 🐛 route GITLEAKS_LICENSE through env in validate-pr-secret workflow (#17)
+
+#### Other changes
+
+- Merge tag 'v0.10.0' into develop
+### 📦 zz_persist changes
+
+#### Features
+
+- add interactive -i/-v/-s prompting (#16)
+
 ## 0.10.0 (2026-09-08)
 
 *Commits from: v0.9.0..HEAD*
@@ -157,5 +176,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-09-08 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-09-11 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
