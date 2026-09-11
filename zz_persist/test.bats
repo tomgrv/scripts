@@ -89,6 +89,36 @@ teardown() {
     rm -f "$tmp" /etc/profile.d/zzptest.sh
 }
 
+@test "zz_persist -i with -v uses the default when not on a terminal" {
+    tmp=$(mktemp)
+    run zz_persist -f "$tmp" -i "Enter value" -v defaultval KEY </dev/null
+    [ "$status" -eq 0 ]
+    grep -q '^KEY=defaultval$' "$tmp"
+    rm -f "$tmp"
+}
+
+@test "zz_persist -i shows and reuses the current value as default" {
+    tmp=$(mktemp)
+    run zz_persist -f "$tmp" KEY first
+    [ "$status" -eq 0 ]
+    run zz_persist -f "$tmp" -i "Enter value" -v ignored KEY </dev/null
+    [ "$status" -eq 0 ]
+    grep -q '^KEY=first$' "$tmp"
+    rm -f "$tmp"
+}
+
+@test "zz_persist -i with -s masks an already-set secret in the log output" {
+    tmp=$(mktemp)
+    run zz_persist -f "$tmp" KEY supersecret
+    [ "$status" -eq 0 ]
+    run zz_persist -f "$tmp" -i "Enter secret" -s ignored KEY </dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'***'* ]]
+    [[ "$output" != *'supersecret'* ]]
+    grep -q '^KEY=supersecret$' "$tmp"
+    rm -f "$tmp"
+}
+
 @test "zz_persist upsert into profile.d replaces an existing export line" {
     skip_msg=""
     if ! mkdir -p /etc/profile.d 2>/dev/null; then
