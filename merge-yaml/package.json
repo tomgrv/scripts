@@ -1,0 +1,12 @@
+{
+    "name": "merge-yaml",
+    "version": "0.1.0",
+    "description": "Recursively merge one YAML file into another, arrays deduped and unioned",
+    "bin": {
+        "merge-yaml": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    },
+    "private": true
+}

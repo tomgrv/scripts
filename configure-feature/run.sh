@@ -68,6 +68,16 @@ if [ -d $source/stubs ]; then
                 cp $file $dest
             fi
 
+        elif [ "${dest##*.}" = "yaml" ] || [ "${dest##*.}" = "yml" ]; then
+
+            if [ -f $dest ]; then
+                zz_log - "Merging {U $file} into {U $dest}..."
+                merge-yaml -i ${tabSize:-2} $dest $file
+            else
+                zz_log w "Destination file {U $dest} does not exist. Copying {U $file} to {U $dest}..."
+                cp $file $dest
+            fi
+
         else
             # Non-JSON fragments accumulate via a plain line-set
             # reconciliation, not git merge-file: merge-file's 3-way diff is

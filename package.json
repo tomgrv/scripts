@@ -50,6 +50,7 @@
     "validate-json",
     "normalize-json",
     "merge-json",
+    "merge-yaml",
     "resolve-context",
     "edit-script",
     "distribute-utils",
