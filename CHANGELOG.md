@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.13.0 (2026-09-12)
+
+*Commits from: v0.12.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Bug Fixes
+
+- 🐛 🔧 bump create-pr action pin to v2 (#23)
+- 🔧 make zz_args pass-through eval-safe grant workflows perm to update-features (#25)
+
+#### Other changes
+
+- Merge tag 'v0.12.0' into develop
+
 ## 0.12.0 (2026-09-12)
 
 *Commits from: v0.11.0..HEAD*
@@ -195,6 +210,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 
