@@ -21,3 +21,9 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- reads a literal argument, a file argument, or stdin (when no argument given)
+- a non-existent path is treated as a literal string, not an error
+- reading a file logs which file it read from, to stderr
+- multi-line file content is preserved
+- an empty literal argument falls back to reading stdin

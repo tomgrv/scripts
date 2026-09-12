@@ -11,13 +11,16 @@ eval $(
     zz_args "Persist a key=value pair durably" $0 "$@" <<-help
         f file      file        Upsert KEY=VALUE into this .env-style file
         p name      profile     Export KEY=VALUE from /etc/profile.d/<profile>.sh
+        i question  question    Ask interactively for the value with this prompt (terminal only)
+        v default   value_default   Default value for a non-secret interactive prompt
+        s default   secret_default  Default value for a secret interactive prompt (masked)
         - key       key         Variable name
         - value     value       Variable value
 help
 )
 
 if [ -z "$key" ]; then
-    zz_log e "Usage: zz_persist [-f file] [-p profile] <key> <value>"
+    zz_log e "Usage: zz_persist [-f file] [-p profile] [-i question [-v default|-s default]] <key> [value]"
     exit 1
 fi
 
@@ -32,6 +35,36 @@ esac
 if [ -z "$file" ] && [ -z "$profile" ]; then
     zz_log e "At least one of -f or -p is required"
     exit 1
+fi
+
+if [ -n "$question" ]; then
+    current=""
+    [ -n "$file" ] && [ -f "$file" ] && current=$(sed -n "s/^$key=//p" "$file" | tail -n1)
+    if [ -z "$current" ] && [ -n "$profile" ] && [ -f "/etc/profile.d/$profile.sh" ]; then
+        current=$(sed -n "s/^export $key=//p" "/etc/profile.d/$profile.sh" | tail -n1)
+    fi
+
+    default="${value_default:-$secret_default}"
+
+    if [ -n "$current" ]; then
+        if [ -n "$secret_default" ]; then
+            zz_log i "$key already set: {Purple ***}"
+        else
+            zz_log i "$key already set: {Purple $current}"
+        fi
+        default="$current"
+    fi
+
+    if [ -t 0 ]; then
+        prompt="  ${question}"
+        [ -n "$default" ] && prompt="${prompt} [${default}]: "
+        printf '%s' "$prompt"
+        read -r answer
+        [ -z "$answer" ] && answer="$default"
+        value="$answer"
+    else
+        value="$default"
+    fi
 fi
 
 escaped_value=$(printf '%s' "${value:-}" | sed -e 's/[\\&|]/\\&/g')

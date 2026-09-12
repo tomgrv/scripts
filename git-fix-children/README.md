@@ -18,3 +18,9 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- `-h` prints usage; fails cleanly outside a git repository
+- with no descendant tags or branches, succeeds cleanly
+- deletes descendant tags and branches, but preserves current/main/master
+- without `-p`, warns that remote deletions were not pushed
+- `-p` pushes tag deletions to the remote

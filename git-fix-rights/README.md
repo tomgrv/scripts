@@ -18,3 +18,8 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- `-h` prints usage and exits non-zero
+- is a harmless no-op outside a git repository
+- normalizes permissions for tracked files and directories (644/755/600/700)
+- leaves untracked files alone

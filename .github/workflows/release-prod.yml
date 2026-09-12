@@ -1,6 +1,6 @@
 # @format
 
-name: 'Release Main'
+name: 'Release Prod'
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ permissions:
   contents: write
 
 jobs:
-  release-main:
+  release-prod:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,10 +24,7 @@ jobs:
           ref: develop
 
       - name: Release promote
-        # TODO: pin to a released tag of tomgrv/actions once its
-        # multi-repo-consistency PR merges and tags (currently pointing at
-        # the working branch until that lands).
-        uses: tomgrv/actions/release-promote@claude/multi-repo-consistency-release-7se0jy
+        uses: tomgrv/actions/release-promote@v2.29.0
         with:
-          scripts-ref: v0.3.0
+          scripts-ref: v0.9.0
           dry-run: ${{ inputs.dry_run == true }}

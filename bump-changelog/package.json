@@ -1,0 +1,12 @@
+{
+  "name": "bump-changelog",
+  "version": "0.10.0",
+  "description": "Generate a CHANGELOG.md entry from conventional commits, optionally bumping version files and tagging",
+  "bin": {
+    "bump-changelog": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "private": true
+}

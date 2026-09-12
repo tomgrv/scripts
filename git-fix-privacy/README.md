@@ -18,3 +18,8 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- `-h` prints usage and exits non-zero
+- fails cleanly outside a git repository
+- rewrites author name/email across history and updates local git config
+- leaves commits by a different author untouched

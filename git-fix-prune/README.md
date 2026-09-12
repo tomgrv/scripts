@@ -18,3 +18,8 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- `-h` prints usage and exits non-zero
+- is a harmless no-op outside a git repository
+- removes stale remote-tracking refs for a branch deleted on the remote
+- accepts an explicit remote name

@@ -1,0 +1,12 @@
+{
+    "name": "gv",
+    "version": "1.0.0",
+    "description": "Call the GitVersion tool with this repo's .gitversion configuration",
+    "bin": {
+        "gv": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    },
+    "private": true
+}

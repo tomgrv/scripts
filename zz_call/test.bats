@@ -24,6 +24,11 @@ teardown() {
     teardown_scripts_path
 }
 
+@test "zz_call is on PATH and syntactically valid" {
+    run bash -n "$(command -v zz_call)"
+    [ "$status" -eq 0 ]
+}
+
 @test "zz_call prompts, persists, and an input entry's own 'as' renames the eval'd output" {
     run bash -c 'printf "myhost\nsecret123\n" | zz_call'
     [ "$status" -eq 0 ]
@@ -69,4 +74,41 @@ EOF
     rm -f package.json
     run zz_call
     [ "$status" -ne 0 ]
+}
+
+@test "zz_call uses default for a missing var and persists that default when accepted" {
+    run bash -c 'printf "\nsecret123\n" | zz_call'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"export DB_HOST='localhost'"* ]]
+    grep -q '^DB_HOST=localhost$' .env
+}
+
+@test "zz_call -p points to a non-default package.json path" {
+    mkdir -p sub
+    cat > sub/other.json <<'EOF'
+{
+  "config": {
+    "input": [{"var": "SOME_VAR", "question": "Value?", "default": "x"}]
+  }
+}
+EOF
+    run bash -c 'printf "picked\n" | zz_call -p sub/other.json'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"export SOME_VAR='picked'"* ]]
+}
+
+@test "zz_call reads config.file to choose a non-.env persistence target" {
+    cat > package.json <<'EOF'
+{
+  "config": {
+    "file": "custom.env",
+    "input": [{"var": "DB_HOST", "question": "Host?", "default": "localhost"}]
+  }
+}
+EOF
+    run bash -c 'printf "myhost\n" | zz_call'
+    [ "$status" -eq 0 ]
+    [ -f custom.env ]
+    grep -q '^DB_HOST=myhost$' custom.env
+    [ ! -f .env ]
 }

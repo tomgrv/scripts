@@ -1,12 +1,12 @@
 {
     "name": "git-fix-up",
-    "version": "1.0.0",
+    "version": "0.4.0",
     "description": "Amend the specified commit with current changes and rebase",
-    "private": true,
     "bin": {
         "git-fix-up": "run.sh"
     },
     "scripts": {
         "test": "bats test.bats"
-    }
+    },
+    "private": true
 }

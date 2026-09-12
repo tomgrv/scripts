@@ -1,12 +1,12 @@
 {
     "name": "zz_ask",
-    "version": "1.0.0",
+    "version": "0.4.0",
     "description": "Interactive single-character confirm/choice prompt",
-    "private": true,
     "bin": {
         "zz_ask": "run.sh"
     },
     "scripts": {
         "test": "bats test.bats"
-    }
+    },
+    "private": true
 }

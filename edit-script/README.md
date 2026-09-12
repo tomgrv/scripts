@@ -21,3 +21,8 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- help/usage output and exit code
+- errors without a script argument
+- fails when the script isn't installed in `/usr/local/bin`
+- copies an installed script locally, makes it executable, and opens it

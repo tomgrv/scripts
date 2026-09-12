@@ -178,7 +178,7 @@ the tool isn't already available.
 | `zz_bindir [-t target]`                  | resolve/create a writable bin dir; `eval $(zz_bindir ...)` to bind `$dir` and extend `PATH`                                           |
 | `zz_dispatch <caller> <subcmd>`          | dispatch an underscore-prefixed caller to a sibling `<name>-<subcmd>` script                                                          |
 | `zz_npx [-s] <tool>`                     | run a local `node_modules/.bin` binary, falling back to `npx`                                                                         |
-| `zz_persist [-f\|-p] <key> <value>`      | upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`                                                                    |
+| `zz_persist [-f\|-p] [-i <question> [-v\|-s <default>]] <key> [value]` | upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`; with `-i`, ask interactively instead (`-s` for a secret, masked when already set) |
 | `zz_call [-p package.json] [command...]` | resolve a caller's declared env vars (`config.input`/`config.output` in `package.json`; ask + persist if missing), then run a command |
 
 ## Functional scripts
@@ -265,3 +265,13 @@ Any single folder can be copied out and still work standalone.
 npm test                     # bats --recursive . (every */test.bats)
 bats validate-json/test.bats # a single script's tests
 ```
+
+Each `test.bats` is a behavioral suite, not just a syntax check: it exercises
+the script's documented options and arguments, `-h`/help output, error paths
+(missing/invalid arguments, running outside a git repo where relevant), and
+success paths against a throwaway git repo or temp directory created in
+`setup()`/`teardown()` (via `tests/helpers.bash`). Suites are hermetic — no
+network access and no writes outside a temp dir — except where a script's own
+purpose requires reaching a real tool (e.g. `zz_npx`/`zz_update` fall back to
+a local fixture and assert no network call is made). 417 tests currently pass
+across all 53 script folders.

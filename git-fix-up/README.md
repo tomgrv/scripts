@@ -18,3 +18,9 @@ Declared via `zz_use` at the top of `run.sh` and resolved on demand
 ```sh
 bats test.bats
 ```
+
+- `-h` prints usage and exits non-zero
+- refuses when a lock file is staged
+- refuses when nothing is staged
+- creates a fixup commit for the target and autosquashes it in, folding
+  the staged content into the target commit with history length preserved
