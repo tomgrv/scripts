@@ -9,7 +9,7 @@
 # in the `var='...'` assignments this script emits for the caller's `eval`.
 # Without this, a value containing a single quote (e.g. `'; rm -rf / #`)
 # would break out of the quoting and be executed by the caller's eval.
-_zz_esc() {
+_escape() {
     printf '%s' "$1" | sed "s/'/'\\\\''/g"
 }
 
@@ -92,7 +92,7 @@ while getopts :$argnames value "$@"; do
     naming=$(printf '%b' "$varnames" | grep -E "^$value" | cut -f2)
 
     if [ -n "$OPTARG" ]; then
-        echo "$naming='$(_zz_esc "$OPTARG")'"
+        echo "$naming='$(_escape "$OPTARG")'"
     else
         echo "$naming=-$value"
     fi
@@ -118,14 +118,14 @@ else
 
     for arg in $(printf '%b' "$varnames" | grep -E "^-" | cut -f2); do
         if [ "$#" -gt "0" ]; then
-            echo "$arg='$(_zz_esc "$1")'" && shift 1
+            echo "$arg='$(_escape "$1")'" && shift 1
         fi
     done
 
     for arg in $(printf '%b' "$varnames" | grep -E "^&" | cut -f2); do
         lines=""
         while [ "$#" -gt "0" ]; do
-            piece=$(_zz_esc "$1")
+            piece=$(_escape "$1")
             if [ -z "$lines" ]; then
                 lines="$piece"
             else
@@ -146,7 +146,7 @@ else
         if [ "$#" -gt "0" ]; then
             line="set --"
             while [ "$#" -gt "0" ]; do
-                line="$line '$(_zz_esc "$1")'"
+                line="$line '$(_escape "$1")'"
                 shift 1
             done
             echo "$line"
@@ -157,7 +157,7 @@ else
         if [ "$#" -gt "0" ]; then
             value=""
             for a in "$@"; do
-                piece=$(_zz_esc "$a")
+                piece=$(_escape "$a")
                 if [ -z "$value" ]; then
                     value="$piece"
                 else
