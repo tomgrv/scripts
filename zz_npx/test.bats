@@ -31,6 +31,17 @@ teardown() {
     rm -rf "$proj"
 }
 
+@test "zz_npx runs a tool with no extra arguments without leaking the tool name back onto \$@" {
+    proj=$(mktemp -d)
+    mkdir -p "$proj/node_modules/.bin"
+    printf '#!/bin/sh\necho "argc:$#"\n' >"$proj/node_modules/.bin/mytool"
+    chmod +x "$proj/node_modules/.bin/mytool"
+    run env INIT_CWD="$proj" zz_npx mytool
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"argc:0"* ]]
+    rm -rf "$proj"
+}
+
 @test "zz_npx uses PWD (not the shell's cwd) fallback when INIT_CWD is unset" {
     proj=$(mktemp -d)
     mkdir -p "$proj/node_modules/.bin"

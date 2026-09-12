@@ -143,14 +143,16 @@ else
         # when the caller's `eval` re-parses it. Emit `set --` with each
         # remaining argument individually single-quoted instead, so the
         # caller gets them back on "$@" byte-for-byte instead of via $arg.
-        if [ "$#" -gt "0" ]; then
-            line="set --"
-            while [ "$#" -gt "0" ]; do
-                line="$line '$(_escape "$1")'"
-                shift 1
-            done
-            echo "$line"
-        fi
+        # Always emit it, even with zero arguments left: otherwise the
+        # caller's own original "$@" (e.g. still holding the tool name a
+        # prior positional arg consumed) is left in place instead of being
+        # cleared, and gets passed through as if it were a real argument.
+        line="set --"
+        while [ "$#" -gt "0" ]; do
+            line="$line '$(_escape "$1")'"
+            shift 1
+        done
+        echo "$line"
     done
 
     for arg in $(printf '%b' "$varnames" | grep -E "^\+" | cut -f2); do
