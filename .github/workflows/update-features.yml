@@ -10,6 +10,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  workflows: write
 
 jobs:
   update-features:
@@ -34,7 +35,7 @@ jobs:
 
       - name: Create pull request
         if: ${{ steps.changes.outputs.has-changes == 'true' }}
-        uses: tomgrv/actions/create-pr@v1
+        uses: tomgrv/actions/create-pr@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}

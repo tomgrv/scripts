@@ -9,7 +9,7 @@
 # in the `var='...'` assignments this script emits for the caller's `eval`.
 # Without this, a value containing a single quote (e.g. `'; rm -rf / #`)
 # would break out of the quoting and be executed by the caller's eval.
-zz_esc() {
+_escape() {
     printf '%s' "$1" | sed "s/'/'\\\\''/g"
 }
 
@@ -35,7 +35,7 @@ if test $# -lt 1; then
     -   for sequential arguments in the order defined, without flags
     +   to capture all remaining arguments as a single variable with spaces as separators
     &   to capture all remaining arguments as a multiple-line variable
-    #   to capture all remaining arguments with escaped spaces" >&2
+    #   to capture all remaining arguments verbatim onto \"\$@\" via 'set --'" >&2
     return 1
 fi
 
@@ -92,7 +92,7 @@ while getopts :$argnames value "$@"; do
     naming=$(printf '%b' "$varnames" | grep -E "^$value" | cut -f2)
 
     if [ -n "$OPTARG" ]; then
-        echo "$naming='$(zz_esc "$OPTARG")'"
+        echo "$naming='$(_escape "$OPTARG")'"
     else
         echo "$naming=-$value"
     fi
@@ -118,14 +118,14 @@ else
 
     for arg in $(printf '%b' "$varnames" | grep -E "^-" | cut -f2); do
         if [ "$#" -gt "0" ]; then
-            echo "$arg='$(zz_esc "$1")'" && shift 1
+            echo "$arg='$(_escape "$1")'" && shift 1
         fi
     done
 
     for arg in $(printf '%b' "$varnames" | grep -E "^&" | cut -f2); do
         lines=""
         while [ "$#" -gt "0" ]; do
-            piece=$(zz_esc "$1")
+            piece=$(_escape "$1")
             if [ -z "$lines" ]; then
                 lines="$piece"
             else
@@ -137,24 +137,27 @@ else
     done
 
     for arg in $(printf '%b' "$varnames" | grep -E "^#" | cut -f2); do
-        lines=""
-        while [ "$#" -gt "0" ]; do
-            piece=$(zz_esc "$1" | sed 's/ /\\ /g')
-            if [ -z "$lines" ]; then
-                lines="$piece"
-            else
-                lines="$lines $piece"
-            fi
-            shift 1
-        done
-        echo "$arg='$lines'"
+        # Unlike the other capture kinds, this one can't round-trip through
+        # a single `var='...'` string: any argument value containing shell
+        # metacharacters (parentheses, quotes, backticks, $, ...) would break
+        # when the caller's `eval` re-parses it. Emit `set --` with each
+        # remaining argument individually single-quoted instead, so the
+        # caller gets them back on "$@" byte-for-byte instead of via $arg.
+        if [ "$#" -gt "0" ]; then
+            line="set --"
+            while [ "$#" -gt "0" ]; do
+                line="$line '$(_escape "$1")'"
+                shift 1
+            done
+            echo "$line"
+        fi
     done
 
     for arg in $(printf '%b' "$varnames" | grep -E "^\+" | cut -f2); do
         if [ "$#" -gt "0" ]; then
             value=""
             for a in "$@"; do
-                piece=$(zz_esc "$a")
+                piece=$(_escape "$a")
                 if [ -z "$value" ]; then
                     value="$piece"
                 else
