@@ -44,9 +44,13 @@ if [ -n "$question" ]; then
         current=$(sed -n "s/^export $key=//p" "/etc/profile.d/$profile.sh" | tail -n1)
     fi
 
+    is_secret=0
+    [ -n "$secret_default" ] && is_secret=1
+
     default="${value_default:-$secret_default}"
 
     if [ -n "$current" ]; then
+        is_secret=1
         if [ -n "$secret_default" ]; then
             zz_log i "$key already set: {Purple ***}"
         else
@@ -57,9 +61,23 @@ if [ -n "$question" ]; then
 
     if [ -t 0 ]; then
         prompt="  ${question}"
-        [ -n "$default" ] && prompt="${prompt} [${default}]: "
+        if [ -n "$default" ]; then
+            if [ "$is_secret" = 1 ]; then
+                prompt="${prompt} [***]: "
+            else
+                prompt="${prompt} [${default}]: "
+            fi
+        fi
         printf '%s' "$prompt"
-        read -r answer
+        if [ "$is_secret" = 1 ]; then
+            stty_orig=$(stty -g 2>/dev/null) || stty_orig=""
+            [ -n "$stty_orig" ] && stty -echo 2>/dev/null
+            read -r answer
+            [ -n "$stty_orig" ] && stty "$stty_orig" 2>/dev/null
+            echo
+        else
+            read -r answer
+        fi
         [ -z "$answer" ] && answer="$default"
         value="$answer"
     else
