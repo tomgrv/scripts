@@ -119,6 +119,25 @@ teardown() {
     rm -f "$tmp"
 }
 
+@test "zz_persist refuses to persist a secret into a non-owner-only file" {
+    tmp=$(mktemp)
+    chmod 644 "$tmp"
+    run zz_persist -f "$tmp" -i "Enter secret" -s ignored KEY </dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'refusing to persist secret'* ]]
+    ! grep -q '^KEY=' "$tmp"
+    rm -f "$tmp"
+}
+
+@test "zz_persist persists a secret into an owner-only file" {
+    tmp=$(mktemp)
+    chmod 600 "$tmp"
+    run zz_persist -f "$tmp" -i "Enter secret" -s injected KEY </dev/null
+    [ "$status" -eq 0 ]
+    grep -q '^KEY=injected$' "$tmp"
+    rm -f "$tmp"
+}
+
 @test "zz_persist upsert into profile.d replaces an existing export line" {
     skip_msg=""
     if ! mkdir -p /etc/profile.d 2>/dev/null; then
