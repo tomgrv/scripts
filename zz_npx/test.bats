@@ -82,3 +82,26 @@ teardown() {
     [[ "$output" == *"local-ran-with-s"* ]]
     rm -rf "$proj"
 }
+
+@test "zz_npx -i installs the tool and extra args quietly via npm, then exits without running it" {
+    callfile=$(mktemp)
+    stub_script npm <<-EOF
+		#!/bin/sh
+		echo "\$@" >"$callfile"
+	EOF
+    run zz_npx -i devmoji @commitlint/config-conventional
+    [ "$status" -eq 0 ]
+    [[ "$(cat "$callfile")" == "install -q -D --no-audit --no-fund devmoji @commitlint/config-conventional" ]]
+    rm -f "$callfile"
+}
+
+@test "zz_npx -i surfaces npm's output and exit status on failure" {
+    stub_script npm <<-EOF
+		#!/bin/sh
+		echo boom-install-failed >&2
+		exit 1
+	EOF
+    run zz_npx -i devmoji
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"boom-install-failed"* ]]
+}
