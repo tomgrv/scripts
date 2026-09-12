@@ -37,6 +37,8 @@ if [ -z "$file" ] && [ -z "$profile" ]; then
     exit 1
 fi
 
+is_secret=0
+
 if [ -n "$question" ]; then
     current=""
     [ -n "$file" ] && [ -f "$file" ] && current=$(sed -n "s/^$key=//p" "$file" | tail -n1)
@@ -44,7 +46,6 @@ if [ -n "$question" ]; then
         current=$(sed -n "s/^export $key=//p" "/etc/profile.d/$profile.sh" | tail -n1)
     fi
 
-    is_secret=0
     [ -n "$secret_default" ] && is_secret=1
 
     default="${value_default:-$secret_default}"
@@ -87,25 +88,40 @@ fi
 
 escaped_value=$(printf '%s' "${value:-}" | sed -e 's/[\\&|]/\\&/g')
 
+is_owner_only_mode() {
+    case "$(stat -c '%a' "$1" 2>/dev/null)" in
+    *00) return 0 ;;
+    *) return 1 ;;
+    esac
+}
+
 if [ -n "$file" ]; then
     touch "$file"
-    if grep -q "^$key=" "$file"; then
-        sed -i "s|^$key=.*|$key=$escaped_value|" "$file"
+    if [ "$is_secret" = 1 ] && ! is_owner_only_mode "$file"; then
+        zz_log w "$key: {U $file} is not owner-only (mode $(stat -c '%a' "$file" 2>/dev/null)); refusing to persist secret, run {Purple chmod 600 $file} first"
     else
-        echo "$key=$value" >>"$file"
+        if grep -q "^$key=" "$file"; then
+            sed -i "s|^$key=.*|$key=$escaped_value|" "$file"
+        else
+            echo "$key=$value" >>"$file"
+        fi
+        zz_log i "$key persisted to {U $file}"
     fi
-    zz_log i "$key persisted to {U $file}"
 fi
 
 if [ -n "$profile" ]; then
     profile_file="/etc/profile.d/$profile.sh"
     if mkdir -p /etc/profile.d 2>/dev/null && touch "$profile_file" 2>/dev/null; then
-        if grep -q "^export $key=" "$profile_file" 2>/dev/null; then
-            sed -i "s|^export $key=.*|export $key=$escaped_value|" "$profile_file"
+        if [ "$is_secret" = 1 ] && ! is_owner_only_mode "$profile_file"; then
+            zz_log w "$key: {U $profile_file} is not owner-only (mode $(stat -c '%a' "$profile_file" 2>/dev/null)); refusing to persist secret, run {Purple chmod 600 $profile_file} first"
         else
-            echo "export $key=$value" >>"$profile_file"
+            if grep -q "^export $key=" "$profile_file" 2>/dev/null; then
+                sed -i "s|^export $key=.*|export $key=$escaped_value|" "$profile_file"
+            else
+                echo "export $key=$value" >>"$profile_file"
+            fi
+            zz_log i "$key persisted to {U $profile_file}"
         fi
-        zz_log i "$key persisted to {U $profile_file}"
     else
         zz_log w "$key: cannot write {U $profile_file}, skipped"
     fi
