@@ -178,7 +178,7 @@ the tool isn't already available.
 | `zz_bindir [-t target]`                  | resolve/create a writable bin dir; `eval $(zz_bindir ...)` to bind `$dir` and extend `PATH`                                           |
 | `zz_dispatch <caller> <subcmd>`          | dispatch an underscore-prefixed caller to a sibling `<name>-<subcmd>` script                                                          |
 | `zz_npx [-s] <tool>`                     | run a local `node_modules/.bin` binary, falling back to `npx`                                                                         |
-| `zz_persist [-f\|-p] <key> <value>`      | upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`                                                                    |
+| `zz_persist [-f\|-p] [-i <question> [-v\|-s <default>]] <key> [value]` | upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`; with `-i`, ask interactively instead (`-s` for a secret, masked when already set) |
 | `zz_call [-p package.json] [command...]` | resolve a caller's declared env vars (`config.input`/`config.output` in `package.json`; ask + persist if missing), then run a command |
 
 ## Functional scripts
