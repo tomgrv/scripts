@@ -15,7 +15,8 @@
     }
   },
   "devDependencies": {
-    "npm-check-updates": "*"
+    "npm-check-updates": "*",
+    "@modelcontextprotocol/sdk": "^1"
   },
   "optionalDependencies": {
     "@tomgrv/devcontainer-features-common-utils": ">=5"
