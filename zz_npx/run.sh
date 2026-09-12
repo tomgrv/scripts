@@ -26,14 +26,14 @@ fi
 bin="${INIT_CWD:-$PWD}/node_modules/.bin/$tool"
 
 if [ -x "$bin" ]; then
-    eval exec "$bin" $args
+    exec "$bin" "$@"
 fi
 
 if command -v npx >/dev/null 2>&1; then
     if [ -n "$withscripts" ]; then
-        eval exec npx --yes "$tool" $args
+        exec npx --yes "$tool" "$@"
     else
-        eval exec npx --yes --ignore-scripts "$tool" $args
+        exec npx --yes --ignore-scripts "$tool" "$@"
     fi
 fi
 

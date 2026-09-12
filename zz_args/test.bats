@@ -80,13 +80,23 @@ help
     [ "$output" = "one two three" ]
 }
 
-@test "zz_args # captures remaining arguments with escaped spaces preserved as one token each" {
+@test "zz_args # rebinds \$@ to the remaining arguments verbatim, byte-for-byte" {
     run bash -c 'eval $(zz_args "t" "$0" "a b" c <<-help
 # rest rest all remaining
 help
-); echo "$rest"'
+); for a in "$@"; do echo "arg:$a"; done'
     [ "$status" -eq 0 ]
-    [[ "$output" == *"a\\ b"* ]] || [[ "$output" == *"a b"* ]]
+    [[ "$output" == *"arg:a b"* ]]
+    [[ "$output" == *"arg:c"* ]]
+}
+
+@test "zz_args # preserves shell metacharacters in remaining arguments (parens, quotes, \$, backticks)" {
+    run bash -c 'eval $(zz_args "t" "$0" "fix(scope): \$(danger) \`danger\` \"q\"" <<-help
+# rest rest all remaining
+help
+); for a in "$@"; do echo "arg:$a"; done'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'arg:fix(scope): $(danger) `danger` "q"'* ]]
 }
 
 @test "zz_args quotes a value containing a single quote so eval does not break out" {

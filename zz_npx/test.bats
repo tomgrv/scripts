@@ -72,6 +72,17 @@ teardown() {
     rm -rf "$proj"
 }
 
+@test "zz_npx passes an argument containing shell metacharacters through unmangled" {
+    proj=$(mktemp -d)
+    mkdir -p "$proj/node_modules/.bin"
+    printf '#!/bin/sh\necho "$2"\n' >"$proj/node_modules/.bin/mytool"
+    chmod +x "$proj/node_modules/.bin/mytool"
+    run env INIT_CWD="$proj" zz_npx mytool --text "fix(scope): \$(danger) \`danger\`"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'fix(scope): $(danger) `danger`'* ]]
+    rm -rf "$proj"
+}
+
 @test "zz_npx -s flag is accepted (allow-lifecycle-scripts option, doesn't affect the local-binary fast path)" {
     proj=$(mktemp -d)
     mkdir -p "$proj/node_modules/.bin"
