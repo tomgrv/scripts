@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.12.0 (2026-09-12)
+
+*Commits from: v0.11.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Features
+
+- ✨ add repo help MCP server via .mcp.json (#21)
+
+#### Other changes
+
+- Merge tag 'v0.11.0' into develop
+- 📚️ update zz_persist's README table entry for -i/-v/-s (#19)
+### 📦 devcontainer changes
+
+#### Features
+
+- add githooks and gitutils features (#5)
+
+### 📦 zz_persist changes
+
+#### Bug Fixes
+
+- mask secret leak in interactive prompt (#20)
+
 ## 0.11.0 (2026-09-11)
 
 *Commits from: v0.10.0..HEAD*
@@ -177,5 +203,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-09-11 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-09-12 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
