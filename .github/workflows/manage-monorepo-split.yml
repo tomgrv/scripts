@@ -73,7 +73,7 @@ jobs:
           github-token: '${{ steps.app-token.outputs.token }}'
 
       - if: ${{ !startsWith(github.ref, 'refs/tags/') && steps.split-package.outputs.split-branch != '' }}
-        uses: tomgrv/actions/create-pr@v1
+        uses: tomgrv/actions/create-pr@v2
         with:
           github-token: '${{ steps.app-token.outputs.token }}'
           repository: '${{ matrix.package.org }}/${{ matrix.package.name }}'
