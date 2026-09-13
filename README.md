@@ -96,6 +96,15 @@ request, it's never skipped just because a same-named command is already
 on `PATH`, since there's no way to tell from an installed script alone
 which repo/ref produced it.
 
+A tool name may also be a glob (e.g. `zz_*`, `git-fix-*`): it expands to
+every matching script folder in the resolved source tree, each installed
+through the normal per-tool path above. A glob that matches nothing logs a
+warning rather than failing:
+
+```sh
+zz_use "zz_*" # every core zz_* script, without naming them one by one
+```
+
 ## Naming
 
 - **Core** folders keep the `zz_` prefix — each atomic function is its own
@@ -165,21 +174,21 @@ the tool isn't already available.
 
 ## Core `zz_*` scripts
 
-| Script                                   | Purpose                                                                                                                               |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `zz_use <tool>[@ref]`                    | the activator: resolve/install a dependency, if and only if missing (see below)                                                       |
-| `zz_update`                              | force a fresh download of the zz_* bundle, bypassing the local cache                                                                  |
-| `zz_colors`                              | ANSI color vars (`$Red` `$Green` ... `$End`); source it: `. zz_colors`                                                                |
-| `zz_log <lvl> <msg...>`                  | colored, leveled log line on stderr (`i`/`w`/`e`/`s`/`-`)                                                                             |
-| `zz_args <title> <caller> <<-help ...`   | parse `$@` per a spec; `eval $(zz_args ...)` to bind the vars                                                                         |
-| `zz_prompt <question> [default]`         | interactive free-form input                                                                                                           |
-| `zz_ask <options> <question...>`         | interactive single-char confirm                                                                                                       |
-| `zz_input [file]`                        | read from arg (literal or file) or stdin                                                                                              |
-| `zz_bindir [-t target]`                  | resolve/create a writable bin dir; `eval $(zz_bindir ...)` to bind `$dir` and extend `PATH`                                           |
-| `zz_dispatch <caller> <subcmd>`          | dispatch an underscore-prefixed caller to a sibling `<name>-<subcmd>` script                                                          |
-| `zz_npx [-s] <tool>`                     | run a local `node_modules/.bin` binary, falling back to `npx`                                                                         |
+| Script                                                                 | Purpose                                                                                                                                               |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `zz_use <tool>[@ref]`                                                  | the activator: resolve/install a dependency, if and only if missing (see below)                                                                       |
+| `zz_update`                                                            | force a fresh download of the zz_* bundle, bypassing the local cache                                                                                  |
+| `zz_colors`                                                            | ANSI color vars (`$Red` `$Green` ... `$End`); source it: `. zz_colors`                                                                                |
+| `zz_log <lvl> <msg...>`                                                | colored, leveled log line on stderr (`i`/`w`/`e`/`s`/`-`)                                                                                             |
+| `zz_args <title> <caller> <<-help ...`                                 | parse `$@` per a spec; `eval $(zz_args ...)` to bind the vars                                                                                         |
+| `zz_prompt <question> [default]`                                       | interactive free-form input                                                                                                                           |
+| `zz_ask <options> <question...>`                                       | interactive single-char confirm                                                                                                                       |
+| `zz_input [file]`                                                      | read from arg (literal or file) or stdin                                                                                                              |
+| `zz_bindir [-t target]`                                                | resolve/create a writable bin dir; `eval $(zz_bindir ...)` to bind `$dir` and extend `PATH`                                                           |
+| `zz_dispatch <caller> <subcmd>`                                        | dispatch an underscore-prefixed caller to a sibling `<name>-<subcmd>` script                                                                          |
+| `zz_npx [-s] <tool>`                                                   | run a local `node_modules/.bin` binary, falling back to `npx`                                                                                         |
 | `zz_persist [-f\|-p] [-i <question> [-v\|-s <default>]] <key> [value]` | upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`; with `-i`, ask interactively instead (`-s` for a secret, masked when already set) |
-| `zz_call [-p package.json] [command...]` | resolve a caller's declared env vars (`config.input`/`config.output` in `package.json`; ask + persist if missing), then run a command |
+| `zz_call [-p package.json] [command...]`                               | resolve a caller's declared env vars (`config.input`/`config.output` in `package.json`; ask + persist if missing), then run a command                 |
 
 ## Functional scripts
 

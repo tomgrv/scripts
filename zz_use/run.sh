@@ -423,6 +423,45 @@ _use() {
             ;;
         esac
 
+        # A glob tool name (e.g. "zz_*") expands to every matching script
+        # folder in the resolved source tree instead of naming one script
+        # directly. Resolve _SRC first so there's something to match
+        # against, then recurse into _use once per concrete match, fully
+        # reusing the per-tool logic below (skip-if-present, bundle vs.
+        # individual install, error reporting) rather than duplicating it.
+        # A glob matching nothing is a soft no-op (warn, don't fail) —
+        # unlike a literal unknown tool name, which still errors via the
+        # command -v check at the end of this loop.
+        case "$tool" in
+        *\**)
+            # Resolved in a subshell: _resolve_src exports its bootstrap
+            # symlink dir onto PATH as a side effect, which would make
+            # every matched tool look "already available" to the
+            # recursive _use calls below before any of them actually gets
+            # installed to a persistent bin dir. Isolating that PATH
+            # mutation to the subshell keeps the per-match recursion
+            # honest; the disk-level effects (cache download/refresh)
+            # still happen for real.
+            _glob_src=$(_resolve_src "$origin" "$ref" 1>&2 && printf '%s' "$_SRC")
+            [ -n "$_glob_src" ] || return 1
+            _glob_matched=0
+            for _gd in "${_glob_src}"/${tool}/; do
+                [ -f "${_gd}run.sh" ] || continue
+                _glob_matched=1
+                _gname=$(basename "$_gd")
+                if [ "$origin" = "$ZZ_ORIGIN" ]; then
+                    _gexpanded="$_gname"
+                else
+                    _gexpanded="${origin}/${_gname}"
+                fi
+                [ -n "$ref" ] && _gexpanded="${_gexpanded}@${ref}"
+                _use "$_gexpanded" || return 1
+            done
+            [ "$_glob_matched" -eq 1 ] || _zzu_log w "No scripts match {Purple ${tool}} in {U ${_glob_src}}"
+            continue
+            ;;
+        esac
+
         # A plain, default-origin, unversioned request, not under --force
         # (or --force on a non-zz_ tool, which --force doesn't apply to),
         # can be skipped if already on PATH. A pinned ref and/or a
