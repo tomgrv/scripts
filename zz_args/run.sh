@@ -143,14 +143,22 @@ else
         # when the caller's `eval` re-parses it. Emit `set --` with each
         # remaining argument individually single-quoted instead, so the
         # caller gets them back on "$@" byte-for-byte instead of via $arg.
-        if [ "$#" -gt "0" ]; then
-            line="set --"
-            while [ "$#" -gt "0" ]; do
-                line="$line '$(_escape "$1")'"
-                shift 1
-            done
-            echo "$line"
-        fi
+        #
+        # Always emit it, even with zero arguments left: this capture's
+        # whole point is to rebind the caller's "$@" to what's left after
+        # earlier positionals consumed their share. Skipping the `set --`
+        # when nothing remains (as this used to do) leaves the caller's
+        # *original*, pre-eval "$@" in place instead of clearing it -- e.g.
+        # a caller with one positional plus a "#" catch-all, invoked with
+        # exactly one argument, would see that same argument twice: once
+        # via the positional's variable, and again via its own untouched
+        # "$@".
+        line="set --"
+        while [ "$#" -gt "0" ]; do
+            line="$line '$(_escape "$1")'"
+            shift 1
+        done
+        echo "$line"
     done
 
     for arg in $(printf '%b' "$varnames" | grep -E "^\+" | cut -f2); do

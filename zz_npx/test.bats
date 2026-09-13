@@ -72,6 +72,25 @@ teardown() {
     rm -rf "$proj"
 }
 
+@test "zz_npx does not re-pass the tool name as a leftover argument when none are given" {
+    # Regression: zz_args used to only clear its caller's "$@" (via "set
+    # --") when at least one argument remained after earlier positionals
+    # consumed their share. With exactly one argument ("mytool") and
+    # nothing left over, that left zz_npx's *original* "$@" (still
+    # "mytool") untouched, so the binary was invoked with "mytool" as both
+    # $tool and a stray extra argument -- exactly the "Unknown argument:
+    # commitlint" failure this reproduces for a real npm CLI's arg parser.
+    proj=$(mktemp -d)
+    mkdir -p "$proj/node_modules/.bin"
+    printf '#!/bin/sh\necho "argc:$#"\nfor a in "$@"; do echo "arg:$a"; done\n' >"$proj/node_modules/.bin/mytool"
+    chmod +x "$proj/node_modules/.bin/mytool"
+    run env INIT_CWD="$proj" zz_npx mytool
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"argc:0"* ]]
+    [[ "$output" != *"arg:"* ]]
+    rm -rf "$proj"
+}
+
 @test "zz_npx passes an argument containing shell metacharacters through unmangled" {
     proj=$(mktemp -d)
     mkdir -p "$proj/node_modules/.bin"
