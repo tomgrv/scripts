@@ -99,6 +99,23 @@ help
     [[ "$output" == *'arg:fix(scope): $(danger) `danger` "q"'* ]]
 }
 
+@test "zz_args # clears \$@ to empty when nothing remains, instead of leaking the caller's original args" {
+    # Runs via `sh` (POSIX dash here), not bash: the fix relies on `set`
+    # being a POSIX "special built-in", whose preceding variable
+    # assignments (the "tool=..." line zz_args emits just before "set --")
+    # persist in the calling shell rather than being scoped to just that
+    # command -- a rule bash's default (non-POSIX) mode does not honor,
+    # unlike every real caller here (zz_args/zz_npx/etc. are `#!/bin/sh`).
+    run sh -c 'eval $(zz_args "t" "$0" onlyarg <<-help
+- tool tool a positional that consumes the only argument
+# rest rest all remaining
+help
+); echo "tool=$tool count=$#"; for a in "$@"; do echo "arg:$a"; done'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"tool=onlyarg count=0"* ]]
+    [[ "$output" != *"arg:"* ]]
+}
+
 @test "zz_args quotes a value containing a single quote so eval does not break out" {
     script='eval $(zz_args "t" "$0" -f "$1" <<-help
 f flag flag help text

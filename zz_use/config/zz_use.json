@@ -16,6 +16,12 @@
         "archive": "tar.xz",
         "binpath": "shellcheck-v{VERSION}/shellcheck"
     },
+    "yq": {
+        "url": "https://github.com/mikefarah/yq/releases/download/v{VERSION}/yq_{OS}_{ARCH}",
+        "version": "4.44.3",
+        "archive": "raw",
+        "binpath": "yq_{OS}_{ARCH}"
+    },
     "reviewdog": {
         "url": "https://github.com/reviewdog/reviewdog/releases/latest/download/reviewdog_{OS}_{ARCH}.tar.gz",
         "archive": "tar.gz",
