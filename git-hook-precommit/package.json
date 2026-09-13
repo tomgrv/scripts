@@ -1,0 +1,12 @@
+{
+    "name": "git-hook-precommit",
+    "version": "0.1.0",
+    "description": "Git pre-commit hook: sync lockfiles, install prettier plugins, run pre-commit checks and lint-staged",
+    "bin": {
+        "git-hook-precommit": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    },
+    "private": true
+}

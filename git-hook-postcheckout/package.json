@@ -1,0 +1,12 @@
+{
+    "name": "git-hook-postcheckout",
+    "version": "0.1.0",
+    "description": "Git post-checkout hook",
+    "bin": {
+        "git-hook-postcheckout": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    },
+    "private": true
+}

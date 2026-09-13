@@ -1,0 +1,12 @@
+{
+    "name": "git-hook-prepush",
+    "version": "0.1.0",
+    "description": "Git pre-push hook: validate the current branch name",
+    "bin": {
+        "git-hook-prepush": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    },
+    "private": true
+}
