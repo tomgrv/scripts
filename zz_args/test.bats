@@ -99,6 +99,17 @@ help
     [[ "$output" == *'arg:fix(scope): $(danger) `danger` "q"'* ]]
 }
 
+@test "zz_args # clears \$@ instead of leaking a stale value when no arguments remain" {
+    run bash -c 'set -- "leftover-from-before-eval"; eval $(zz_args "t" "$0" tool <<-help
+- toolname toolname the tool to run
+# rest rest all remaining
+help
+); echo "count=$#"; for a in "$@"; do echo "arg:$a"; done'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"count=0"* ]]
+    [[ "$output" != *"leftover-from-before-eval"* ]]
+}
+
 @test "zz_args quotes a value containing a single quote so eval does not break out" {
     script='eval $(zz_args "t" "$0" -f "$1" <<-help
 f flag flag help text
