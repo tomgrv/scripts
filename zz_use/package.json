@@ -1,12 +1,12 @@
 {
-    "name": "zz_use",
-    "version": "0.4.0",
-    "description": "Activator: on-demand dependency management (apt/download, and single-shot zz_* bundle install)",
-    "bin": {
-        "zz_use": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "private": true
+  "name": "zz_use",
+  "version": "0.14.0",
+  "description": "Activator: on-demand dependency management (apt/download, and single-shot zz_* bundle install)",
+  "bin": {
+    "zz_use": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "private": true
 }
