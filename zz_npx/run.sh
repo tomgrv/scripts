@@ -7,7 +7,6 @@
 # are untrusted and skipped (--ignore-scripts) by default. Pass -s to allow
 # them to run.
 
-zz_use zz_colors zz_args
 . zz_colors
 
 eval $(

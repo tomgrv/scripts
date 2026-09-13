@@ -2,7 +2,7 @@
 # zz_colors — ANSI color codes. Meant to be sourced: `. zz_colors`.
 
 None='\033[0m'
-End='\033[0m\r'
+End='\033[0m'
 
 Black='\033[0;30m'
 Red='\033[0;31m'

@@ -1,12 +1,12 @@
 {
-    "name": "zz_call",
-    "version": "0.4.0",
-    "description": "Resolve a caller's declared env vars (ask + persist if missing), then run a command",
-    "bin": {
-        "zz_call": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "private": true
+  "name": "zz_call",
+  "version": "0.15.0",
+  "description": "Resolve a caller's declared env vars (ask + persist if missing), then run a command",
+  "bin": {
+    "zz_call": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "private": true
 }

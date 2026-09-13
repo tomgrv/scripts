@@ -1,12 +1,12 @@
 {
-    "name": "zz_colors",
-    "version": "0.4.0",
-    "description": "ANSI color variables, sourced by other zz_* scripts and functional scripts",
-    "bin": {
-        "zz_colors": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "private": true
+  "name": "zz_colors",
+  "version": "0.15.0",
+  "description": "ANSI color variables, sourced by other zz_* scripts and functional scripts",
+  "bin": {
+    "zz_colors": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "private": true
 }

@@ -49,7 +49,7 @@
 
 set -e
 
-zz_use zz_colors zz_args zz_prompt zz_persist jq
+zz_use jq
 . zz_colors
 
 eval $(
