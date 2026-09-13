@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.15.0 (2026-09-13)
+
+*Commits from: v0.14.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v0.14.0' into develop
+### 📦 zz_colors changes
+
+#### Bug Fixes
+
+- drop trailing CR that corrupted GHA log lines (#31)
+
 ## 0.14.0 (2026-09-13)
 
 *Commits from: v0.13.0..HEAD*
@@ -235,6 +250,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 
