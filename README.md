@@ -233,6 +233,13 @@ lifecycle — only the script implementations moved.
 | `git-fix-secrets`    | redact a secret across git history                          |
 | `git-fix-up`         | amend a commit with current changes and rebase              |
 | `git-forall`         | execute a command for all files in the repository           |
+| `git-hook-commitmsg`         | `commit-msg` hook: apply commitlint + devmoji to the commit message |
+| `git-hook-installplugins`    | install npm plugins declared at a package.json key          |
+| `git-hook-postcheckout`      | `post-checkout` hook                                         |
+| `git-hook-postmerge`         | `post-merge` hook: keep merged lockfiles, prompt to reinstall |
+| `git-hook-precommit`         | `pre-commit` hook: sync lockfiles, run pre-commit checks and lint-staged |
+| `git-hook-preparecommitmsg`  | `prepare-commit-msg` hook: launch the commitizen prompt      |
+| `git-hook-prepush`           | `pre-push` hook: validate the current branch name            |
 | `git-getcommit`      | list history and ask for a commit to fix up                 |
 | `git-integrate`      | integrate modifications from the remote repository          |
 | `git-pick`           | pick files from a specific commit                           |
