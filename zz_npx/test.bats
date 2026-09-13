@@ -91,6 +91,25 @@ teardown() {
     rm -rf "$proj"
 }
 
+@test "zz_npx commitlint present case: piped stdin, no extra args, tool not duplicated" {
+    # The exact real-world case that surfaced the bug: check-pr-format
+    # runs `echo "${formatted_title}" | zz_npx commitlint 2>&1` -- stdin
+    # piped in, "commitlint" the only argument. Pin this down verbatim
+    # (not just the generic "mytool" case above) so a future regression
+    # here is caught under the same name and shape as the original CI
+    # failure ("Unknown argument: commitlint").
+    proj=$(mktemp -d)
+    mkdir -p "$proj/node_modules/.bin"
+    printf '#!/bin/sh\necho "argc:$#"\nfor a in "$@"; do echo "arg:$a"; done\ncat\n' >"$proj/node_modules/.bin/commitlint"
+    chmod +x "$proj/node_modules/.bin/commitlint"
+    run bash -c 'echo "feat: title" | INIT_CWD="'"$proj"'" zz_npx commitlint'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"argc:0"* ]]
+    [[ "$output" != *"arg:"* ]]
+    [[ "$output" == *"feat: title"* ]]
+    rm -rf "$proj"
+}
+
 @test "zz_npx passes an argument containing shell metacharacters through unmangled" {
     proj=$(mktemp -d)
     mkdir -p "$proj/node_modules/.bin"
