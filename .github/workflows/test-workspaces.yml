@@ -1,0 +1,50 @@
+# @format
+
+name: Test workspaces
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - '*/package.json'
+  pull_request:
+    paths:
+      - '*/package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  list-packages:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.list.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: List packages
+        id: list
+        uses: tomgrv/actions/list-packages@v2
+        with:
+          require-repository: 'false'
+
+  test:
+    needs: list-packages
+    if: needs.list-packages.outputs.packages != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJson(needs.list-packages.outputs.packages) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bats
+        uses: bats-core/bats-action@4.0.0
+
+      - name: Run workspace tests
+        uses: tomgrv/actions/run-workspace-tests@v2
+        with:
+          workspace: ${{ matrix.package.path }}

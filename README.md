@@ -291,3 +291,13 @@ network access and no writes outside a temp dir — except where a script's own
 purpose requires reaching a real tool (e.g. `zz_npx`/`zz_update` fall back to
 a local fixture and assert no network call is made). 417 tests currently pass
 across all 53 script folders.
+
+### CI
+
+`.github/workflows/test-workspaces.yml` discovers every workspace (via
+[`tomgrv/actions/list-packages`](https://github.com/tomgrv/actions/tree/main/list-packages))
+and runs each one's `package.json` `scripts.test` entry
+(`bats test.bats`) via
+[`tomgrv/actions/run-workspace-tests`](https://github.com/tomgrv/actions/tree/main/run-workspace-tests),
+in a matrix — one job per workspace instead of one `bats --recursive .`
+job for the whole repo.
