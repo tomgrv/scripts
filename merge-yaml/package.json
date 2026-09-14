@@ -1,16 +1,16 @@
 {
-    "name": "merge-yaml",
-    "version": "0.14.0",
-    "description": "Recursively merge one YAML file into another, arrays deduped and unioned",
-    "bin": {
-        "merge-yaml": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "peerDependencies": {
-        "zz_args": "*",
-        "zz_colors": "*"
-    },
-    "private": true
+  "name": "merge-yaml",
+  "version": "0.18.0",
+  "description": "Recursively merge one YAML file into another, arrays deduped and unioned",
+  "bin": {
+    "merge-yaml": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "zz_args": "*",
+    "zz_colors": "*"
+  },
+  "private": true
 }

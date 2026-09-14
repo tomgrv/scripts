@@ -1,17 +1,17 @@
 {
-    "name": "run-workspace-tests",
-    "version": "0.16.0",
-    "description": "Run a workspace's .scripts.test entry (from each root *.json file) as its test suite",
-    "bin": {
-        "run-workspace-tests": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "peerDependencies": {
-        "zz_args": "*",
-        "zz_colors": "*",
-        "zz_log": "*"
-    },
-    "private": true
+  "name": "run-workspace-tests",
+  "version": "0.18.0",
+  "description": "Run a workspace's .scripts.test entry (from each root *.json file) as its test suite",
+  "bin": {
+    "run-workspace-tests": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "zz_args": "*",
+    "zz_colors": "*",
+    "zz_log": "*"
+  },
+  "private": true
 }

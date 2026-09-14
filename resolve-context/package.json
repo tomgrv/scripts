@@ -1,16 +1,16 @@
 {
-    "name": "resolve-context",
-    "version": "0.4.0",
-    "description": "Resolve a feature's source/target directories from the calling script",
-    "bin": {
-        "resolve-context": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "peerDependencies": {
-        "zz_args": "*",
-        "zz_colors": "*"
-    },
-    "private": true
+  "name": "resolve-context",
+  "version": "0.18.0",
+  "description": "Resolve a feature's source/target directories from the calling script",
+  "bin": {
+    "resolve-context": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "zz_args": "*",
+    "zz_colors": "*"
+  },
+  "private": true
 }

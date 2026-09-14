@@ -1,17 +1,17 @@
 {
-    "name": "install-feature",
-    "version": "0.4.0",
-    "description": "Copy a feature's stubs/config/bin into a target, run install-*.sh",
-    "bin": {
-        "install-feature": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "peerDependencies": {
-        "zz_args": "*",
-        "zz_bindir": "*",
-        "zz_colors": "*"
-    },
-    "private": true
+  "name": "install-feature",
+  "version": "0.18.0",
+  "description": "Copy a feature's stubs/config/bin into a target, run install-*.sh",
+  "bin": {
+    "install-feature": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "zz_args": "*",
+    "zz_bindir": "*",
+    "zz_colors": "*"
+  },
+  "private": true
 }

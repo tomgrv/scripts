@@ -1,16 +1,16 @@
 {
-    "name": "git-hook-postmerge",
-    "version": "0.16.0",
-    "description": "Git post-merge hook: keep merged lockfiles and prompt to reinstall dependencies",
-    "bin": {
-        "git-hook-postmerge": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "peerDependencies": {
-        "zz_args": "*",
-        "zz_colors": "*"
-    },
-    "private": true
+  "name": "git-hook-postmerge",
+  "version": "0.18.0",
+  "description": "Git post-merge hook: keep merged lockfiles and prompt to reinstall dependencies",
+  "bin": {
+    "git-hook-postmerge": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "zz_args": "*",
+    "zz_colors": "*"
+  },
+  "private": true
 }

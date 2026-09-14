@@ -1,16 +1,16 @@
 {
-    "name": "merge-json",
-    "version": "0.4.0",
-    "description": "Recursively merge one JSON file into another, arrays deduped and unioned",
-    "bin": {
-        "merge-json": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "peerDependencies": {
-        "zz_args": "*",
-        "zz_colors": "*"
-    },
-    "private": true
+  "name": "merge-json",
+  "version": "0.18.0",
+  "description": "Recursively merge one JSON file into another, arrays deduped and unioned",
+  "bin": {
+    "merge-json": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "zz_args": "*",
+    "zz_colors": "*"
+  },
+  "private": true
 }
