@@ -1,12 +1,16 @@
 {
   "name": "git-hook-installplugins",
-  "version": "0.16.0",
+  "version": "0.18.0",
   "description": "Install npm plugins declared in a package.json key, used by other git-hook-* scripts",
   "bin": {
     "git-hook-installplugins": "run.sh"
   },
   "scripts": {
     "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "zz_args": "*",
+    "zz_colors": "*"
   },
   "private": true
 }

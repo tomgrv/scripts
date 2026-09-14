@@ -1,12 +1,16 @@
 {
-    "name": "normalize-json",
-    "version": "0.4.0",
-    "description": "Sort JSON object keys per schema and alphabetically, optional in-place write",
-    "bin": {
-        "normalize-json": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "private": true
+  "name": "normalize-json",
+  "version": "0.18.0",
+  "description": "Sort JSON object keys per schema and alphabetically, optional in-place write",
+  "bin": {
+    "normalize-json": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "zz_args": "*",
+    "zz_colors": "*"
+  },
+  "private": true
 }

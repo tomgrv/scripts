@@ -43,6 +43,8 @@ jobs:
 
       - name: Setup Bats
         uses: bats-core/bats-action@4.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run workspace tests
         uses: tomgrv/actions/run-workspace-tests@v2

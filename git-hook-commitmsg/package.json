@@ -1,12 +1,18 @@
 {
   "name": "git-hook-commitmsg",
-  "version": "0.16.0",
+  "version": "0.18.0",
   "description": "Git commit-msg hook: apply commitlint rules and devmoji to the commit message",
   "bin": {
     "git-hook-commitmsg": "run.sh"
   },
   "scripts": {
     "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "git-hook-installplugins": "*",
+    "zz_args": "*",
+    "zz_colors": "*",
+    "zz_npx": "*"
   },
   "private": true
 }

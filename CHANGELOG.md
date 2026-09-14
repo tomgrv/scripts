@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.18.0 (2026-09-14)
+
+*Commits from: v0.17.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v0.17.0' into develop
+### 📦 run-workspace-tests changes
+
+#### Features
+
+- ✨ declare tomgrv/scripts sibling deps as peerDependencies (#34)
+
 ## 0.17.0 (2026-09-14)
 
 *Commits from: v0.16.0..HEAD*
@@ -284,6 +299,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 
