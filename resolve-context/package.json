@@ -8,5 +8,9 @@
     "scripts": {
         "test": "bats test.bats"
     },
+    "peerDependencies": {
+        "zz_args": "*",
+        "zz_colors": "*"
+    },
     "private": true
 }

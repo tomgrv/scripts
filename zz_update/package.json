@@ -8,5 +8,19 @@
     "scripts": {
         "test": "bats test.bats"
     },
+    "peerDependencies": {
+        "zz_args": "*",
+        "zz_ask": "*",
+        "zz_bindir": "*",
+        "zz_call": "*",
+        "zz_colors": "*",
+        "zz_dispatch": "*",
+        "zz_input": "*",
+        "zz_log": "*",
+        "zz_npx": "*",
+        "zz_persist": "*",
+        "zz_prompt": "*",
+        "zz_use": "*"
+    },
     "private": true
 }

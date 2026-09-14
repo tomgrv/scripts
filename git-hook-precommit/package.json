@@ -1,12 +1,18 @@
 {
-  "name": "git-hook-precommit",
-  "version": "0.16.0",
-  "description": "Git pre-commit hook: sync lockfiles, install prettier plugins, run pre-commit checks and lint-staged",
-  "bin": {
-    "git-hook-precommit": "run.sh"
-  },
-  "scripts": {
-    "test": "bats test.bats"
-  },
-  "private": true
+    "name": "git-hook-precommit",
+    "version": "0.16.0",
+    "description": "Git pre-commit hook: sync lockfiles, install prettier plugins, run pre-commit checks and lint-staged",
+    "bin": {
+        "git-hook-precommit": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "git-hook-installplugins": "*",
+        "zz_args": "*",
+        "zz_colors": "*",
+        "zz_npx": "*"
+    },
+    "private": true
 }

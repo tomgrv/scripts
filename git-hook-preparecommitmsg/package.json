@@ -1,12 +1,18 @@
 {
-  "name": "git-hook-preparecommitmsg",
-  "version": "0.16.0",
-  "description": "Git prepare-commit-msg hook: install commitizen plugins and launch the commitizen prompt",
-  "bin": {
-    "git-hook-preparecommitmsg": "run.sh"
-  },
-  "scripts": {
-    "test": "bats test.bats"
-  },
-  "private": true
+    "name": "git-hook-preparecommitmsg",
+    "version": "0.16.0",
+    "description": "Git prepare-commit-msg hook: install commitizen plugins and launch the commitizen prompt",
+    "bin": {
+        "git-hook-preparecommitmsg": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "git-hook-installplugins": "*",
+        "zz_args": "*",
+        "zz_colors": "*",
+        "zz_npx": "*"
+    },
+    "private": true
 }
