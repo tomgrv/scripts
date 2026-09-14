@@ -98,7 +98,8 @@
     "gv",
     "bump-tag",
     "bump-changelog",
-    "bump-version"
+    "bump-version",
+    "run-workspace-tests"
   ],
   "prettier": {
     "insertPragma": true,
