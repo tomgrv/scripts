@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "Reusable POSIX shell scripts shared across tomgrv devcontainer-features and vps",
   "license": "MIT",
   "scripts": {
@@ -68,6 +68,13 @@
     "git-fix-date",
     "git-fix-del",
     "git-fix-emoji",
+    "git-hook-commitmsg",
+    "git-hook-installplugins",
+    "git-hook-postcheckout",
+    "git-hook-postmerge",
+    "git-hook-precommit",
+    "git-hook-preparecommitmsg",
+    "git-hook-prepush",
     "git-fix-last",
     "git-fix-lock",
     "git-fix-message",
@@ -91,7 +98,8 @@
     "gv",
     "bump-tag",
     "bump-changelog",
-    "bump-version"
+    "bump-version",
+    "run-workspace-tests"
   ],
   "prettier": {
     "insertPragma": true,
