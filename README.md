@@ -294,7 +294,7 @@ across all 53 script folders.
 
 ### CI
 
-`.github/workflows/test-workspaces.yml` discovers every workspace (via
+`.github/workflows/validate-workspace-tests.yml` discovers every workspace (via
 [`tomgrv/actions/list-packages`](https://github.com/tomgrv/actions/tree/main/list-packages))
 and runs each one's `package.json` `scripts.test` entry
 (`bats test.bats`) via

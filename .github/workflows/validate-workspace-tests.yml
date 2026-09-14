@@ -1,6 +1,6 @@
 # @format
 
-name: Test workspaces
+name: Validate Workspace Tests
 
 on:
   push:
