@@ -10,7 +10,30 @@
         "allow": [
             "Bash(git push:*)",
             "Bash(git tag:*)"
+        ],
+        "deny": [
+            "ScheduleWakeup",
+            "mcp__claude-code-remote__send_later",
+            "mcp__claude-code-remote__create_trigger",
+            "mcp__claude-code-remote__update_trigger",
+            "mcp__claude-code-remote__fire_trigger"
         ]
     },
+    "hooks": {
+        "PreToolUse": [
+            {
+                "hooks": [
+                    {
+                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/lint-staged-precommit.sh",
+                        "if": "Bash(git commit*)",
+                        "type": "command"
+                    }
+                ],
+                "matcher": "Bash"
+            }
+        ]
+    },
+    "outputStyle": "Caveman",
+    "enableWorkflows": true,
     "includeCoAuthoredBy": false
 }
