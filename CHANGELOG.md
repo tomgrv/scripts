@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.19.0 (2026-09-15)
+
+*Commits from: v0.18.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Bug Fixes
+
+- 🐛 🔧 remove invalid workflows permission from update-features.yml (#35)
+- 🐛 🔧 track moving release-promote/scripts tags in release-prod workflow (#36)
+
+#### Other changes
+
+- Merge tag 'v0.18.0' into develop
+
 ## 0.18.0 (2026-09-14)
 
 *Commits from: v0.17.0..HEAD*
@@ -314,5 +329,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-09-14 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-09-15 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
