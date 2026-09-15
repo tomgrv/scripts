@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.20.0 (2026-09-15)
+
+*Commits from: v0.19.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Bug Fixes
+
+- 🐛 🔧 align update-features workflow with devcontainer-features canonical stub (#37)
+
+#### Other changes
+
+- Merge tag 'v0.19.0' into develop
+
 ## 0.19.0 (2026-09-15)
 
 *Commits from: v0.18.0..HEAD*
@@ -314,6 +328,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 
