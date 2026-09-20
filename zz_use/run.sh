@@ -128,6 +128,7 @@ _zzu_log() {
         zz_log "$@"
     else
         lvl="$1" && shift
+        [ "$lvl" = "d" ] && [ -z "${ZZ_DEBUG:-}" ] && return 0
         printf '[%s] %s\n' "$lvl" "$*" >&2
     fi
 }
@@ -171,7 +172,7 @@ _resolve_src() {
         if [ "$FORCE" -eq 1 ] || ! _has_script_layout "$_cache_dir"; then
             _refresh_cache "$_req_origin" "$_req_ref" "$_cache_dir" || return 1
         else
-            _zzu_log - "Using cached repo scripts at {U ${_cache_dir}}"
+            _zzu_log d "Using cached repo scripts at {U ${_cache_dir}}"
         fi
         _SRC="$_cache_dir"
     fi
@@ -470,7 +471,7 @@ _use() {
         # "already available" can't be trusted to mean "the requested one".
         if [ -z "$ref" ] && [ "$origin" = "$ZZ_ORIGIN" ] && { [ "$FORCE" -eq 0 ] || [ "${tool#zz_}" = "$tool" ]; }; then
             if command -v "$tool" >/dev/null 2>&1; then
-                _zzu_log - "{Purple $tool} already available"
+                _zzu_log d "{Purple $tool} already available"
                 continue
             fi
         fi

@@ -1,6 +1,6 @@
 # zz_log
 
-Colored, leveled log line on stderr (i/n/w/e/s/-).
+Colored, leveled log line on stderr (i/n/w/e/s/d/-).
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `zz_log`.
@@ -8,7 +8,7 @@ and linked onto `PATH` as `zz_log`.
 ## Usage
 
 ```sh
-zz_log <i|n|w|e|s|-> <message...>
+zz_log <i|n|w|e|s|d|-> <message...>
 ```
 
 Inside a GitHub Actions run (`GITHUB_ACTIONS=true`), `n`/`w`/`e` also emit a
@@ -18,6 +18,9 @@ per GitHub's workflow-command syntax) ahead of the usual colored job-log
 line, so the message surfaces as a PR/checks-UI annotation too. `i`/`s`/`-`
 are never annotated, and outside Actions the annotation line is skipped
 entirely.
+
+`d` (debug) is silent unless `ZZ_DEBUG` is set (to any non-empty value), in
+which case it prints like `-` but dimmed.
 
 ## Dependencies
 
@@ -31,7 +34,8 @@ bats test.bats
 ```
 
 - writes to stderr, never stdout
-- each of i/n/w/e/s/- picks the right pictogram (→, i, !, ✕, ✔, none)
+- each of i/n/w/e/s/d/- picks the right pictogram (→, i, !, ✕, ✔, ·, none)
+- `d` (debug) prints only when `ZZ_DEBUG` is set, silent otherwise
 - an unknown level falls back to printing the level string itself
 - multiple message words are joined with spaces
 - `{Color text}` inline highlight syntax is supported

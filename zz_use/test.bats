@@ -16,7 +16,7 @@ teardown() {
 }
 
 @test "zz_use skips a tool already on PATH" {
-    run zz_use sh
+    run env ZZ_DEBUG=1 zz_use sh
     [ "$status" -eq 0 ]
     [[ "$output" == *"already available"* ]]
 }
