@@ -107,8 +107,11 @@ trap _cleanup EXIT
 
 # _SRC: the resolved source tree for _SRC_ORIGIN/_SRC_REF (set by
 # _resolve_src). _SRC_RESOLVED guards against re-resolving the same
-# origin+ref more than once per run; a different one requested later in
-# the same run re-resolves (and switches _SRC to it).
+# origin+ref more than once per run — even under --force, which only
+# needs to force *one* fresh download per origin+ref, not one per tool
+# requested at it (zz_update alone names 13 core tools at the same
+# default origin/ref). A different origin+ref requested later in the
+# same run re-resolves (and switches _SRC to it).
 _SRC=""
 _SRC_ORIGIN=""
 _SRC_REF=""
@@ -127,7 +130,7 @@ _SRC_RESOLVED=0
 _resolve_src() {
     _req_origin="${1:-$ZZ_ORIGIN}"
     _req_ref="${2:-}"
-    if [ "$_SRC_RESOLVED" -eq 1 ] && [ "$_SRC_ORIGIN" = "$_req_origin" ] && [ "$_SRC_REF" = "$_req_ref" ] && [ "$FORCE" -eq 0 ]; then
+    if [ "$_SRC_RESOLVED" -eq 1 ] && [ "$_SRC_ORIGIN" = "$_req_origin" ] && [ "$_SRC_REF" = "$_req_ref" ]; then
         return 0
     fi
 

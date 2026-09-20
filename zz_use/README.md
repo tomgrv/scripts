@@ -10,7 +10,7 @@ and linked onto `PATH` as `zz_use`.
 ## Usage
 
 ```sh
-zz_use < tool > [tool...]
+zz_use "<tool>" [tool...]
 ```
 
 ## Dependencies

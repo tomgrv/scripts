@@ -159,10 +159,10 @@ For each `<tool>` requested, in order:
 3. **Any script from this repo** (a functional script like `load-json`,
    or a core `zz_*` one) — installed individually, the same way whether
    it's core or functional: nothing in this repo needs installing as a
-   group. Source for both 2 and 3 is, in order: a sibling `zz_*/run.sh`
-   folder in this repo when running from a checkout/npm install;
-   otherwise a local cache (see caching below); otherwise a fresh
-   download into that cache.
+   group. Source is, in order: a sibling `zz_*/run.sh` folder in this
+   repo when running from a checkout/npm install; otherwise a local
+   cache (see caching below); otherwise a fresh download into that
+   cache.
 4. No config entry, not a script in this repo → fall back to
    `apt-get install -y <tool>` (same name).
 5. Still missing afterwards → error, exit 1.
