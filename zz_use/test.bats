@@ -41,14 +41,13 @@ teardown() {
     rm -rf "$bindir"
 }
 
-@test "zz_use installs the full zz_* bundle at once when any one zz_* tool is missing" {
+@test "zz_use installs a single zz_* tool individually, not the whole set" {
     bindir=$(mktemp -d)
     zz_use_bin=$(command -v zz_use)
     run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" zz_log
     [ "$status" -eq 0 ]
-    for tool in zz_use zz_colors zz_log zz_args zz_prompt zz_ask zz_input zz_bindir zz_dispatch zz_npx zz_persist zz_call zz_update; do
-        [ -x "$bindir/$tool" ]
-    done
+    [ -x "$bindir/zz_log" ]
+    [ ! -e "$bindir/zz_args" ]
     rm -rf "$bindir"
 }
 

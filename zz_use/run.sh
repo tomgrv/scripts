@@ -19,41 +19,38 @@
 # ZZ_CACHE_DIR below), so pinning one script doesn't disturb anything
 # already resolved at the default.
 #
-# Two install paths:
+# Every tool, zz_* core or functional, installs the same way, one at a
+# time (a glob name such as "zz_*" just expands to every match and
+# recurses — that's how setup.sh gets the whole core set in place up
+# front, in one call, before anything else runs):
 #
-#   - zz_* tools: all zz_* scripts in this repo are retrieved and installed
-#     together, as a single bundle, via _bootstrap (below) — run
-#     unconditionally, up front, at this script's own default origin/ref,
-#     since zz_use needs its own zz_log/zz_colors/zz_bindir to report
-#     anything at all. When not running from a local checkout, the bundle
-#     is fetched once into a local cache directory (ZZ_CACHE_DIR/<ref>,
-#     default ~/.cache/zz_scripts/main) and every subsequent bundle
-#     install at that ref links from that cache — no repeat network
-#     round-trip. Use `zz_update` (or `zz_use --force ...`) to force a
-#     fresh download, bypassing the cache.
-#
-#   - Any other tool:
-#     1. A functional script from this same repo (e.g. `zz_use load-json`
-#        installs load-json/run.sh) — installed individually (not as a
-#        bundle: unlike the core zz_* set, functional scripts aren't all
-#        needed together), from the same local-checkout/cache/download
-#        source a zz_* bundle install would use.
-#     2. Otherwise, looked up in config/zz_use.json (ZZ_USE_CONFIG to
-#        override):
-#          {"apt": "<pkg>"}  -> apt-get install -y <pkg> (sudo if not root)
-#          {"url": "...", "archive": "tar.gz"|"tar.xz"|"zip"|"raw",
-#           "binpath": "..."} -> download, extract if needed, resolve a
-#           writable bin dir, and install the binary as <tool>. Templates
-#           support {VERSION}, {OS} (uname -s, lowercased), {ARCH}
-#           (uname -m, mapped to amd64/arm64).
-#     3. No config entry -> fall back to `apt-get install -y <tool>` (same
-#        name) when apt-get is available. (@<ref> has no meaning for an
-#        apt package; it's simply ignored if this is the path taken.)
+#   1. A script from this same repo (e.g. `zz_use load-json` installs
+#      load-json/run.sh, `zz_use zz_log` installs zz_log/run.sh) — from a
+#      local checkout when running from one, otherwise a local cache
+#      (ZZ_CACHE_DIR/<origin>/<ref>, default ~/.cache/zz_scripts), fetched
+#      fresh into that cache the first time it's needed. Use `zz_update`
+#      (or `zz_use --force ...`) to force a fresh download, bypassing the
+#      cache.
+#   2. Otherwise, looked up in config/zz_use.json (ZZ_USE_CONFIG to
+#      override):
+#        {"apt": "<pkg>"}  -> apt-get install -y <pkg> (sudo if not root)
+#        {"url": "...", "archive": "tar.gz"|"tar.xz"|"zip"|"raw",
+#         "binpath": "..."} -> download, extract if needed, resolve a
+#         writable bin dir, and install the binary as <tool>. Templates
+#         support {VERSION}, {OS} (uname -s, lowercased), {ARCH}
+#         (uname -m, mapped to amd64/arm64).
+#   3. No config entry -> fall back to `apt-get install -y <tool>` (same
+#      name) when apt-get is available. (@<ref> has no meaning for an
+#      apt package; it's simply ignored if this is the path taken.)
 #
 # Still not found on PATH afterwards -> error, exit 1.
 #
 # Idempotent: safe to call on every script invocation — resolved tools are
 # skipped in ~0ms via `command -v`, unless --force or @<ref> is given.
+#
+# zz_use relies on zz_log (and its own siblings) already being on PATH —
+# setup.sh's `zz_use "zz_*"` call is what puts the whole core set there in
+# the first place; this script doesn't re-derive that bootstrapping.
 
 set -e
 
@@ -92,7 +89,7 @@ ZZ_USE_REPO_URL="${ZZ_USE_REPO_URL:-$_ZZ_USE_REPO_URL_DEFAULT}"
 ZZ_CACHE_DIR="${ZZ_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zz_scripts}"
 
 # Every temp dir this script creates (a fresh cache download, a
-# _download_install extraction, _bootstrap's own symlink dir) is cleaned
+# _download_install extraction, _resolve_src's own symlink dir) is cleaned
 # up through this single mechanism instead of each having its own EXIT
 # trap (which would just clobber each other).
 _TMP_DIRS=""
@@ -108,49 +105,44 @@ _cleanup() {
 }
 trap _cleanup EXIT
 
-# _BOOTSTRAPPED: the "<origin>@<ref>" already resolved+installed by
-# _bootstrap, so a repeat request for the same one (the common case) is an
-# instant no-op instead of re-touching disk. A different one requested
-# later in the same run re-resolves.
-_BOOTSTRAPPED=""
+# _SRC: the resolved source tree for _SRC_ORIGIN/_SRC_REF (set by
+# _resolve_src). _SRC_RESOLVED guards against re-resolving the same
+# origin+ref more than once per run; a different one requested later in
+# the same run re-resolves (and switches _SRC to it).
+_SRC=""
+_SRC_ORIGIN=""
+_SRC_REF=""
+_SRC_RESOLVED=0
 
-# _bootstrap: the one function in charge of retrieving the zz_* scripts —
-# resolving <origin>@<ref> (default: this script's own ZZ_ORIGIN/
-# ZZ_ORIGIN_REF) to a local checkout, a warm cache, or a fresh download,
-# then installing every zz_*/run.sh from it as a single bundle onto a
-# writable bin dir. Called unconditionally, up front, at the default
-# origin/ref, before anything else in this script runs — zz_use needs its
-# own zz_log/zz_colors/zz_bindir to report anything at all — and again
-# later for any pinned or other-origin zz_* request. Every other function
-# in this script can therefore assume zz_log is already installed and call
-# it directly; the one exception is the log line inside this function
-# itself, before that installation has actually happened — that's the
-# only spot with a trivial, uncolored fallback logger.
-_bootstrap() {
-    _origin="${1:-$ZZ_ORIGIN}"
-    _ref="${2:-}"
-    _key="${_origin}@${_ref}"
-    [ "$FORCE" -eq 0 ] && [ "$_key" = "$_BOOTSTRAPPED" ] && return 0
+# Resolve _SRC for <origin> (default: ZZ_ORIGIN) at <ref> (default:
+# ZZ_ORIGIN_REF) — a local checkout (ROOT_DIR, when zz_use is running from
+# within this repo, the requested origin is this repo's own default, and
+# no specific ref was asked for), otherwise the local cache for that
+# origin+ref (refreshed first when missing or under --force) — then
+# expose every zz_*/run.sh in it on PATH under its bare conventional name
+# (zz_colors, zz_log, zz_bindir, ...) via symlinks in a scratch dir.
+# That's what lets `zz_log ...` and `. zz_colors` — including from
+# *inside* a functional script's own source — all just resolve normally
+# from here on, with zero reimplementation of what those scripts do.
+_resolve_src() {
+    _req_origin="${1:-$ZZ_ORIGIN}"
+    _req_ref="${2:-}"
+    if [ "$_SRC_RESOLVED" -eq 1 ] && [ "$_SRC_ORIGIN" = "$_req_origin" ] && [ "$_SRC_REF" = "$_req_ref" ] && [ "$FORCE" -eq 0 ]; then
+        return 0
+    fi
 
-    _blog() {
-        command -v zz_log >/dev/null 2>&1 && { zz_log "$@"; return; }
-        _lvl="$1" && shift
-        [ "$_lvl" = "d" ] && [ -z "${ZZ_DEBUG:-}" ] && return 0
-        printf '[%s] %s\n' "$_lvl" "$*" >&2
-    }
-
-    if [ "$_origin" = "$ZZ_ORIGIN" ] && [ -z "$_ref" ] && [ -f "${ROOT_DIR}/zz_colors/run.sh" ]; then
-        _src="$ROOT_DIR"
+    if [ "$_req_origin" = "$ZZ_ORIGIN" ] && [ -z "$_req_ref" ] && [ -f "${ROOT_DIR}/zz_colors/run.sh" ]; then
+        _SRC="$ROOT_DIR"
     else
-        _cache_dir="${ZZ_CACHE_DIR}/${_origin}/${_ref:-$ZZ_ORIGIN_REF}"
+        _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_req_ref:-$ZZ_ORIGIN_REF}"
         _warm=0
         for _d in "$_cache_dir"/*/; do [ -f "${_d}run.sh" ] && _warm=1 && break; done
         if [ "$FORCE" -eq 1 ] || [ "$_warm" -eq 0 ]; then
             # "|" (not "/") as the sed delimiter: {ORIGIN} always contains
-            # "/" (org/repo), and {REF} can too (a branch like
-            # "feature/foo").
-            _url=$(printf '%s' "$ZZ_USE_REPO_URL" | sed -e "s|{ORIGIN}|${_origin}|g" -e "s|{REF}|${_ref:-$ZZ_ORIGIN_REF}|g")
-            _blog i "Retrieving repo scripts ({B ${_origin}@${_ref:-$ZZ_ORIGIN_REF}}) from {U ${_url}}..."
+            # "/" (org/repo), and {REF} can too (a branch name like
+            # "feature/foo") — either would break the s/// syntax with "/".
+            _url=$(printf '%s' "$ZZ_USE_REPO_URL" | sed -e "s|{ORIGIN}|${_req_origin}|g" -e "s|{REF}|${_req_ref:-$ZZ_ORIGIN_REF}|g")
+            zz_log i "Retrieving repo scripts ({B ${_req_origin}@${_req_ref:-$ZZ_ORIGIN_REF}}) from {U ${_url}}..."
             _tmp="${_cache_dir}.tmp.$$"
             _add_tmp "$_tmp"
             rm -rf "$_tmp"
@@ -158,60 +150,36 @@ _bootstrap() {
             curl -fsSL "$_url" | tar -xz -C "$_tmp" --strip-components=1
             _ok=0
             for _d in "$_tmp"/*/; do [ -f "${_d}run.sh" ] && _ok=1 && break; done
-            [ "$_ok" -eq 1 ] || { _blog e "Downloaded archive from {B ${_origin}@${_ref:-$ZZ_ORIGIN_REF}} has no <name>/run.sh scripts (unexpected repo layout)"; return 1; }
+            [ "$_ok" -eq 1 ] || { zz_log e "Downloaded archive from {B ${_req_origin}@${_req_ref:-$ZZ_ORIGIN_REF}} has no <name>/run.sh scripts (unexpected repo layout)"; return 1; }
             mkdir -p "$(dirname "$_cache_dir")"
             rm -rf "$_cache_dir"
             mv "$_tmp" "$_cache_dir"
         else
-            _blog d "Using cached repo scripts at {U ${_cache_dir}}"
+            zz_log d "Using cached repo scripts at {U ${_cache_dir}}"
         fi
-        _src="$_cache_dir"
+        _SRC="$_cache_dir"
     fi
 
-    # Expose every zz_*/run.sh from _src on PATH under its bare
-    # conventional name (zz_colors, zz_log, zz_bindir, ...) via symlinks in
-    # a scratch dir, so `command -v zz_bindir`, `zz_log ...` and
-    # `. zz_colors` below — including from *inside* zz_bindir's/zz_log's
-    # own source, which itself does `. zz_colors` — all just resolve.
     _boot_dir=$(mktemp -d)
     _add_tmp "$_boot_dir"
-    for _d in "${_src}"/zz_*/; do
+    for _d in "${_SRC}"/zz_*/; do
         [ -f "${_d}run.sh" ] || continue
         ln -s "${_d}run.sh" "${_boot_dir}/$(basename "$_d")"
     done
     export PATH="${_boot_dir}:${PATH}"
 
-    _dir=$(_bindir) || { _blog e "No writable bin directory found for zz_* bundle install"; return 1; }
-    _ensure_path "$_dir"
-
-    _blog i "Installing zz_* bundle from {U ${_src}} to {U ${_dir}}..."
-    for _d in "${_src}"/zz_*/; do
-        [ -f "${_d}run.sh" ] || continue
-        _name=$(basename "$_d")
-        # Write to a temp file and `mv` it into place rather than `cp`ing
-        # over the target directly: one of these names can be zz_use
-        # itself (e.g. under zz_update, which force-refreshes the whole
-        # core set including zz_use), and an in-place cp can truncate a
-        # script the shell is still mid-read on. mv (same filesystem) is
-        # an atomic rename instead.
-        cp "${_d}run.sh" "${_dir}/.${_name}.$$"
-        chmod +x "${_dir}/.${_name}.$$"
-        mv "${_dir}/.${_name}.$$" "${_dir}/${_name}"
-        _install_script_config "${_d}config" "${_dir}/config"
-    done
-    _blog s "zz_* bundle installed to {U ${_dir}}"
-
-    _BOOTSTRAPPED="$_key"
-    export _SRC="$_src"
+    _SRC_ORIGIN="$_req_origin"
+    _SRC_REF="$_req_ref"
+    _SRC_RESOLVED=1
 }
 
 # Resolve (and create if needed) a writable bin directory. Delegates to
-# the real zz_bindir — bootstrapping the default zz_* set first if it
-# isn't already on PATH, so this never has to reimplement zz_bindir's
-# candidate-directory logic.
+# the real zz_bindir — resolving _SRC first (if it isn't already on PATH)
+# makes that possible without reimplementing its candidate-directory logic
+# here too.
 _bindir() {
     _t="$1"
-    command -v zz_bindir >/dev/null 2>&1 || _bootstrap || return 1
+    command -v zz_bindir >/dev/null 2>&1 || _resolve_src || return 1
     eval "$(zz_bindir ${_t:+-t "$_t"})"
     printf '%s\n' "$dir"
 }
@@ -246,21 +214,28 @@ _install_script_config() {
 }
 
 # Install a single named script from this or another repo — functional or
-# core, requested individually, unlike the core zz_* set which always
-# installs as one bundle via _bootstrap. Returns non-zero (silently) when
-# <name> isn't a script in that repo at all, so the caller can fall
-# through to the apt/config lookup for genuinely external tools.
+# core, always individually: nothing in this repo needs to be installed as
+# a group any more (setup.sh already puts the whole core set in place up
+# front via a "zz_*" glob call). Returns non-zero (silently) when <name>
+# isn't a script in that repo at all, so the caller can fall through to
+# the apt/config lookup for genuinely external tools.
 _install_repo_script() {
     _name="$1"
     _origin="${2:-$ZZ_ORIGIN}"
     _ref="${3:-}"
-    _bootstrap "$_origin" "$_ref" || return 1
+    _resolve_src "$_origin" "$_ref" || return 1
     [ -f "${_SRC}/${_name}/run.sh" ] || return 1
 
     _dir=$(_bindir) || { zz_log e "No writable bin directory found for {Purple ${_name}}"; return 1; }
     _ensure_path "$_dir"
 
     zz_log i "Installing {Purple ${_name}} from {U ${_SRC}/${_name}} to {U ${_dir}}..."
+    # Write to a temp file and `mv` it into place rather than `cp`ing over
+    # the target directly: <_name> can be zz_use itself (e.g. under
+    # zz_update, which force-refreshes the core scripts one by one,
+    # including zz_use), and an in-place cp can truncate a script the
+    # shell is still mid-read on. mv (same filesystem) is an atomic
+    # rename instead.
     cp "${_SRC}/${_name}/run.sh" "${_dir}/.${_name}.$$"
     chmod +x "${_dir}/.${_name}.$$"
     mv "${_dir}/.${_name}.$$" "${_dir}/${_name}"
@@ -340,8 +315,7 @@ _download_install() {
 # repo and/or pins it to a specific tag/branch/commit instead of this
 # repo's own default (ZZ_ORIGIN/ZZ_ORIGIN_REF); the origin/ref are
 # stripped from the name for command lookup/config/case matching and
-# threaded through to _bootstrap/_install_repo_script. Recurses into
-# itself once per concrete match of a glob tool name.
+# threaded through to _resolve_src/_install_repo_script.
 _use() {
     if [ $# -eq 0 ]; then
         zz_log e "Usage: zz_use <tool>[@ref] [tool[@ref]...]"
@@ -374,39 +348,25 @@ _use() {
 
         # A glob tool name (e.g. "zz_*") expands to every matching script
         # folder in the resolved source tree instead of naming one script
-        # directly. Bootstrap _SRC first so there's something to match
-        # against, then recurse into _use once per concrete match, fully
-        # reusing the per-tool logic below (skip-if-present, bundle vs.
-        # individual install, error reporting) rather than duplicating it.
-        # A glob matching nothing is a soft no-op (warn, don't fail) —
-        # unlike a literal unknown tool name, which still errors via the
-        # command -v check at the end of this loop.
+        # directly — this is how setup.sh puts the whole core zz_* set in
+        # place with a single `zz_use "zz_*"` call. Each match is installed
+        # for real, unconditionally: _resolve_src's own symlink step (see
+        # above) puts every zz_* name on PATH as a side effect, so the
+        # ordinary "already available" skip below can't be trusted here —
+        # it would make every match after the first look already installed
+        # and skip the one thing this glob call exists to do. A glob
+        # matching nothing is a soft no-op (warn, don't fail) — unlike a
+        # literal unknown tool name, which still errors out below.
         case "$tool" in
         *\**)
-            # Resolved in a subshell: _bootstrap exports its bootstrap
-            # symlink dir onto PATH as a side effect, which would make
-            # every matched tool look "already available" to the
-            # recursive _use calls below before any of them actually gets
-            # installed to a persistent bin dir. Isolating that PATH
-            # mutation to the subshell keeps the per-match recursion
-            # honest; the disk-level effects (cache download/install)
-            # still happen for real.
-            _glob_src=$(_bootstrap "$origin" "$ref" 1>&2 && printf '%s' "$_SRC")
-            [ -n "$_glob_src" ] || return 1
+            _resolve_src "$origin" "$ref" || return 1
             _glob_matched=0
-            for _gd in "${_glob_src}"/${tool}/; do
+            for _gd in "${_SRC}"/${tool}/; do
                 [ -f "${_gd}run.sh" ] || continue
                 _glob_matched=1
-                _gname=$(basename "$_gd")
-                if [ "$origin" = "$ZZ_ORIGIN" ]; then
-                    _gexpanded="$_gname"
-                else
-                    _gexpanded="${origin}/${_gname}"
-                fi
-                [ -n "$ref" ] && _gexpanded="${_gexpanded}@${ref}"
-                _use "$_gexpanded" || return 1
+                _install_repo_script "$(basename "$_gd")" "$origin" "$ref" || return 1
             done
-            [ "$_glob_matched" -eq 1 ] || zz_log w "No scripts match {Purple ${tool}} in {U ${_glob_src}}"
+            [ "$_glob_matched" -eq 1 ] || zz_log w "No scripts match {Purple ${tool}} in {U ${_SRC}}"
             continue
             ;;
         esac
@@ -424,36 +384,29 @@ _use() {
             fi
         fi
 
-        case "$tool" in
-        zz_*)
-            _bootstrap "$origin" "$ref" || return 1
-            ;;
-        *)
-            entry=""
-            if [ -f "$ZZ_USE_CONFIG" ] && command -v jq >/dev/null 2>&1; then
-                entry=$(jq -c --arg t "$tool" '.[$t] // empty' "$ZZ_USE_CONFIG" 2>/dev/null)
-            fi
+        entry=""
+        if [ -f "$ZZ_USE_CONFIG" ] && command -v jq >/dev/null 2>&1; then
+            entry=$(jq -c --arg t "$tool" '.[$t] // empty' "$ZZ_USE_CONFIG" 2>/dev/null)
+        fi
 
-            if [ -n "$entry" ]; then
-                apt_pkg=$(printf '%s' "$entry" | jq -r '.apt // empty')
-                url=$(printf '%s' "$entry" | jq -r '.url // empty')
+        if [ -n "$entry" ]; then
+            apt_pkg=$(printf '%s' "$entry" | jq -r '.apt // empty')
+            url=$(printf '%s' "$entry" | jq -r '.url // empty')
 
-                if [ -n "$apt_pkg" ]; then
-                    _apt_install "$apt_pkg" || zz_log w "apt install of {Purple $apt_pkg} failed"
-                elif [ -n "$url" ]; then
-                    archive=$(printf '%s' "$entry" | jq -r '.archive // empty')
-                    binpath=$(printf '%s' "$entry" | jq -r '.binpath // empty')
-                    version=$(printf '%s' "$entry" | jq -r '.version // empty')
-                    _download_install "$tool" "$url" "$archive" "$binpath" "$version" \
-                        || zz_log w "Download install of {Purple $tool} failed"
-                fi
-            elif _install_repo_script "$tool" "$origin" "$ref"; then
-                : # a functional (or core, requested by name) script from this or another repo
-            else
-                _apt_install "$tool" || true
+            if [ -n "$apt_pkg" ]; then
+                _apt_install "$apt_pkg" || zz_log w "apt install of {Purple $apt_pkg} failed"
+            elif [ -n "$url" ]; then
+                archive=$(printf '%s' "$entry" | jq -r '.archive // empty')
+                binpath=$(printf '%s' "$entry" | jq -r '.binpath // empty')
+                version=$(printf '%s' "$entry" | jq -r '.version // empty')
+                _download_install "$tool" "$url" "$archive" "$binpath" "$version" \
+                    || zz_log w "Download install of {Purple $tool} failed"
             fi
-            ;;
-        esac
+        elif _install_repo_script "$tool" "$origin" "$ref"; then
+            : # a functional (or core, requested by name) script from this or another repo
+        else
+            _apt_install "$tool" || true
+        fi
 
         if ! command -v "$tool" >/dev/null 2>&1; then
             zz_log e "Unable to provide required dependency: {Purple $tool}"
@@ -462,5 +415,4 @@ _use() {
     done
 }
 
-_bootstrap
 _use "$@"
