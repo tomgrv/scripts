@@ -1,6 +1,7 @@
 #!/bin/sh
 # zz_log <level> <msg...> — colored, leveled log line on stderr.
-# level: i(nfo) n(otice) w(arning) e(rror) s(uccess) -(plain).
+# level: i(nfo) n(otice) w(arning) e(rror) s(uccess) d(ebug) -(plain).
+# d(ebug) is silent unless ZZ_DEBUG is set.
 
 . zz_colors
 
@@ -9,6 +10,11 @@ lvl="$1" && shift
 gha=""
 
 case $lvl in
+d*)
+    [ -n "${ZZ_DEBUG:-}" ] || exit 0
+    picto="{BBlack ·} "
+    base="BBlack"
+    ;;
 i*)
     picto="{BBlue →} "
     base="White"
