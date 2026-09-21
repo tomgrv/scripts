@@ -1,0 +1,12 @@
+{
+    "devDependencies": {
+        "git-hook-commitmsg": "*",
+        "git-hook-installplugins": "*",
+        "git-hook-postcheckout": "*",
+        "git-hook-postmerge": "*",
+        "git-hook-precommit": "*",
+        "git-hook-preparecommitmsg": "*",
+        "git-hook-prepush": "*",
+        "husky": "*"
+    }
+}

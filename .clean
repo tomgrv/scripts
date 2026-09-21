@@ -1,0 +1,4 @@
+DEL .github/workflows/merge-monorepo.yml
+DEL .github/workflows/split-monorepo.yml
+DEL .github/workflows/rebase-pr.yml
+DEL .github/workflows/release-main.yml

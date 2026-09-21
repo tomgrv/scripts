@@ -1,0 +1,5 @@
+#!/bin/sh
+# Skip silently if not yet installed (e.g. package.json changed without a
+# following `npm install`) rather than hard-failing the git operation.
+command -v git-hook-prepush >/dev/null 2>&1 || exit 0
+git-hook-prepush "$@"

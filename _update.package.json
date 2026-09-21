@@ -1,0 +1,9 @@
+{
+    "scripts": {
+        "update": "npm-check-updates -i -u",
+        "update-all": "npm run update -w --root"
+    },
+    "devDependencies": {
+        "npm-check-updates": "*"
+    }
+}

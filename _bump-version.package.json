@@ -1,0 +1,26 @@
+{
+    "bump-version": {
+        "files": [
+            {
+                "filename": "composer.json",
+                "type": "json"
+            },
+            {
+                "filename": "package.json",
+                "type": "json"
+            },
+            {
+                "filename": "package.json",
+                "type": "json@ws"
+            },
+            {
+                "filename": "devcontainer-feature.json",
+                "type": "json@ws"
+            },
+            {
+                "filename": "VERSION",
+                "type": "plain-text"
+            }
+        ]
+    }
+}
