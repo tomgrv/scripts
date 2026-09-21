@@ -48,6 +48,15 @@
 # Idempotent: safe to call on every script invocation — resolved tools are
 # skipped in ~0ms via `command -v`, unless --force or @<ref> is given.
 #
+# -x/--exec <tool> [arg...]: install <tool> (through the same resolution
+# path as any other tool) and exec straight into it, replacing this
+# process, with every argument after <tool> passed through as its argv.
+# Any tool names given before -x are resolved first, as ordinary
+# dependencies:
+#   zz_use zz_log jq -x validate-json some-file.json
+# installs zz_log and jq as usual, then installs and execs
+# `validate-json some-file.json`.
+#
 # zz_use relies on zz_log (and its own siblings) already being on PATH —
 # setup.sh's `zz_use "zz_*"` call is what puts the whole core set there in
 # the first place; this script doesn't re-derive that bootstrapping.
@@ -61,6 +70,35 @@ case "${1:-}" in
     shift
     ;;
 esac
+
+# Scan left-to-right (not just the first arg, like --force above) for
+# -x/--exec, since dependencies commonly come before it. Every arg up to
+# that point is single-quoted and appended to _before (restored with
+# `eval set --` further down), so it survives intact even if it contains
+# spaces or quotes. Everything from <tool> onward is left in "$@" as-is:
+# <tool> is threaded straight to `_use`, and whatever follows it is never
+# parsed by zz_use at all — it stays in "$@" untouched, ready to become
+# the exec'd tool's own argv.
+EXEC_TOOL=""
+_before=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+    -x | --exec)
+        shift
+        EXEC_TOOL="${1:-}"
+        if [ -z "$EXEC_TOOL" ]; then
+            printf '[e] -x/--exec requires a tool name\n' >&2
+            exit 1
+        fi
+        shift
+        break
+        ;;
+    *)
+        _before="${_before} '$(printf '%s' "$1" | sed "s/'/'\\\\''/g")'"
+        shift
+        ;;
+    esac
+done
 
 # Follow symlinks (an installed/linked "zz_use" on PATH is a symlink to this
 # file) so SCRIPT_DIR/ROOT_DIR resolve to the real checkout, not the link's
@@ -418,4 +456,15 @@ _use() {
     done
 }
 
-_use "$@"
+# -x/--exec: install EXEC_TOOL alongside the dependencies collected into
+# _before, then exec into it — replacing this process, remaining "$@"
+# (never touched by the parsing loop above) becoming its argv. Falls
+# through to the plain _use call below when -x wasn't given.
+if [ -n "$EXEC_TOOL" ]; then
+    eval "_use $_before \"\$EXEC_TOOL\"" || exit 1
+    _exec_name="${EXEC_TOOL%%@*}"
+    case "$_exec_name" in */*) _exec_name="${_exec_name##*/}" ;; esac
+    exec "$_exec_name" "$@"
+fi
+
+eval "_use $_before"

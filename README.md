@@ -105,6 +105,18 @@ warning rather than failing:
 zz_use "zz_*" # every core zz_* script, without naming them one by one
 ```
 
+`-x`/`--exec <tool> [arg...]` installs `<tool>` and execs straight into it
+(replacing the current process), passing everything after it through as
+its argv. Any tool names given before `-x` are resolved first, as ordinary
+dependencies — useful for a thin wrapper script that just wants to
+activate its real implementation and hand off to it:
+
+```sh
+zz_use zz_log jq -x validate-json some-file.json
+# installs zz_log and jq as usual, then installs and execs
+# `validate-json some-file.json`
+```
+
 ## Naming
 
 - **Core** folders keep the `zz_` prefix — each atomic function is its own
@@ -170,6 +182,11 @@ For each `<tool>` requested, in order:
 Idempotent: safe to call on every invocation — resolved tools are skipped
 via `command -v` in ~0ms. Retrieval or install happens **if and only if**
 the tool isn't already available.
+
+Below is that same per-tool decision path. `-x`/`--exec <tool> [arg...]`
+just wraps it: any tools before `-x` go through it as ordinary
+dependencies, then `<tool>` itself goes through it too, and once it's on
+`PATH`, `zz_use` execs into it instead of returning.
 
 ```mermaid
 flowchart TD

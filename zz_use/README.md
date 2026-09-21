@@ -11,6 +11,7 @@ and linked onto `PATH` as `zz_use`.
 
 ```sh
 zz_use "<tool>" [tool...]
+zz_use [tool...] -x "<tool>" [arg...] # install <tool>, then exec it
 ```
 
 ## Dependencies
@@ -31,3 +32,8 @@ bats test.bats
 - errors with "Unable to provide required dependency" when a tool can't be resolved
 - `--force` re-installs a zz_* tool even when already on PATH
 - resolves a functional script's `config/` folder alongside it
+- `-x` installs the target and execs it, passing arguments through
+- `-x` propagates the exec'd command's exit status
+- `-x` resolves leading dependencies before installing/exec'ing the target
+- `-x` strips an `[org/repo/]` prefix from the exec target's command name
+- `-x` without a tool name errors

@@ -101,3 +101,40 @@ teardown() {
     [ -x "$bindir/validate-json" ]
     rm -rf "$bindir"
 }
+
+@test "zz_use -x installs the target and execs it, passing arguments through" {
+    zz_use_bin=$(command -v zz_use)
+    run env PATH="/usr/bin:/bin" "$zz_use_bin" -x sh -c "echo hello-from-exec"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"hello-from-exec"* ]]
+}
+
+@test "zz_use -x propagates the exec'd command's exit status" {
+    zz_use_bin=$(command -v zz_use)
+    run env PATH="/usr/bin:/bin" "$zz_use_bin" -x sh -c "exit 7"
+    [ "$status" -eq 7 ]
+}
+
+@test "zz_use -x resolves leading dependencies before installing/exec'ing the target" {
+    bindir=$(mktemp -d)
+    zz_use_bin=$(command -v zz_use)
+    run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" load-json -x zz_log w "warned"
+    [ "$status" -eq 0 ]
+    [ -x "$bindir/load-json" ]
+    [[ "$output" == *"warned"* ]]
+    rm -rf "$bindir"
+}
+
+@test "zz_use -x strips an [org/repo/] prefix from the exec target's command name" {
+    zz_use_bin=$(command -v zz_use)
+    run env PATH="/usr/bin:/bin" "$zz_use_bin" -x tomgrv/scripts/zz_log w "pinned"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"pinned"* ]]
+}
+
+@test "zz_use -x without a tool name errors" {
+    zz_use_bin=$(command -v zz_use)
+    run env PATH="/usr/bin:/bin" "$zz_use_bin" -x
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"requires a tool name"* ]]
+}
