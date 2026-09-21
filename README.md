@@ -171,6 +171,38 @@ Idempotent: safe to call on every invocation — resolved tools are skipped
 via `command -v` in ~0ms. Retrieval or install happens **if and only if**
 the tool isn't already available.
 
+```mermaid
+flowchart TD
+    Start(["zz_use tool[@ref] ..."]) --> Glob{"name is a\nglob, e.g. zz_*?"}
+
+    Glob -- yes --> ResolveG["resolve source\n(checkout / cache / download)"]
+    ResolveG --> ForEachMatch["for each matching\nscript folder"]
+    ForEachMatch --> InstallEach["install it\n(_install_repo_script)"]
+    InstallEach -->|more matches| ForEachMatch
+    InstallEach -->|no matches at all| WarnEmpty["warn: no scripts match"]
+
+    Glob -- no --> Skip{"already on PATH?\n(skipped if pinned/\nother origin/--force)"}
+    Skip -- yes --> Done(["done — 0ms"])
+    Skip -- no --> Config{"zz_use.json has\nan entry for it?"}
+
+    Config -- apt --> Apt["apt-get install"]
+    Config -- url --> Download["download + extract,\ninstall via zz_bindir"]
+    Config -- no entry --> Repo{"a script in\nthis repo?"}
+
+    Repo -- yes --> ResolveOne["resolve source\n(checkout / cache / download)"]
+    ResolveOne --> InstallOne["install it\n(_install_repo_script)"]
+
+    Repo -- no --> AptFallback["apt-get install\n(same name)"]
+
+    Apt --> Check
+    Download --> Check
+    InstallOne --> Check
+    AptFallback --> Check
+    Check{"on PATH now?"}
+    Check -- yes --> Done
+    Check -- no --> Fail(["error, exit 1"])
+```
+
 ## Core `zz_*` scripts
 
 | Script                                                                 | Purpose                                                                                                                                               |
