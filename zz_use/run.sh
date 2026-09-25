@@ -93,6 +93,10 @@ while [ $# -gt 0 ]; do
         shift
         break
         ;;
+    -*) 
+        zz_log e "Unknown option: $1"
+        exit 1
+        ;;
     *)
         _before="${_before} '$(printf '%s' "$1" | sed "s/'/'\\\\''/g")'"
         shift
