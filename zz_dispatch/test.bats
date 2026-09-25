@@ -58,6 +58,17 @@ teardown() {
     rm -rf "$dir"
 }
 
+@test "zz_dispatch only lists executable files as available utilities" {
+    dir=$(mktemp -d)
+    printf '#!/bin/sh\necho other\n' >"$dir/foo-other"
+    chmod +x "$dir/foo-other"
+    printf '#!/bin/sh\necho not-executable\n' >"$dir/foo-noexec"
+    run zz_dispatch "$dir/_foo.sh" nonexistent
+    [[ "$output" == *"foo-other"* ]]
+    [[ "$output" != *"foo-noexec"* ]]
+    rm -rf "$dir"
+}
+
 @test "zz_dispatch derives the subcommand family name from the caller basename, stripping leading underscore and extension" {
     dir=$(mktemp -d)
     printf '#!/bin/sh\necho matched\n' >"$dir/thing-sub"
