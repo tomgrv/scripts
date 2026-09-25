@@ -63,33 +63,33 @@
 
 set -e
 
+# A single left-to-right scan handles every option zz_use recognizes
+# (--force/-f, -x/--exec) and rejects any other -leading word, instead of
+# splitting that job between a "just the first arg" check for --force and
+# a separate loop for everything else — the split let --force go
+# unrecognized (and get rejected as an "unknown option") whenever it
+# wasn't literally $1, e.g. `zz_use zz_log --force`. Any error printed
+# here uses plain stderr, not zz_log: this whole scan runs before any
+# tool — zz_log included — has been resolved, unlike every other error in
+# this script. Every non-option arg is single-quoted and appended to
+# _before (restored with `eval set --` further down), so it survives
+# intact even if it contains spaces or quotes. Everything from -x's
+# <tool> onward is left in "$@" as-is: <tool> is threaded straight to
+# `_use`, and whatever follows it is never parsed by zz_use at all — it
+# stays in "$@" untouched, ready to become the exec'd tool's own argv.
 FORCE=0
-case "${1:-}" in
---force | -f)
-    FORCE=1
-    shift
-    ;;
-esac
-
-# Scan left-to-right (not just the first arg, like --force above) for
-# -x/--exec, since dependencies commonly come before it. Every arg up to
-# that point is single-quoted and appended to _before (restored with
-# `eval set --` further down), so it survives intact even if it contains
-# spaces or quotes. Everything from <tool> onward is left in "$@" as-is:
-# <tool> is threaded straight to `_use`, and whatever follows it is never
-# parsed by zz_use at all — it stays in "$@" untouched, ready to become
-# the exec'd tool's own argv.
 EXEC_TOOL=""
 _before=""
 while [ $# -gt 0 ]; do
     case "$1" in
+    --force | -f)
+        FORCE=1
+        shift
+        ;;
     -x | --exec)
         shift
         EXEC_TOOL="${1:-}"
         if [ -z "$EXEC_TOOL" ]; then
-            # Plain stderr, not zz_log: this check runs before any tool has
-            # been resolved, so — unlike every other error in this script —
-            # zz_log itself isn't guaranteed to be on PATH yet.
             printf '[e] -x/--exec requires a tool name\n' >&2
             exit 1
         fi
@@ -97,8 +97,6 @@ while [ $# -gt 0 ]; do
         break
         ;;
     -*)
-        # Plain stderr, not zz_log: same reasoning as the -x check above —
-        # this can fire before zz_log has been resolved.
         printf '[e] Unknown option: %s\n' "$1" >&2
         exit 1
         ;;

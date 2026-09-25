@@ -107,6 +107,18 @@ teardown() {
     rm -rf "$bindir"
 }
 
+@test "zz_use recognizes --force after a tool name, not just as the first arg" {
+    bindir=$(mktemp -d)
+    zz_use_bin=$(command -v zz_use)
+    run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" zz_log
+    [ "$status" -eq 0 ]
+    run env INSTALL_BIN_DIR="$bindir" PATH="$bindir:/usr/bin:/bin" "$zz_use_bin" zz_log --force
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"already available"* ]]
+    [[ "$output" != *"Unknown option"* ]]
+    rm -rf "$bindir"
+}
+
 @test "zz_use resolves a functional script's config/ folder alongside it" {
     bindir=$(mktemp -d)
     zz_use_bin=$(command -v zz_use)

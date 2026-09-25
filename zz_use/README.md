@@ -33,6 +33,7 @@ bats test.bats
 - installs a single zz_* tool individually, not the whole set
 - errors with "Unable to provide required dependency" when a tool can't be resolved
 - `--force` re-installs a zz_* tool even when already on PATH
+- recognizes `--force` after a tool name, not just as the first arg
 - resolves a functional script's `config/` folder alongside it
 - `-x` installs the target and execs it, passing arguments through
 - `-x` propagates the exec'd command's exit status
