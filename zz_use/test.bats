@@ -33,6 +33,13 @@ teardown() {
     [[ "$output" == *"Usage: zz_use"* ]]
 }
 
+@test "zz_use rejects an unknown option instead of treating it as a tool name" {
+    zz_use_bin=$(command -v zz_use)
+    run env PATH="/usr/bin:/bin" "$zz_use_bin" zz_log --bogus
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Unknown option: --bogus"* ]]
+}
+
 @test "zz_use installs a functional script individually, not the whole bundle" {
     bindir=$(mktemp -d)
     # PATH is restricted to hide load-json/validate-json (already linked

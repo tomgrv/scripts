@@ -96,8 +96,10 @@ while [ $# -gt 0 ]; do
         shift
         break
         ;;
-    -*) 
-        zz_log e "Unknown option: $1"
+    -*)
+        # Plain stderr, not zz_log: same reasoning as the -x check above —
+        # this can fire before zz_log has been resolved.
+        printf '[e] Unknown option: %s\n' "$1" >&2
         exit 1
         ;;
     *)

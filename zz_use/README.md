@@ -28,6 +28,7 @@ bats test.bats
 - skips a tool already on PATH, reporting "already available"
 - requires at least one tool argument
 - prints its usage error even when zz_log isn't resolvable yet
+- rejects an unknown option instead of treating it as a tool name
 - installs a functional script individually, not the whole set
 - installs a single zz_* tool individually, not the whole set
 - errors with "Unable to provide required dependency" when a tool can't be resolved
