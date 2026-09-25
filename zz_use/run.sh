@@ -87,7 +87,10 @@ while [ $# -gt 0 ]; do
         shift
         EXEC_TOOL="${1:-}"
         if [ -z "$EXEC_TOOL" ]; then
-            zz_log e "-x/--exec requires a tool name"
+            # Plain stderr, not zz_log: this check runs before any tool has
+            # been resolved, so — unlike every other error in this script —
+            # zz_log itself isn't guaranteed to be on PATH yet.
+            printf '[e] -x/--exec requires a tool name\n' >&2
             exit 1
         fi
         shift
@@ -363,7 +366,9 @@ _download_install() {
 # threaded through to _resolve_src/_install_repo_script.
 _use() {
     if [ $# -eq 0 ]; then
-        zz_log e "Usage: zz_use <tool>[@ref] [tool[@ref]...]"
+        # Plain stderr, not zz_log: the very first call into _use can
+        # happen before any tool (zz_log included) has been resolved.
+        printf '[e] Usage: zz_use <tool>[@ref] [tool[@ref]...]\n' >&2
         return 1
     fi
 

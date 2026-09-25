@@ -26,6 +26,13 @@ teardown() {
     [ "$status" -ne 0 ]
 }
 
+@test "zz_use's usage error prints even when zz_log isn't resolvable yet" {
+    zz_use_bin=$(command -v zz_use)
+    run env PATH="/usr/bin:/bin" "$zz_use_bin"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Usage: zz_use"* ]]
+}
+
 @test "zz_use installs a functional script individually, not the whole bundle" {
     bindir=$(mktemp -d)
     # PATH is restricted to hide load-json/validate-json (already linked
