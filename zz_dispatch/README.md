@@ -30,4 +30,5 @@ bats test.bats
 - passes remaining arguments through to the target script
 - falls back to running a non-executable target through `sh`
 - no matching target reports "No dispatch target found" and lists available utilities
+- only lists executable files as available utilities
 - derives the family name from the caller basename, stripping leading `_` and extension

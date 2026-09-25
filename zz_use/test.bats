@@ -26,6 +26,20 @@ teardown() {
     [ "$status" -ne 0 ]
 }
 
+@test "zz_use's usage error prints even when zz_log isn't resolvable yet" {
+    zz_use_bin=$(command -v zz_use)
+    run env PATH="/usr/bin:/bin" "$zz_use_bin"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Usage: zz_use"* ]]
+}
+
+@test "zz_use rejects an unknown option instead of treating it as a tool name" {
+    zz_use_bin=$(command -v zz_use)
+    run env PATH="/usr/bin:/bin" "$zz_use_bin" zz_log --bogus
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Unknown option: --bogus"* ]]
+}
+
 @test "zz_use installs a functional script individually, not the whole bundle" {
     bindir=$(mktemp -d)
     # PATH is restricted to hide load-json/validate-json (already linked
@@ -41,14 +55,13 @@ teardown() {
     rm -rf "$bindir"
 }
 
-@test "zz_use installs the full zz_* bundle at once when any one zz_* tool is missing" {
+@test "zz_use installs a single zz_* tool individually, not the whole set" {
     bindir=$(mktemp -d)
     zz_use_bin=$(command -v zz_use)
     run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" zz_log
     [ "$status" -eq 0 ]
-    for tool in zz_use zz_colors zz_log zz_args zz_prompt zz_ask zz_input zz_bindir zz_dispatch zz_npx zz_persist zz_call zz_update; do
-        [ -x "$bindir/$tool" ]
-    done
+    [ -x "$bindir/zz_log" ]
+    [ ! -e "$bindir/zz_args" ]
     rm -rf "$bindir"
 }
 
@@ -94,6 +107,18 @@ teardown() {
     rm -rf "$bindir"
 }
 
+@test "zz_use recognizes --force after a tool name, not just as the first arg" {
+    bindir=$(mktemp -d)
+    zz_use_bin=$(command -v zz_use)
+    run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" zz_log
+    [ "$status" -eq 0 ]
+    run env INSTALL_BIN_DIR="$bindir" PATH="$bindir:/usr/bin:/bin" "$zz_use_bin" zz_log --force
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"already available"* ]]
+    [[ "$output" != *"Unknown option"* ]]
+    rm -rf "$bindir"
+}
+
 @test "zz_use resolves a functional script's config/ folder alongside it" {
     bindir=$(mktemp -d)
     zz_use_bin=$(command -v zz_use)
@@ -101,4 +126,41 @@ teardown() {
     [ "$status" -eq 0 ]
     [ -x "$bindir/validate-json" ]
     rm -rf "$bindir"
+}
+
+@test "zz_use -x installs the target and execs it, passing arguments through" {
+    zz_use_bin=$(command -v zz_use)
+    run env PATH="/usr/bin:/bin" "$zz_use_bin" -x sh -c "echo hello-from-exec"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"hello-from-exec"* ]]
+}
+
+@test "zz_use -x propagates the exec'd command's exit status" {
+    zz_use_bin=$(command -v zz_use)
+    run env PATH="/usr/bin:/bin" "$zz_use_bin" -x sh -c "exit 7"
+    [ "$status" -eq 7 ]
+}
+
+@test "zz_use -x resolves leading dependencies before installing/exec'ing the target" {
+    bindir=$(mktemp -d)
+    zz_use_bin=$(command -v zz_use)
+    run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" load-json -x zz_log w "warned"
+    [ "$status" -eq 0 ]
+    [ -x "$bindir/load-json" ]
+    [[ "$output" == *"warned"* ]]
+    rm -rf "$bindir"
+}
+
+@test "zz_use -x strips an [org/repo/] prefix from the exec target's command name" {
+    zz_use_bin=$(command -v zz_use)
+    run env PATH="/usr/bin:/bin" "$zz_use_bin" -x tomgrv/scripts/zz_log w "pinned"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"pinned"* ]]
+}
+
+@test "zz_use -x without a tool name errors" {
+    zz_use_bin=$(command -v zz_use)
+    run env PATH="/usr/bin:/bin" "$zz_use_bin" -x
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"requires a tool name"* ]]
 }

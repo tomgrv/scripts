@@ -65,7 +65,7 @@ install those directly (`npm install <folder>`, or check out the repo).
 
 ## Caching, `zz_update`, and pinning an origin/ref
 
-Both `setup.sh` and `zz_use`'s zz_* bundle install resolve the same way:
+Both `setup.sh` and `zz_use`'s script installs resolve the same way:
 straight from disk when running inside a checkout of this repo, otherwise
 from a local cache directory (`ZZ_CACHE_DIR/<org>/<repo>/<ref>`, default
 `~/.cache/zz_scripts/tomgrv/scripts/main`) that's populated on first use
@@ -105,6 +105,18 @@ warning rather than failing:
 zz_use "zz_*" # every core zz_* script, without naming them one by one
 ```
 
+`-x`/`--exec <tool> [arg...]` installs `<tool>` and execs straight into it
+(replacing the current process), passing everything after it through as
+its argv. Any tool names given before `-x` are resolved first, as ordinary
+dependencies — useful for a thin wrapper script that just wants to
+activate its real implementation and hand off to it:
+
+```sh
+zz_use zz_log jq -x validate-json some-file.json
+# installs zz_log and jq as usual, then installs and execs
+# `validate-json some-file.json`
+```
+
 ## Naming
 
 - **Core** folders keep the `zz_` prefix — each atomic function is its own
@@ -127,50 +139,86 @@ zz_use zz_colors zz_args load-json jq git
 ```
 
 Internally, `run.sh` is a thin wrapper around a `_use()` function that does
-the actual resolving, calling `_bindir`, `_install_zz_bundle`,
-`_install_repo_script`, etc. None of them need `zz_bindir`, `zz_log`, or
-any other core script to already be on `PATH` — but that's not because
-they each carry a fallback reimplementation. It's `_resolve_src` doing the
-one thing that actually has to happen first: figure out the "tarball
-context" (a checkout, a warm cache, or a freshly downloaded tarball — all
-three are just a directory of `zz_*/run.sh` siblings) and symlink every
-script in it onto `PATH` under its real name, in a throwaway scratch dir.
-From that point on, `command -v zz_bindir`, `zz_log ...`, even the
-`. zz_colors` _inside_ zz_bindir's and zz_log's own source, all just
-resolve normally — zero reimplementation of what those scripts do. That's
-what lets `zz_use` bootstrap the whole core `zz_*` bundle from nothing:
-the very first `zz_use zz_colors ...` a freshly downloaded, standalone
-`zz_use` ever runs (e.g. from `setup.sh`) needs none of its own
-dependencies installed first.
+the actual resolving, calling `_bindir`, `_install_repo_script`, etc. None
+of them need `zz_bindir`, `zz_log`, or any other core script to already be
+on `PATH` — but that's not because they each carry a fallback
+reimplementation. It's `_resolve_src` doing the one thing that actually
+has to happen first: figure out the "tarball context" (a checkout, a warm
+cache, or a freshly downloaded tarball — all three are just a directory of
+`zz_*/run.sh` siblings) and symlink every script in it onto `PATH` under
+its real name, in a throwaway scratch dir. From that point on,
+`command -v zz_bindir`, `zz_log ...`, even the `. zz_colors` _inside_
+zz_bindir's and zz_log's own source, all just resolve normally — zero
+reimplementation of what those scripts do.
+
+`zz_use` itself relies on `zz_log` (and its other core siblings) already
+being on `PATH` — that's `setup.sh`'s job (see above): its
+`zz_use "zz_*"` call puts the whole core set in place, one script at a
+time, before anything else runs. `zz_use` doesn't re-derive that
+bootstrapping.
 
 For each `<tool>` requested, in order:
 
 1. `command -v <tool>` — already there, no-op.
-2. **`zz_*` core tools** — installed together, as a single bundle, the
-   first time any one of them is missing (not one download/copy per
-   script: they ship together and are cheap to install as a set).
-3. **Any other tool with a `zz_use/config/zz_use.json` entry** (override
-   with `ZZ_USE_CONFIG`) — an explicit mapping always wins if a name
-   happens to collide with a repo script:
+2. **Any tool with a `zz_use/config/zz_use.json` entry** (override with
+   `ZZ_USE_CONFIG`) — an explicit mapping always wins if a name happens to
+   collide with a repo script:
     - `{"apt": "<pkg>"}` → `apt-get install -y <pkg>` (via `sudo` if not root).
     - `{"url": ..., "archive": "tar.gz"|"tar.xz"|"zip"|"raw", "binpath": ...}`
       → download, extract if needed, resolve a writable bin dir via
       `zz_bindir`, and install the binary as `<tool>`. Templates support
       `{VERSION}`, `{OS}` (`uname -s`, lowercased), `{ARCH}` (`amd64`/`arm64`).
-4. **Any other script from this repo** (a functional script like
-   `load-json`, or a core one requested individually) — installed on its
-   own, not as part of the bundle: unlike the core set, functional
-   scripts aren't all needed together. Source for both 2 and 4 is, in
-   order: a sibling `zz_*/run.sh` folder in this repo when running from a
-   checkout/npm install; otherwise a local cache (see caching below);
-   otherwise a fresh download into that cache.
-5. No config entry, not a script in this repo → fall back to
+3. **Any script from this repo** (a functional script like `load-json`,
+   or a core `zz_*` one) — installed individually, the same way whether
+   it's core or functional: nothing in this repo needs installing as a
+   group. Source is, in order: a sibling `zz_*/run.sh` folder in this
+   repo when running from a checkout/npm install; otherwise a local
+   cache (see caching below); otherwise a fresh download into that
+   cache.
+4. No config entry, not a script in this repo → fall back to
    `apt-get install -y <tool>` (same name).
-6. Still missing afterwards → error, exit 1.
+5. Still missing afterwards → error, exit 1.
 
 Idempotent: safe to call on every invocation — resolved tools are skipped
 via `command -v` in ~0ms. Retrieval or install happens **if and only if**
 the tool isn't already available.
+
+Below is that same per-tool decision path. `-x`/`--exec <tool> [arg...]`
+just wraps it: any tools before `-x` go through it as ordinary
+dependencies, then `<tool>` itself goes through it too, and once it's on
+`PATH`, `zz_use` execs into it instead of returning.
+
+```mermaid
+flowchart TD
+    Start(["zz_use tool[@ref] ..."]) --> Glob{"name is a\nglob, e.g. zz_*?"}
+
+    Glob -- yes --> ResolveG["resolve source\n(checkout / cache / download)"]
+    ResolveG --> ForEachMatch["for each matching\nscript folder"]
+    ForEachMatch --> InstallEach["install it\n(_install_repo_script)"]
+    InstallEach -->|more matches| ForEachMatch
+    InstallEach -->|no matches at all| WarnEmpty["warn: no scripts match"]
+
+    Glob -- no --> Skip{"already on PATH?\n(skipped if pinned/\nother origin/--force)"}
+    Skip -- yes --> Done(["done — 0ms"])
+    Skip -- no --> Config{"zz_use.json has\nan entry for it?"}
+
+    Config -- apt --> Apt["apt-get install"]
+    Config -- url --> Download["download + extract,\ninstall via zz_bindir"]
+    Config -- no entry --> Repo{"a script in\nthis repo?"}
+
+    Repo -- yes --> ResolveOne["resolve source\n(checkout / cache / download)"]
+    ResolveOne --> InstallOne["install it\n(_install_repo_script)"]
+
+    Repo -- no --> AptFallback["apt-get install\n(same name)"]
+
+    Apt --> Check
+    Download --> Check
+    InstallOne --> Check
+    AptFallback --> Check
+    Check{"on PATH now?"}
+    Check -- yes --> Done
+    Check -- no --> Fail(["error, exit 1"])
+```
 
 ## Core `zz_*` scripts
 
@@ -218,47 +266,47 @@ The `gitutils` feature still owns the config (which aliases like `git
 beta`/`git prod` point at which of these) and the git-flow install/config
 lifecycle — only the script implementations moved.
 
-| Script               | Purpose                                                     |
-| -------------------- | ----------------------------------------------------------- |
-| `git-align`          | align the current branch with its remote counterpart        |
-| `git-autorebase`     | non-interactive rebasing with conflict resolution           |
-| `git-co`             | enhanced commit                                             |
-| `git-degit`          | clone and degit a repository                                |
-| `git-fix`            | dispatch to `git-fix-<subcommand>`                          |
-| `git-fix-author`     | set `user.name`/`user.email` to a specified commit's author |
-| `git-fix-base`       | rebase commits from one branch onto another                 |
-| `git-fix-blanks`     | discard whitespace/blank/quote-slash-only changes           |
-| `git-fix-children`   | delete all descendant tags and branches of a commit         |
-| `git-fix-date`       | fix commit dates/times in history                           |
-| `git-fix-del`        | delete a specified commit and rebase subsequent history     |
-| `git-fix-emoji`      | fix git emoji                                               |
-| `git-fix-last`       | edit the last commit's message and content                  |
-| `git-fix-lock`       | resolve conflicts and regenerate lock files                 |
-| `git-fix-message`    | rewrite an arbitrary commit message                         |
-| `git-fix-mode`       | fix file mode changes from diff                             |
-| `git-fix-privacy`    | fix privacy in history                                      |
-| `git-fix-prune`      | prune stale remote-tracking references                      |
-| `git-fix-rights`     | set appropriate file/directory permissions                  |
-| `git-fix-secrets`    | redact a secret across git history                          |
-| `git-fix-up`         | amend a commit with current changes and rebase              |
-| `git-forall`         | execute a command for all files in the repository           |
-| `git-hook-commitmsg`         | `commit-msg` hook: apply commitlint + devmoji to the commit message |
-| `git-hook-installplugins`    | install npm plugins declared at a package.json key          |
-| `git-hook-postcheckout`      | `post-checkout` hook                                         |
-| `git-hook-postmerge`         | `post-merge` hook: keep merged lockfiles, prompt to reinstall |
-| `git-hook-precommit`         | `pre-commit` hook: sync lockfiles, run pre-commit checks and lint-staged |
-| `git-hook-preparecommitmsg`  | `prepare-commit-msg` hook: launch the commitizen prompt      |
-| `git-hook-prepush`           | `pre-push` hook: validate the current branch name            |
-| `git-getcommit`      | list history and ask for a commit to fix up                 |
-| `git-integrate`      | integrate modifications from the remote repository          |
-| `git-pick`           | pick files from a specific commit                           |
-| `git-release`        | dispatch to `git-release-<subcommand>`                      |
-| `git-release-alpha`  | squash-merge the current feature branch into develop        |
-| `git-release-beta`   | start a release branch via Git Flow                         |
-| `git-release-hotfix` | start a hotfix branch via Git Flow                          |
-| `git-release-prod`   | finish a release/hotfix branch via Git Flow                 |
-| `git-unset`          | unset all git config keys starting with a given prefix      |
-| `git-workspaces`     | list workspace directories and affected workspaces          |
+| Script                      | Purpose                                                                  |
+| --------------------------- | ------------------------------------------------------------------------ |
+| `git-align`                 | align the current branch with its remote counterpart                     |
+| `git-autorebase`            | non-interactive rebasing with conflict resolution                        |
+| `git-co`                    | enhanced commit                                                          |
+| `git-degit`                 | clone and degit a repository                                             |
+| `git-fix`                   | dispatch to `git-fix-<subcommand>`                                       |
+| `git-fix-author`            | set `user.name`/`user.email` to a specified commit's author              |
+| `git-fix-base`              | rebase commits from one branch onto another                              |
+| `git-fix-blanks`            | discard whitespace/blank/quote-slash-only changes                        |
+| `git-fix-children`          | delete all descendant tags and branches of a commit                      |
+| `git-fix-date`              | fix commit dates/times in history                                        |
+| `git-fix-del`               | delete a specified commit and rebase subsequent history                  |
+| `git-fix-emoji`             | fix git emoji                                                            |
+| `git-fix-last`              | edit the last commit's message and content                               |
+| `git-fix-lock`              | resolve conflicts and regenerate lock files                              |
+| `git-fix-message`           | rewrite an arbitrary commit message                                      |
+| `git-fix-mode`              | fix file mode changes from diff                                          |
+| `git-fix-privacy`           | fix privacy in history                                                   |
+| `git-fix-prune`             | prune stale remote-tracking references                                   |
+| `git-fix-rights`            | set appropriate file/directory permissions                               |
+| `git-fix-secrets`           | redact a secret across git history                                       |
+| `git-fix-up`                | amend a commit with current changes and rebase                           |
+| `git-forall`                | execute a command for all files in the repository                        |
+| `git-hook-commitmsg`        | `commit-msg` hook: apply commitlint + devmoji to the commit message      |
+| `git-hook-installplugins`   | install npm plugins declared at a package.json key                       |
+| `git-hook-postcheckout`     | `post-checkout` hook                                                     |
+| `git-hook-postmerge`        | `post-merge` hook: keep merged lockfiles, prompt to reinstall            |
+| `git-hook-precommit`        | `pre-commit` hook: sync lockfiles, run pre-commit checks and lint-staged |
+| `git-hook-preparecommitmsg` | `prepare-commit-msg` hook: launch the commitizen prompt                  |
+| `git-hook-prepush`          | `pre-push` hook: validate the current branch name                        |
+| `git-getcommit`             | list history and ask for a commit to fix up                              |
+| `git-integrate`             | integrate modifications from the remote repository                       |
+| `git-pick`                  | pick files from a specific commit                                        |
+| `git-release`               | dispatch to `git-release-<subcommand>`                                   |
+| `git-release-alpha`         | squash-merge the current feature branch into develop                     |
+| `git-release-beta`          | start a release branch via Git Flow                                      |
+| `git-release-hotfix`        | start a hotfix branch via Git Flow                                       |
+| `git-release-prod`          | finish a release/hotfix branch via Git Flow                              |
+| `git-unset`                 | unset all git config keys starting with a given prefix                   |
+| `git-workspaces`            | list workspace directories and affected workspaces                       |
 
 ## Usage
 
@@ -271,8 +319,8 @@ npm install --save-dev ./validate-json # just this one, standalone
 ```
 
 Every functional script is self-contained: `zz_use zz_colors zz_args ...`
-resolves its own dependencies (installing the `zz_*` bundle and any
-external tools on first use), then `. zz_colors` picks up the color vars.
+resolves its own dependencies (installing any missing `zz_*` or external
+tool on first use), then `. zz_colors` picks up the color vars.
 Any single folder can be copied out and still work standalone.
 
 ## Tests
