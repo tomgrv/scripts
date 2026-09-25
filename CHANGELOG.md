@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.21.0 (2026-09-25)
+
+*Commits from: v0.20.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v0.20.0' into develop
+- update color customizations for title bar
+### 📦 git-hook-installplugins changes
+
+#### Bug Fixes
+
+- store PLUGINS config in git hook folder (#38)
+
+### 📦 git-hook-prepush changes
+
+#### Bug Fixes
+
+- 🐛 don't zz_use validate-branch-name (#39)
+
+### 📦 zz_use changes
+
+#### Other changes
+
+- install every tool individually, no core-set bootstrap (#40)
+
 ## 0.20.0 (2026-09-15)
 
 *Commits from: v0.19.0..HEAD*
@@ -345,5 +373,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-09-15 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-09-25 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*

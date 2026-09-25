@@ -1,6 +1,6 @@
 {
   "name": "git-hook-prepush",
-  "version": "0.18.0",
+  "version": "0.21.0",
   "description": "Git pre-push hook: validate the current branch name",
   "bin": {
     "git-hook-prepush": "run.sh"
