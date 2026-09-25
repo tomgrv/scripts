@@ -21,11 +21,19 @@ teardown() {
     [[ "$output" == *"hello"* ]]
 }
 
-@test "zz_log supports i/n/w/e/s/- levels without erroring" {
-    for lvl in i n w e s -; do
+@test "zz_log supports i/n/w/e/s/d/- levels without erroring" {
+    for lvl in i n w e s d -; do
         run zz_log "$lvl" "msg"
         [ "$status" -eq 0 ]
     done
+}
+
+@test "zz_log debug (d) level is silent unless ZZ_DEBUG is set" {
+    run bash -c 'unset ZZ_DEBUG; zz_log d "hidden" 2>&1'
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    run bash -c 'ZZ_DEBUG=1 zz_log d "shown" 2>&1'
+    [[ "$output" == *"shown"* ]]
 }
 
 @test "zz_log writes to stderr, not stdout" {

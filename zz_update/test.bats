@@ -15,10 +15,10 @@ teardown() {
     [ "$status" -eq 0 ]
 }
 
-@test "zz_update re-links the zz_* bundle from a local checkout without touching the network" {
+@test "zz_update re-links the core zz_* scripts from a local checkout without touching the network" {
     run zz_update
     [ "$status" -eq 0 ]
-    [[ "$output" == *"already available"* || "$output" == *"bundle"* ]]
+    [[ "$output" == *"Installed"* ]]
 }
 
 @test "zz_update re-installs every core zz_* script (force, bypassing the already-available skip)" {

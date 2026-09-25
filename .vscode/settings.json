@@ -6,5 +6,15 @@
     ],
     "triggerTaskOnSave": {
         "tasks": null
+    },
+    "workbench.colorCustomizations": {
+        "titleBar.activeBackground": "#ffd249",
+        "titleBar.border": "#ffd249",
+        "titleBar.activeForeground": "#1d1707",
+        "titleBar.inactiveBackground": "#ffd964",
+        "titleBar.inactiveForeground": "#3f3a2c",
+        "activityBar.background": "#ffd249",
+        "activityBar.foreground": "#1d1707",
+        "activityBar.inactiveForeground": "#171206"
     }
 }

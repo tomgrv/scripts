@@ -32,8 +32,11 @@ if [ -z "$plugins" ]; then
 	exit 0
 fi
 
-# Load the config file, kept next to this script (not the repo checkout)
-config=$(dirname $(readlink -f $0))/PLUGINS
+# Load the config file, kept in the repo's git hook folder (not next to
+# this script) so it travels with the repo checkout instead of a shared
+# global install location
+hookdir=$(git rev-parse --git-path hooks) || { zz_log e "Not inside a git repository."; exit 1; }
+config=$hookdir/PLUGINS
 
 # if config file only contains comments and empty lines, make it empty
 if [ -f "$config" ] && [ -z "$(grep -v -e '^#' -e '^$' $config)" ]; then

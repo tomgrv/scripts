@@ -22,7 +22,10 @@ usage() {
     zz_log i "Usage: ${name} <subcommand> [args...]" >&2
     if [ -d "${caller_dir}" ]; then
         zz_log - "Available utilities in ${caller_dir}:" >&2
-        ls -1 "${caller_dir}" | grep -E "${name}(-.*)(\.sh)?$" | sed -e 's/^/_/' -e 's/^_\?//' | sed 's/^/    /' >&2 || true
+        for entry in "${caller_dir}"/*; do
+            [ -x "${entry}" ] || continue
+            basename "${entry}" | grep -E "${name}(-.*)(\.sh)?$" | sed -e 's/^_//' -e 's/^/    /' >&2 || true
+        done
     fi
 }
 
