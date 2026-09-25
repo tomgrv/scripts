@@ -143,3 +143,9 @@ teardown() {
     run bash -c 'GITHUB_ACTIONS=true zz_log e $'"'"'100% done\rline1\nline2'"'"' 2>&1'
     [[ "$output" == *"::error::100%25 done%0Dline1%0Aline2"* ]]
 }
+
+@test "zz_log prints shell-special characters (\" \$ \` parentheses) verbatim" {
+    run bash -c 'zz_log i '"'"'select(.path | test("(^|/)src/")) $HOME `id`'"'"' 2>&1'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'select(.path | test("(^|/)src/")) $HOME `id`'* ]]
+}
