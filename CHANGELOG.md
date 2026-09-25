@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.22.0 (2026-09-25)
+
+*Commits from: v0.21.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v0.21.0' into develop
+### 📦 zz_log changes
+
+#### Bug Fixes
+
+- escape shell-special chars before eval (#41)
+
 ## 0.21.0 (2026-09-25)
 
 *Commits from: v0.20.0..HEAD*
@@ -356,6 +371,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 
