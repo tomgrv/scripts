@@ -65,7 +65,11 @@ if [ -n "$gha" ]; then
     )
     printf '%s%s\n' "$gha" "$plain" >&2
 else
+    # Escape the message's shell-special chars (\ " $ `) before it goes through
+    # eval, so a message quoting e.g. a jq filter (`test("(^|/)src/")`) is
+    # printed verbatim instead of breaking the generated command.
+    msg=$(printf '%s' "$*" | sed 's/[\\"$`]/\\&/g')
     eval "$(
-        echo "printf '%b\n' \"$picto$*\${End}\"" | sed -E "s/\{([A-Z]) /{\1${base} /g;s/\{([a-zA-Z]+) ([^}]*)\}/\${\1}\2\${${base}}/g; s/\r//g; "
+        printf '%s\n' "printf '%b\n' \"$picto$msg\${End}\"" | sed -E "s/\{([A-Z]) /{\1${base} /g;s/\{([a-zA-Z]+) ([^}]*)\}/\${\1}\2\${${base}}/g; s/\r//g; "
     )" >&2
 fi
