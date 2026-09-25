@@ -1,6 +1,6 @@
 {
   "name": "zz_log",
-  "version": "0.21.0",
+  "version": "0.22.0",
   "description": "Colored, leveled log line on stderr (i/w/e/s/-)",
   "bin": {
     "zz_log": "run.sh"
