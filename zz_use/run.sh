@@ -87,7 +87,7 @@ while [ $# -gt 0 ]; do
         shift
         EXEC_TOOL="${1:-}"
         if [ -z "$EXEC_TOOL" ]; then
-            printf '[e] -x/--exec requires a tool name\n' >&2
+            zz_log e "-x/--exec requires a tool name"
             exit 1
         fi
         shift
