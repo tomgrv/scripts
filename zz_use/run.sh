@@ -19,15 +19,23 @@
 # ZZ_CACHE_DIR below), so pinning one script doesn't disturb anything
 # already resolved at the default.
 #
-# The [org/repo/] prefix also accepts a local path — "./some-dir/" or
-# "/abs/path/" — instead of a GitHub "org/repo": the checkout is used
-# directly, relative to the current working directory, with no cache and
-# no download — just symlinked into place the same way this repo's own
-# zz_* scripts are, so edits to a local sibling checkout show up on the
-# next call with no re-fetch:
-#   zz_use ./local-scripts/some-tool
-# Like any other non-default origin, a local-path request always
-# (re)installs — never skipped as "already available".
+# The [org/repo/] prefix is really "whatever comes before <tool>'s own
+# last /", so besides a GitHub "org/repo" it also accepts, by its leading
+# sigil:
+#   ./some-dir/some-tool   - a local path, relative to the caller's cwd
+#   ../some-dir/some-tool  - ditto, one level up
+#   /abs/path/some-tool    - a local path, absolute
+#   $some-dir/some-tool    - relative to the current git repo's top level
+#   $/some-tool            - the git root itself, no subdirectory
+#   @myscope/pkg/some-tool - an npm package, fetched from its registry
+# A local ("./", "../", "/") or git-root ("$") origin is resolved as-is —
+# no cache dir, no download, just symlinked into place the same way this
+# repo's own zz_* scripts are, so edits to a local sibling checkout (or
+# another spot in the same git repo) show up on the next call with no
+# re-fetch. An npm origin ("@") is cached and fetched like a GitHub
+# archive, just from the npm registry's tarball instead. Like any other
+# non-default origin, none of these are ever skipped as "already
+# available" — only a plain, default-origin request can be.
 #
 # Every tool, zz_* core or functional, installs the same way, one at a
 # time (a glob name such as "zz_*" just expands to every match and
@@ -189,47 +197,98 @@ _resolve_src() {
         return 0
     fi
 
-    _local_origin=0
-    case "$_req_origin" in
-    ./* | ../* | /*) _local_origin=1 ;;
-    esac
-
     if [ "$_req_origin" = "$ZZ_ORIGIN" ] && [ -z "$_req_ref" ] && [ -f "${ROOT_DIR}/zz_colors/run.sh" ]; then
         _SRC="$ROOT_DIR"
-    elif [ "$_local_origin" -eq 1 ]; then
-        # A local-path origin: resolved directly relative to the caller's
-        # cwd, no cache dir and no curl/tar — the whole point is to pick up
-        # a sibling checkout as-is (and its future edits) via symlink,
-        # exactly like ROOT_DIR above.
-        # Plain stderr, not zz_log: this can be the very first thing
-        # zz_use ever resolves (see the usage-error comment above), so
-        # zz_log itself may not be on PATH yet.
-        _SRC=$(cd "$_req_origin" 2>/dev/null && pwd) || { printf '[e] Local repo path %s not found\n' "$_req_origin" >&2; return 1; }
     else
-        _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_req_ref:-$ZZ_ORIGIN_REF}"
-        _warm=0
-        for _d in "$_cache_dir"/*/; do [ -f "${_d}run.sh" ] && _warm=1 && break; done
-        if [ "$FORCE" -eq 1 ] || [ "$_warm" -eq 0 ]; then
-            # "|" (not "/") as the sed delimiter: {ORIGIN} always contains
-            # "/" (org/repo), and {REF} can too (a branch name like
-            # "feature/foo") — either would break the s/// syntax with "/".
-            _url=$(printf '%s' "$ZZ_USE_REPO_URL" | sed -e "s|{ORIGIN}|${_req_origin}|g" -e "s|{REF}|${_req_ref:-$ZZ_ORIGIN_REF}|g")
-            zz_log i "Retrieving repo scripts ({B ${_req_origin}@${_req_ref:-$ZZ_ORIGIN_REF}}) from {U ${_url}}..."
-            _tmp="${_cache_dir}.tmp.$$"
-            _add_tmp "$_tmp"
-            rm -rf "$_tmp"
-            mkdir -p "$_tmp"
-            curl -fsSL "$_url" | tar -xz -C "$_tmp" --strip-components=1
-            _ok=0
-            for _d in "$_tmp"/*/; do [ -f "${_d}run.sh" ] && _ok=1 && break; done
-            [ "$_ok" -eq 1 ] || { zz_log e "Downloaded archive from {B ${_req_origin}@${_req_ref:-$ZZ_ORIGIN_REF}} has no <name>/run.sh scripts (unexpected repo layout)"; return 1; }
-            mkdir -p "$(dirname "$_cache_dir")"
-            rm -rf "$_cache_dir"
-            mv "$_tmp" "$_cache_dir"
-        else
-            zz_log d "Using cached repo scripts at {U ${_cache_dir}}"
-        fi
-        _SRC="$_cache_dir"
+        case "$_req_origin" in
+        ./* | ../* | /*)
+            # Local-path scheme: resolved directly relative to the caller's
+            # cwd (or absolute), no cache dir and no curl/tar — the whole
+            # point is to pick up a sibling checkout as-is (and its future
+            # edits) via symlink, exactly like ROOT_DIR above.
+            # Plain stderr, not zz_log: this can be the very first thing
+            # zz_use ever resolves (see the usage-error comment above), so
+            # zz_log itself may not be on PATH yet.
+            _SRC=$(cd "$_req_origin" 2>/dev/null && pwd) || { printf '[e] Local repo path %s not found\n' "$_req_origin" >&2; return 1; }
+            ;;
+        '$'*)
+            # Git-root scheme ("$" alone, or "$<subpath>"): resolved
+            # relative to the current git repository's top level — same
+            # no-cache/no-download handling as a local path, just anchored
+            # at the repo root instead of the caller's cwd, so it still
+            # works from a subdirectory.
+            _git_root=$(git rev-parse --show-toplevel 2>/dev/null) || { printf '[e] %s: not inside a git repository\n' "$_req_origin" >&2; return 1; }
+            _sub="${_req_origin#\$}"
+            case "$_sub" in /*) _sub="${_sub#/}" ;; esac
+            if [ -z "$_sub" ]; then
+                _SRC="$_git_root"
+            else
+                _SRC=$(cd "${_git_root}/${_sub}" 2>/dev/null && pwd) || { printf '[e] Git-root path %s not found (root: %s)\n' "$_req_origin" "$_git_root" >&2; return 1; }
+            fi
+            ;;
+        @*)
+            # npm scheme: origin is an npm package name as-is (e.g.
+            # "@myscope/pkg"), <ref> a dist-tag or exact version (default:
+            # "latest") — cached under its own origin+ref slot exactly like
+            # a GitHub archive below, just fetched from the npm registry's
+            # tarball instead of GitHub's.
+            command -v jq >/dev/null 2>&1 || { printf '[e] npm origin %s requires jq on PATH\n' "$_req_origin" >&2; return 1; }
+            _npm_ref="${_req_ref:-latest}"
+            _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_npm_ref}"
+            _warm=0
+            [ -d "$_cache_dir" ] && [ -n "$(ls -A "$_cache_dir" 2>/dev/null)" ] && _warm=1
+            if [ "$FORCE" -eq 1 ] || [ "$_warm" -eq 0 ]; then
+                # A scoped name's own "/" (between @scope and pkg) must be
+                # percent-encoded for the registry's URL path — unlike
+                # {ORIGIN} in the GitHub archive URL below, which is a
+                # path segment ("org/repo") where a literal "/" is exactly
+                # what's wanted.
+                _npm_origin_enc=$(printf '%s' "$_req_origin" | sed 's#/#%2f#g')
+                _meta_url="https://registry.npmjs.org/${_npm_origin_enc}/${_npm_ref}"
+                zz_log i "Retrieving npm package ({B ${_req_origin}@${_npm_ref}}) from {U ${_meta_url}}..."
+                _tarball=$(curl -fsSL "$_meta_url" | jq -r '.dist.tarball // empty')
+                [ -n "$_tarball" ] || { zz_log e "Could not resolve npm tarball for {Purple ${_req_origin}@${_npm_ref}}"; return 1; }
+                _tmp="${_cache_dir}.tmp.$$"
+                _add_tmp "$_tmp"
+                rm -rf "$_tmp"
+                mkdir -p "$_tmp"
+                curl -fsSL "$_tarball" | tar -xz -C "$_tmp" --strip-components=1
+                mkdir -p "$(dirname "$_cache_dir")"
+                rm -rf "$_cache_dir"
+                mv "$_tmp" "$_cache_dir"
+            else
+                zz_log d "Using cached npm package at {U ${_cache_dir}}"
+            fi
+            _SRC="$_cache_dir"
+            ;;
+        *)
+            # GitHub-archive scheme (default): "org/repo".
+            _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_req_ref:-$ZZ_ORIGIN_REF}"
+            _warm=0
+            for _d in "$_cache_dir"/*/; do [ -f "${_d}run.sh" ] && _warm=1 && break; done
+            if [ "$FORCE" -eq 1 ] || [ "$_warm" -eq 0 ]; then
+                # "|" (not "/") as the sed delimiter: {ORIGIN} always contains
+                # "/" (org/repo), and {REF} can too (a branch name like
+                # "feature/foo") — either would break the s/// syntax with "/".
+                _url=$(printf '%s' "$ZZ_USE_REPO_URL" | sed -e "s|{ORIGIN}|${_req_origin}|g" -e "s|{REF}|${_req_ref:-$ZZ_ORIGIN_REF}|g")
+                zz_log i "Retrieving repo scripts ({B ${_req_origin}@${_req_ref:-$ZZ_ORIGIN_REF}}) from {U ${_url}}..."
+                _tmp="${_cache_dir}.tmp.$$"
+                _add_tmp "$_tmp"
+                rm -rf "$_tmp"
+                mkdir -p "$_tmp"
+                curl -fsSL "$_url" | tar -xz -C "$_tmp" --strip-components=1
+                _ok=0
+                for _d in "$_tmp"/*/; do [ -f "${_d}run.sh" ] && _ok=1 && break; done
+                [ "$_ok" -eq 1 ] || { zz_log e "Downloaded archive from {B ${_req_origin}@${_req_ref:-$ZZ_ORIGIN_REF}} has no <name>/run.sh scripts (unexpected repo layout)"; return 1; }
+                mkdir -p "$(dirname "$_cache_dir")"
+                rm -rf "$_cache_dir"
+                mv "$_tmp" "$_cache_dir"
+            else
+                zz_log d "Using cached repo scripts at {U ${_cache_dir}}"
+            fi
+            _SRC="$_cache_dir"
+            ;;
+        esac
     fi
 
     _boot_dir=$(mktemp -d)
@@ -397,22 +456,43 @@ _use() {
     fi
 
     for tool_ref in "$@"; do
+        # A leading "@" is the npm scheme sigil (an npm-registry origin is
+        # simply its package name, e.g. "@myscope/pkg" for a scoped
+        # package), not the "@ref" pin suffix — stripped and re-prepended
+        # around the *@* split below so it's never mistaken for one, the
+        # same way "@myscope/pkg/tool@1.2.3" still pins to "1.2.3" instead
+        # of splitting on the scope's own "@".
         case "$tool_ref" in
-        *@*)
-            _name_part="${tool_ref%%@*}"
-            ref="${tool_ref#*@}"
+        @*)
+            _at_sigil="@"
+            _rest_ref="${tool_ref#@}"
             ;;
         *)
-            _name_part="$tool_ref"
+            _at_sigil=""
+            _rest_ref="$tool_ref"
+            ;;
+        esac
+        case "$_rest_ref" in
+        *@*)
+            _name_part="${_at_sigil}${_rest_ref%%@*}"
+            ref="${_rest_ref#*@}"
+            ;;
+        *)
+            _name_part="${_at_sigil}${_rest_ref}"
             ref=""
             ;;
         esac
 
+        # The [org/repo/], [./local/path/], [$git/root/path/] or
+        # [@npm/pkg/] prefix is everything before <tool>'s own last "/" —
+        # one rule for every scheme, instead of a github-specific "exactly
+        # two components" pattern that a single-component local/git-root/npm
+        # origin (e.g. "$/tool") could never match. A tool name with no "/"
+        # at all still just defaults to ZZ_ORIGIN.
         case "$_name_part" in
-        */*/*)
-            _rest="${_name_part#*/}"
-            origin="${_name_part%%/*}/${_rest%%/*}"
-            tool="${_rest#*/}"
+        */*)
+            origin="${_name_part%/*}"
+            tool="${_name_part##*/}"
             ;;
         *)
             origin="$ZZ_ORIGIN"
@@ -495,7 +575,20 @@ _use() {
 # through to the plain _use call below when -x wasn't given.
 if [ -n "$EXEC_TOOL" ]; then
     eval "_use $_before \"\$EXEC_TOOL\"" || exit 1
-    _exec_name="${EXEC_TOOL%%@*}"
+    # Same leading-"@" vs trailing-"@ref" split as in _use, and the same
+    # last-"/" origin strip: an npm-origin exec target (e.g.
+    # "@myscope/pkg/tool@1.2.3") must not have its command name mangled by
+    # naively splitting on the scope's own "@".
+    case "$EXEC_TOOL" in
+    @*)
+        _exec_rest="${EXEC_TOOL#@}"
+        case "$_exec_rest" in *@*) _exec_rest="${_exec_rest%%@*}" ;; esac
+        _exec_name="@${_exec_rest}"
+        ;;
+    *)
+        _exec_name="${EXEC_TOOL%%@*}"
+        ;;
+    esac
     case "$_exec_name" in */*) _exec_name="${_exec_name##*/}" ;; esac
     exec "$_exec_name" "$@"
 fi
