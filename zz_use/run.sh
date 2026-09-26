@@ -185,39 +185,68 @@ _SRC_ORIGIN=""
 _SRC_REF=""
 _SRC_RESOLVED=0
 
-# Fetch (or reuse the cache for) an npm-registry origin — scoped
-# ("@scope/pkg") or unscoped ("pkg") alike, npm's own two valid
-# package-name shapes; shared by both matching arms in _resolve_src's own
-# case below since the only difference between them is a scoped name's
-# own "/" needing percent-encoding for the registry URL, which the sed
-# below is a no-op for when there isn't one. <ref> is a dist-tag or exact
-# version (default: "latest"), cached under its own origin+ref slot
-# exactly like a GitHub archive, just fetched from the npm registry's
-# tarball instead of GitHub's. Sets _SRC on success.
-_resolve_npm() {
-    command -v jq >/dev/null 2>&1 || { printf '[e] npm origin %s requires jq on PATH\n' "$_req_origin" >&2; return 1; }
-    _npm_ref="${_req_ref:-latest}"
-    _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_npm_ref}"
-    _warm=0
-    [ -d "$_cache_dir" ] && [ -n "$(ls -A "$_cache_dir" 2>/dev/null)" ] && _warm=1
-    if [ "$FORCE" -eq 1 ] || [ "$_warm" -eq 0 ]; then
-        _npm_origin_enc=$(printf '%s' "$_req_origin" | sed 's#/#%2f#g')
-        _meta_url="https://registry.npmjs.org/${_npm_origin_enc}/${_npm_ref}"
-        zz_log i "Retrieving npm package ({B ${_req_origin}@${_npm_ref}}) from {U ${_meta_url}}..."
-        _tarball=$(curl -fsSL "$_meta_url" | jq -r '.dist.tarball // empty')
-        [ -n "$_tarball" ] || { zz_log e "Could not resolve npm tarball for {Purple ${_req_origin}@${_npm_ref}}"; return 1; }
+# True (0) if <cache_dir> already holds a fetched, well-formed archive
+# (a <name>/run.sh directly under it, same layout --strip-components=1
+# below always produces) — shared warm-cache test for every origin that
+# downloads and caches (GitHub archive, npm registry), so the same
+# "already there and looks right" rule applies to all of them.
+_cache_warm() {
+    for _cw_d in "$1"/*/; do [ -f "${_cw_d}run.sh" ] && return 0; done
+    return 1
+}
+
+# Fetch <url> (a tar.gz archive whose single top-level dir is stripped,
+# same as a GitHub codeload archive or an npm registry tarball) into
+# <cache_dir> unless it's already warm there (or --force), verifying the
+# result actually has <name>/run.sh scripts before replacing any existing
+# cache — shared by every origin below (GitHub archive, npm registry) so
+# the fetch/verify/replace dance is written once. <desc> is a
+# human-readable label for the log lines and any error. Sets _SRC on
+# success; <url> is unused (and may be left empty) when already warm.
+_fetch_archive() {
+    _cache_dir="$1" _url="$2" _desc="$3"
+    if [ "$FORCE" -eq 1 ] || ! _cache_warm "$_cache_dir"; then
+        zz_log i "Retrieving ${_desc} from {U ${_url}}..."
         _tmp="${_cache_dir}.tmp.$$"
         _add_tmp "$_tmp"
         rm -rf "$_tmp"
         mkdir -p "$_tmp"
-        curl -fsSL "$_tarball" | tar -xz -C "$_tmp" --strip-components=1
+        curl -fsSL "$_url" | tar -xz -C "$_tmp" --strip-components=1
+        _cache_warm "$_tmp" || { zz_log e "Downloaded archive for ${_desc} has no <name>/run.sh scripts (unexpected repo layout)"; return 1; }
         mkdir -p "$(dirname "$_cache_dir")"
         rm -rf "$_cache_dir"
         mv "$_tmp" "$_cache_dir"
     else
-        zz_log d "Using cached npm package at {U ${_cache_dir}}"
+        zz_log d "Using cached ${_desc} at {U ${_cache_dir}}"
     fi
     _SRC="$_cache_dir"
+}
+
+# Fetch (or reuse the cache for) an npm-registry origin — scoped
+# ("@scope/pkg") or unscoped ("pkg") alike, npm's own two valid
+# package-name shapes (see
+# https://docs.npmjs.com/cli/v12/configuring-npm/package-json#name);
+# shared by both matching arms in _resolve_src's own case below since the
+# only difference between them is a scoped name's own "/" needing
+# percent-encoding for the registry URL, which the sed below is a no-op
+# for when there isn't one. <ref> is a dist-tag or exact version
+# (default: "latest") — registry.npmjs.org/<name>/<ref> resolves either
+# the same way, exactly like `npm view <name>@<ref>` would. Cached under
+# its own origin+ref slot exactly like a GitHub archive (_fetch_archive
+# above), just fetched from the npm registry's tarball instead of
+# GitHub's. Sets _SRC on success.
+_resolve_npm() {
+    command -v jq >/dev/null 2>&1 || { printf '[e] npm origin %s requires jq on PATH\n' "$_req_origin" >&2; return 1; }
+    _npm_ref="${_req_ref:-latest}"
+    _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_npm_ref}"
+    _tarball=""
+    if [ "$FORCE" -eq 1 ] || ! _cache_warm "$_cache_dir"; then
+        _npm_origin_enc=$(printf '%s' "$_req_origin" | sed 's#/#%2f#g')
+        _meta_url="https://registry.npmjs.org/${_npm_origin_enc}/${_npm_ref}"
+        _tarball=$(curl -fsSL "$_meta_url" | jq -r '.dist.tarball // empty')
+        [ -n "$_tarball" ] || { zz_log e "Could not resolve npm tarball for {Purple ${_req_origin}@${_npm_ref}} from {U ${_meta_url}}"; return 1; }
+    fi
+    _fetch_archive "$_cache_dir" "$_tarball" "npm package ({B ${_req_origin}@${_npm_ref}})"
 }
 
 # Resolve _SRC for <origin> (default: ZZ_ORIGIN) at <ref> (default:
@@ -277,29 +306,14 @@ _resolve_src() {
             # an unscoped npm name (caught by the "*)" arm below), which is
             # what distinguishes the two.
             _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_req_ref:-$ZZ_ORIGIN_REF}"
-            _warm=0
-            for _d in "$_cache_dir"/*/; do [ -f "${_d}run.sh" ] && _warm=1 && break; done
-            if [ "$FORCE" -eq 1 ] || [ "$_warm" -eq 0 ]; then
+            _url=""
+            if [ "$FORCE" -eq 1 ] || ! _cache_warm "$_cache_dir"; then
                 # "|" (not "/") as the sed delimiter: {ORIGIN} always contains
                 # "/" (org/repo), and {REF} can too (a branch name like
                 # "feature/foo") — either would break the s/// syntax with "/".
                 _url=$(printf '%s' "$ZZ_USE_REPO_URL" | sed -e "s|{ORIGIN}|${_req_origin}|g" -e "s|{REF}|${_req_ref:-$ZZ_ORIGIN_REF}|g")
-                zz_log i "Retrieving repo scripts ({B ${_req_origin}@${_req_ref:-$ZZ_ORIGIN_REF}}) from {U ${_url}}..."
-                _tmp="${_cache_dir}.tmp.$$"
-                _add_tmp "$_tmp"
-                rm -rf "$_tmp"
-                mkdir -p "$_tmp"
-                curl -fsSL "$_url" | tar -xz -C "$_tmp" --strip-components=1
-                _ok=0
-                for _d in "$_tmp"/*/; do [ -f "${_d}run.sh" ] && _ok=1 && break; done
-                [ "$_ok" -eq 1 ] || { zz_log e "Downloaded archive from {B ${_req_origin}@${_req_ref:-$ZZ_ORIGIN_REF}} has no <name>/run.sh scripts (unexpected repo layout)"; return 1; }
-                mkdir -p "$(dirname "$_cache_dir")"
-                rm -rf "$_cache_dir"
-                mv "$_tmp" "$_cache_dir"
-            else
-                zz_log d "Using cached repo scripts at {U ${_cache_dir}}"
             fi
-            _SRC="$_cache_dir"
+            _fetch_archive "$_cache_dir" "$_url" "repo scripts ({B ${_req_origin}@${_req_ref:-$ZZ_ORIGIN_REF}})" || return 1
             ;;
         *)
             # npm scheme, unscoped package (e.g. "mypkg") — npm's other
