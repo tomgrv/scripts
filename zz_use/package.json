@@ -1,6 +1,6 @@
 {
   "name": "zz_use",
-  "version": "0.21.0",
+  "version": "0.23.0",
   "description": "Activator: on-demand dependency management (apt/download, and single-shot zz_* bundle install)",
   "bin": {
     "zz_use": "run.sh"
