@@ -1,0 +1,24 @@
+# @format
+
+name: 'Clean Branches'
+
+on:
+  schedule:
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  clean-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Clean branches
+        uses: tomgrv/actions/clean-branches@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

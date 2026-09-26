@@ -11,3 +11,6 @@ CHANGELOG.md export-ignore
 .vscode export-ignore
 *.{cmd,[cC][mM][dD]} text eol=crlf
 *.{bat,[bB][aA][tT]} text eol=crlf
+.agents export-ignore
+.claude export-ignore
+.gemini export-ignore

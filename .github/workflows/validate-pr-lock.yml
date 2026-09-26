@@ -1,0 +1,31 @@
+# @format
+
+name: Validate PR Lock
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+      - synchronize
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate-lock:
+    name: Validate lock coherence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validate lock coherence
+        uses: tomgrv/actions/check-lock@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # paths: '.' checks the repo root; pass a comma-separated list
+          # (e.g. '.,packages/foo') if manifests live in subdirectories.

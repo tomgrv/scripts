@@ -44,7 +44,6 @@ Homestead.yaml
 .devcontainer/devcontainer-lock.json
 .mono
 .toolkit
-bin
 obj
 ## Gitversion
 VERSION
