@@ -23,6 +23,7 @@
 # last /", so besides a GitHub "org/repo" it also accepts, by its leading
 # sigil:
 #   ./some-dir/some-tool   - a local path, relative to the caller's cwd
+#   ./some-tool            - ditto, the caller's cwd itself
 #   ../some-dir/some-tool  - ditto, one level up
 #   /abs/path/some-tool    - a local path, absolute
 #   $some-dir/some-tool    - relative to the current git repo's top level
@@ -270,11 +271,14 @@ _resolve_src() {
         _SRC="$ROOT_DIR"
     else
         case "$_req_origin" in
-        ./* | ../* | /*)
+        . | .. | ./* | ../* | /*)
             # Local-path scheme: resolved directly relative to the caller's
             # cwd (or absolute), no cache dir and no curl/tar — the whole
             # point is to pick up a sibling checkout as-is (and its future
-            # edits) via symlink, exactly like ROOT_DIR above.
+            # edits) via symlink, exactly like ROOT_DIR above. A bare "." or
+            # ".." (the origin of "./tool" or "../tool", i.e. everything
+            # before the last "/") is a local path too — without these two
+            # arms it would fall through to the unscoped-npm "*)" arm below.
             # Plain stderr, not zz_log: this can be the very first thing
             # zz_use ever resolves (see the usage-error comment above), so
             # zz_log itself may not be on PATH yet.

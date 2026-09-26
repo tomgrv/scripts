@@ -3,3 +3,7 @@ node_modules/
 dist/
 build/
 .git/
+# Exclude .agents/ from prettier formatting
+# This is the canonical source for AI tooling; symlinked copies format via their own rules
+.agents/
+

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.24.0 (2026-09-26)
+
+*Commits from: v0.23.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v0.23.0' into develop
+- 🔧 update devcontainer configuration
+### 📦 git-hook-precommit changes
+
+#### Other changes
+
+- ♻️ remove redundant command from pre-commit hook
+
+### 📦 zz_use changes
+
+#### Bug Fixes
+
+- resolve bare ./tool and ../tool as local paths, not npm packages (#43)
+
 ## 0.23.0 (2026-09-26)
 
 *Commits from: v0.22.0..HEAD*
@@ -386,6 +408,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 

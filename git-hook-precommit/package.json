@@ -1,6 +1,6 @@
 {
   "name": "git-hook-precommit",
-  "version": "0.18.0",
+  "version": "0.24.0",
   "description": "Git pre-commit hook: sync lockfiles, install prettier plugins, run pre-commit checks and lint-staged",
   "bin": {
     "git-hook-precommit": "run.sh"
