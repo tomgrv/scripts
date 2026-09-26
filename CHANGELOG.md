@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.23.0 (2026-09-26)
+
+*Commits from: v0.22.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v0.22.0' into develop
+### 📦 zz_use changes
+
+#### Features
+
+- support ./ or /abs local-path origins (#42)
+
 ## 0.22.0 (2026-09-25)
 
 *Commits from: v0.21.0..HEAD*
@@ -390,5 +405,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-09-25 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-09-26 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
