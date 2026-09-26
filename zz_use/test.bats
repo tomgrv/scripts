@@ -176,6 +176,29 @@ EOF
     rm -rf "$local_repo" "$bindir"
 }
 
+@test "zz_use resolves a bare ./tool or ../tool origin, not as an npm package" {
+    local_repo=$(mktemp -d)
+    mkdir -p "$local_repo/some-tool" "$local_repo/sub"
+    cat >"$local_repo/some-tool/run.sh" <<'EOF'
+#!/bin/sh
+echo from-cwd
+EOF
+    chmod +x "$local_repo/some-tool/run.sh"
+
+    bindir=$(mktemp -d)
+    zz_use_bin=$(command -v zz_use)
+    run bash -c "cd '$local_repo' && INSTALL_BIN_DIR='$bindir' PATH='/usr/bin:/bin' '$zz_use_bin' ./some-tool"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"npm"* ]]
+    [[ "$("$bindir/some-tool")" == "from-cwd" ]]
+
+    rm -f "$bindir/some-tool"
+    run bash -c "cd '$local_repo/sub' && INSTALL_BIN_DIR='$bindir' PATH='/usr/bin:/bin' '$zz_use_bin' ../some-tool"
+    [ "$status" -eq 0 ]
+    [[ "$("$bindir/some-tool")" == "from-cwd" ]]
+    rm -rf "$local_repo" "$bindir"
+}
+
 @test "zz_use errors on a ./ local-path origin that doesn't exist" {
     bindir=$(mktemp -d)
     zz_use_bin=$(command -v zz_use)
