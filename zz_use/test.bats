@@ -217,10 +217,13 @@ EOF
     rm -rf "$non_repo" "$bindir"
 }
 
-@test "zz_use resolves an @ npm origin, splitting a pinned @ref from the scope's own leading @" {
-    # Stubs the registry round-trip: curl serves fixed metadata for the
-    # percent-encoded scoped-package URL, then the tarball bytes for
-    # whatever "tarball" URL that metadata pointed to — no real network.
+# Shared by both npm-origin tests below: stubs the registry round-trip
+# (curl serves fixed metadata for <registry_url_glob>, then the tarball
+# bytes for whatever "tarball" URL that metadata pointed to — no real
+# network) and asserts zz_use <use_arg> installs a working some-tool.
+_npm_resolve_test() {
+    registry_url_glob="$1" use_arg="$2"
+
     tarball=$(mktemp)
     tar_src=$(mktemp -d)
     mkdir -p "$tar_src/package/some-tool"
@@ -241,7 +244,7 @@ for a in "\$@"; do
     esac
 done
 case "\$url" in
-*'registry.npmjs.org/@myscope%2fpkg/1.2.3'*)
+${registry_url_glob})
     printf '{"dist":{"tarball":"http://fake-registry.invalid/tarball.tgz"}}'
     ;;
 *fake-registry.invalid/tarball.tgz*)
@@ -256,11 +259,22 @@ EOF
     zz_cache_dir=$(mktemp -d)
     bindir=$(mktemp -d)
     zz_use_bin=$(command -v zz_use)
-    run env ZZ_CACHE_DIR="$zz_cache_dir" INSTALL_BIN_DIR="$bindir" PATH="$TEST_BIN:/usr/bin:/bin" "$zz_use_bin" "@myscope/pkg/some-tool@1.2.3"
+    run env ZZ_CACHE_DIR="$zz_cache_dir" INSTALL_BIN_DIR="$bindir" PATH="$TEST_BIN:/usr/bin:/bin" "$zz_use_bin" "$use_arg"
     [ "$status" -eq 0 ]
     [ -x "$bindir/some-tool" ]
     [[ "$("$bindir/some-tool")" == "from-npm-registry" ]]
     rm -rf "$tarball" "$tar_src" "$zz_cache_dir" "$bindir"
+}
+
+@test "zz_use resolves an @ npm origin, splitting a pinned @ref from the scope's own leading @" {
+    _npm_resolve_test "*'registry.npmjs.org/@myscope%2fpkg/1.2.3'*" "@myscope/pkg/some-tool@1.2.3"
+}
+
+@test "zz_use resolves an unscoped npm origin (no @, no /)" {
+    # npm's other valid package-name shape: a bare "mypkg", no leading "@"
+    # and no "/" of its own — the case a GitHub "org/repo" origin, which
+    # always has a "/", can never collide with.
+    _npm_resolve_test "*'registry.npmjs.org/mypkg/latest'*" "mypkg/some-tool"
 }
 
 @test "zz_use -x strips an npm scope's own @ from the exec target's command name, keeping a real @ref" {

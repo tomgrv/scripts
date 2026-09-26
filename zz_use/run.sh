@@ -27,15 +27,20 @@
 #   /abs/path/some-tool    - a local path, absolute
 #   $some-dir/some-tool    - relative to the current git repo's top level
 #   $/some-tool            - the git root itself, no subdirectory
-#   @myscope/pkg/some-tool - an npm package, fetched from its registry
+#   @myscope/pkg/some-tool - a scoped npm package, fetched from its registry
+#   mypkg/some-tool        - an unscoped npm package, ditto
 # A local ("./", "../", "/") or git-root ("$") origin is resolved as-is —
 # no cache dir, no download, just symlinked into place the same way this
 # repo's own zz_* scripts are, so edits to a local sibling checkout (or
 # another spot in the same git repo) show up on the next call with no
-# re-fetch. An npm origin ("@") is cached and fetched like a GitHub
-# archive, just from the npm registry's tarball instead. Like any other
-# non-default origin, none of these are ever skipped as "already
-# available" — only a plain, default-origin request can be.
+# re-fetch. An npm origin — scoped ("@scope/pkg") or unscoped ("pkg"),
+# npm's own two valid package-name shapes — is cached and fetched like a
+# GitHub archive, just from the npm registry's tarball instead. A scoped
+# name is recognized by its leading "@" sigil; an unscoped one, by having
+# no "/" at all (a GitHub "org/repo" origin always has one, so a bare
+# single-component origin can only be this). Like any other non-default
+# origin, none of these are ever skipped as "already available" — only a
+# plain, default-origin request can be.
 #
 # Every tool, zz_* core or functional, installs the same way, one at a
 # time (a glob name such as "zz_*" just expands to every match and
@@ -180,6 +185,41 @@ _SRC_ORIGIN=""
 _SRC_REF=""
 _SRC_RESOLVED=0
 
+# Fetch (or reuse the cache for) an npm-registry origin — scoped
+# ("@scope/pkg") or unscoped ("pkg") alike, npm's own two valid
+# package-name shapes; shared by both matching arms in _resolve_src's own
+# case below since the only difference between them is a scoped name's
+# own "/" needing percent-encoding for the registry URL, which the sed
+# below is a no-op for when there isn't one. <ref> is a dist-tag or exact
+# version (default: "latest"), cached under its own origin+ref slot
+# exactly like a GitHub archive, just fetched from the npm registry's
+# tarball instead of GitHub's. Sets _SRC on success.
+_resolve_npm() {
+    command -v jq >/dev/null 2>&1 || { printf '[e] npm origin %s requires jq on PATH\n' "$_req_origin" >&2; return 1; }
+    _npm_ref="${_req_ref:-latest}"
+    _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_npm_ref}"
+    _warm=0
+    [ -d "$_cache_dir" ] && [ -n "$(ls -A "$_cache_dir" 2>/dev/null)" ] && _warm=1
+    if [ "$FORCE" -eq 1 ] || [ "$_warm" -eq 0 ]; then
+        _npm_origin_enc=$(printf '%s' "$_req_origin" | sed 's#/#%2f#g')
+        _meta_url="https://registry.npmjs.org/${_npm_origin_enc}/${_npm_ref}"
+        zz_log i "Retrieving npm package ({B ${_req_origin}@${_npm_ref}}) from {U ${_meta_url}}..."
+        _tarball=$(curl -fsSL "$_meta_url" | jq -r '.dist.tarball // empty')
+        [ -n "$_tarball" ] || { zz_log e "Could not resolve npm tarball for {Purple ${_req_origin}@${_npm_ref}}"; return 1; }
+        _tmp="${_cache_dir}.tmp.$$"
+        _add_tmp "$_tmp"
+        rm -rf "$_tmp"
+        mkdir -p "$_tmp"
+        curl -fsSL "$_tarball" | tar -xz -C "$_tmp" --strip-components=1
+        mkdir -p "$(dirname "$_cache_dir")"
+        rm -rf "$_cache_dir"
+        mv "$_tmp" "$_cache_dir"
+    else
+        zz_log d "Using cached npm package at {U ${_cache_dir}}"
+    fi
+    _SRC="$_cache_dir"
+}
+
 # Resolve _SRC for <origin> (default: ZZ_ORIGIN) at <ref> (default:
 # ZZ_ORIGIN_REF) — a local checkout (ROOT_DIR, when zz_use is running from
 # within this repo, the requested origin is this repo's own default, and
@@ -227,42 +267,15 @@ _resolve_src() {
             fi
             ;;
         @*)
-            # npm scheme: origin is an npm package name as-is (e.g.
-            # "@myscope/pkg"), <ref> a dist-tag or exact version (default:
-            # "latest") — cached under its own origin+ref slot exactly like
-            # a GitHub archive below, just fetched from the npm registry's
-            # tarball instead of GitHub's.
-            command -v jq >/dev/null 2>&1 || { printf '[e] npm origin %s requires jq on PATH\n' "$_req_origin" >&2; return 1; }
-            _npm_ref="${_req_ref:-latest}"
-            _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_npm_ref}"
-            _warm=0
-            [ -d "$_cache_dir" ] && [ -n "$(ls -A "$_cache_dir" 2>/dev/null)" ] && _warm=1
-            if [ "$FORCE" -eq 1 ] || [ "$_warm" -eq 0 ]; then
-                # A scoped name's own "/" (between @scope and pkg) must be
-                # percent-encoded for the registry's URL path — unlike
-                # {ORIGIN} in the GitHub archive URL below, which is a
-                # path segment ("org/repo") where a literal "/" is exactly
-                # what's wanted.
-                _npm_origin_enc=$(printf '%s' "$_req_origin" | sed 's#/#%2f#g')
-                _meta_url="https://registry.npmjs.org/${_npm_origin_enc}/${_npm_ref}"
-                zz_log i "Retrieving npm package ({B ${_req_origin}@${_npm_ref}}) from {U ${_meta_url}}..."
-                _tarball=$(curl -fsSL "$_meta_url" | jq -r '.dist.tarball // empty')
-                [ -n "$_tarball" ] || { zz_log e "Could not resolve npm tarball for {Purple ${_req_origin}@${_npm_ref}}"; return 1; }
-                _tmp="${_cache_dir}.tmp.$$"
-                _add_tmp "$_tmp"
-                rm -rf "$_tmp"
-                mkdir -p "$_tmp"
-                curl -fsSL "$_tarball" | tar -xz -C "$_tmp" --strip-components=1
-                mkdir -p "$(dirname "$_cache_dir")"
-                rm -rf "$_cache_dir"
-                mv "$_tmp" "$_cache_dir"
-            else
-                zz_log d "Using cached npm package at {U ${_cache_dir}}"
-            fi
-            _SRC="$_cache_dir"
+            # npm scheme, scoped package (e.g. "@myscope/pkg") — see
+            # _resolve_npm above; the "*)" catch-all arm below handles
+            # npm's other, unscoped name shape.
+            _resolve_npm || return 1
             ;;
-        *)
-            # GitHub-archive scheme (default): "org/repo".
+        */*)
+            # GitHub-archive scheme: "org/repo" — always has a "/", unlike
+            # an unscoped npm name (caught by the "*)" arm below), which is
+            # what distinguishes the two.
             _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_req_ref:-$ZZ_ORIGIN_REF}"
             _warm=0
             for _d in "$_cache_dir"/*/; do [ -f "${_d}run.sh" ] && _warm=1 && break; done
@@ -287,6 +300,14 @@ _resolve_src() {
                 zz_log d "Using cached repo scripts at {U ${_cache_dir}}"
             fi
             _SRC="$_cache_dir"
+            ;;
+        *)
+            # npm scheme, unscoped package (e.g. "mypkg") — npm's other
+            # valid package-name shape, distinguished from the "org/repo"
+            # GitHub scheme above by having no "/" at all. See _resolve_npm
+            # above for the fetch/cache logic, shared with the scoped "@*"
+            # arm.
+            _resolve_npm || return 1
             ;;
         esac
     fi
