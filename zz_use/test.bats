@@ -158,6 +158,33 @@ teardown() {
     [[ "$output" == *"pinned"* ]]
 }
 
+@test "zz_use resolves a ./ local-path origin relative to cwd, no download" {
+    local_repo=$(mktemp -d)
+    mkdir -p "$local_repo/some-tool"
+    cat >"$local_repo/some-tool/run.sh" <<'EOF'
+#!/bin/sh
+echo from-local-repo
+EOF
+    chmod +x "$local_repo/some-tool/run.sh"
+
+    bindir=$(mktemp -d)
+    zz_use_bin=$(command -v zz_use)
+    run bash -c "cd '$(dirname "$local_repo")' && INSTALL_BIN_DIR='$bindir' PATH='/usr/bin:/bin' '$zz_use_bin' './$(basename "$local_repo")/some-tool'"
+    [ "$status" -eq 0 ]
+    [ -x "$bindir/some-tool" ]
+    [[ "$("$bindir/some-tool")" == "from-local-repo" ]]
+    rm -rf "$local_repo" "$bindir"
+}
+
+@test "zz_use errors on a ./ local-path origin that doesn't exist" {
+    bindir=$(mktemp -d)
+    zz_use_bin=$(command -v zz_use)
+    run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" ./totally-bogus-local-dir/some-tool
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"not found"* ]]
+    rm -rf "$bindir"
+}
+
 @test "zz_use -x without a tool name errors" {
     zz_use_bin=$(command -v zz_use)
     run env PATH="/usr/bin:/bin" "$zz_use_bin" -x

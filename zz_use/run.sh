@@ -19,6 +19,16 @@
 # ZZ_CACHE_DIR below), so pinning one script doesn't disturb anything
 # already resolved at the default.
 #
+# The [org/repo/] prefix also accepts a local path — "./some-dir/" or
+# "/abs/path/" — instead of a GitHub "org/repo": the checkout is used
+# directly, relative to the current working directory, with no cache and
+# no download — just symlinked into place the same way this repo's own
+# zz_* scripts are, so edits to a local sibling checkout show up on the
+# next call with no re-fetch:
+#   zz_use ./local-scripts/some-tool
+# Like any other non-default origin, a local-path request always
+# (re)installs — never skipped as "already available".
+#
 # Every tool, zz_* core or functional, installs the same way, one at a
 # time (a glob name such as "zz_*" just expands to every match and
 # recurses — that's how setup.sh gets the whole core set in place up
@@ -179,8 +189,22 @@ _resolve_src() {
         return 0
     fi
 
+    _local_origin=0
+    case "$_req_origin" in
+    ./* | ../* | /*) _local_origin=1 ;;
+    esac
+
     if [ "$_req_origin" = "$ZZ_ORIGIN" ] && [ -z "$_req_ref" ] && [ -f "${ROOT_DIR}/zz_colors/run.sh" ]; then
         _SRC="$ROOT_DIR"
+    elif [ "$_local_origin" -eq 1 ]; then
+        # A local-path origin: resolved directly relative to the caller's
+        # cwd, no cache dir and no curl/tar — the whole point is to pick up
+        # a sibling checkout as-is (and its future edits) via symlink,
+        # exactly like ROOT_DIR above.
+        # Plain stderr, not zz_log: this can be the very first thing
+        # zz_use ever resolves (see the usage-error comment above), so
+        # zz_log itself may not be on PATH yet.
+        _SRC=$(cd "$_req_origin" 2>/dev/null && pwd) || { printf '[e] Local repo path %s not found\n' "$_req_origin" >&2; return 1; }
     else
         _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_req_ref:-$ZZ_ORIGIN_REF}"
         _warm=0
