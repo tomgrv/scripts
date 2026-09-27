@@ -1,17 +1,17 @@
 {
-    "name": "@tomgrv/scripts-git-fix-privacy",
-    "version": "0.4.0",
-    "description": "Fix privacy in history",
-    "bin": {
-        "git-fix-privacy": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "peerDependencies": {
-        "@tomgrv/scripts-zz_args": "*",
-        "@tomgrv/scripts-zz_ask": "*",
-        "@tomgrv/scripts-zz_log": "*"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-git-fix-privacy",
+  "version": "0.25.0",
+  "description": "Fix privacy in history",
+  "bin": {
+    "git-fix-privacy": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_ask": "*",
+    "@tomgrv/scripts-zz_log": "*"
+  },
+  "private": true
 }

@@ -1,15 +1,15 @@
 {
-    "name": "@tomgrv/scripts-zz_prompt",
-    "version": "0.4.0",
-    "description": "Interactive free-form input with an optional default",
-    "bin": {
-        "zz_prompt": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "peerDependencies": {
-        "@tomgrv/scripts-zz_colors": "*"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-zz_prompt",
+  "version": "0.25.0",
+  "description": "Interactive free-form input with an optional default",
+  "bin": {
+    "zz_prompt": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_colors": "*"
+  },
+  "private": true
 }

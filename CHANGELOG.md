@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.25.0 (2026-09-27)
+
+*Commits from: v0.24.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v0.24.0' into develop
+- ♻️ scope package names to @tomgrv/scripts-* and have zz_use loop over peerDependencies (#44)
+
 ## 0.24.0 (2026-09-26)
 
 *Commits from: v0.23.0..HEAD*
@@ -429,5 +440,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-09-26 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-09-27 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*

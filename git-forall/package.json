@@ -1,12 +1,12 @@
 {
-    "name": "@tomgrv/scripts-git-forall",
-    "version": "0.4.0",
-    "description": "Execute a command for all files in the repository",
-    "bin": {
-        "git-forall": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-git-forall",
+  "version": "0.25.0",
+  "description": "Execute a command for all files in the repository",
+  "bin": {
+    "git-forall": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "private": true
 }

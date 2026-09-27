@@ -1,15 +1,15 @@
 {
-    "name": "@tomgrv/scripts-gv",
-    "version": "1.0.0",
-    "description": "Call the GitVersion tool with this repo's .gitversion configuration",
-    "bin": {
-        "gv": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "peerDependencies": {
-        "@tomgrv/scripts-zz_log": "*"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-gv",
+  "version": "0.25.0",
+  "description": "Call the GitVersion tool with this repo's .gitversion configuration",
+  "bin": {
+    "gv": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_log": "*"
+  },
+  "private": true
 }

@@ -1,16 +1,16 @@
 {
-    "name": "@tomgrv/scripts-zz_ask",
-    "version": "0.4.0",
-    "description": "Interactive single-character confirm/choice prompt",
-    "bin": {
-        "zz_ask": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "peerDependencies": {
-        "@tomgrv/scripts-zz_colors": "*",
-        "@tomgrv/scripts-zz_log": "*"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-zz_ask",
+  "version": "0.25.0",
+  "description": "Interactive single-character confirm/choice prompt",
+  "bin": {
+    "zz_ask": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_log": "*"
+  },
+  "private": true
 }

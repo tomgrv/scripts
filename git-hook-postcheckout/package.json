@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-hook-postcheckout",
-  "version": "0.18.0",
+  "version": "0.25.0",
   "description": "Git post-checkout hook",
   "bin": {
     "git-hook-postcheckout": "run.sh"

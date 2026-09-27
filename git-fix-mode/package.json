@@ -1,12 +1,12 @@
 {
-    "name": "@tomgrv/scripts-git-fix-mode",
-    "version": "0.4.0",
-    "description": "Fix file mode changes from diff",
-    "bin": {
-        "git-fix-mode": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-git-fix-mode",
+  "version": "0.25.0",
+  "description": "Fix file mode changes from diff",
+  "bin": {
+    "git-fix-mode": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "private": true
 }

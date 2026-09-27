@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-resolve-context",
-  "version": "0.18.0",
+  "version": "0.25.0",
   "description": "Resolve a feature's source/target directories from the calling script",
   "bin": {
     "resolve-context": "run.sh"
