@@ -1,5 +1,5 @@
 {
-  "name": "install-feature",
+  "name": "@tomgrv/scripts-install-feature",
   "version": "0.18.0",
   "description": "Copy a feature's stubs/config/bin into a target, run install-*.sh",
   "bin": {
@@ -9,9 +9,9 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "zz_args": "*",
-    "zz_bindir": "*",
-    "zz_colors": "*"
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_bindir": "*",
+    "@tomgrv/scripts-zz_colors": "*"
   },
   "private": true
 }

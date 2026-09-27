@@ -1,5 +1,5 @@
 {
-    "name": "git-autorebase",
+    "name": "@tomgrv/scripts-git-autorebase",
     "version": "0.4.0",
     "description": "Automatically handle non-interactive rebasing with conflict resolution",
     "bin": {

@@ -1,5 +1,5 @@
 {
-  "name": "zz_colors",
+  "name": "@tomgrv/scripts-zz_colors",
   "version": "0.15.0",
   "description": "ANSI color variables, sourced by other zz_* scripts and functional scripts",
   "bin": {

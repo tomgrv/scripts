@@ -5,7 +5,7 @@
 # Install as .git/hooks/commit-msg (or via husky) invoking
 # `git hook-commitmsg "$@"` — git passes the commit message file as $1.
 
-zz_use zz_colors zz_args zz_npx git-hook-installplugins commitlint devmoji
+zz_use --pkg "$(cd "$(dirname "$0")" && pwd)" commitlint devmoji
 . zz_colors
 
 eval $(

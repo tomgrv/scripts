@@ -4,7 +4,7 @@
 # `git hook-postcheckout "$@"` — git passes the previous HEAD, new HEAD,
 # and a flag (1 for a branch checkout, 0 for a file checkout).
 
-zz_use zz_colors zz_args
+zz_use --pkg "$(cd "$(dirname "$0")" && pwd)"
 . zz_colors
 
 eval $(

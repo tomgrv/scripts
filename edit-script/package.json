@@ -1,5 +1,5 @@
 {
-  "name": "edit-script",
+  "name": "@tomgrv/scripts-edit-script",
   "version": "0.18.0",
   "description": "Copy an installed script locally and open it for editing",
   "bin": {
@@ -9,8 +9,8 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "zz_args": "*",
-    "zz_colors": "*"
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_colors": "*"
   },
   "private": true
 }

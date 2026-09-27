@@ -1,5 +1,5 @@
 {
-    "name": "git-fix-del",
+    "name": "@tomgrv/scripts-git-fix-del",
     "version": "0.4.0",
     "description": "Delete a specified commit and rebase subsequent history",
     "bin": {

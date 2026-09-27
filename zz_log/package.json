@@ -1,5 +1,5 @@
 {
-  "name": "zz_log",
+  "name": "@tomgrv/scripts-zz_log",
   "version": "0.22.0",
   "description": "Colored, leveled log line on stderr (i/w/e/s/-)",
   "bin": {

@@ -1,5 +1,5 @@
 {
-  "name": "zz_npx",
+  "name": "@tomgrv/scripts-zz_npx",
   "version": "0.15.0",
   "description": "Run a local node_modules/.bin binary, falling back to npx",
   "bin": {

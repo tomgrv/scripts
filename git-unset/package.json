@@ -1,5 +1,5 @@
 {
-    "name": "git-unset",
+    "name": "@tomgrv/scripts-git-unset",
     "version": "0.4.0",
     "description": "Unset all Git config keys starting with the given prefix",
     "bin": {

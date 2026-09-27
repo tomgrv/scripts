@@ -1,5 +1,5 @@
 {
-  "name": "zz_dispatch",
+  "name": "@tomgrv/scripts-zz_dispatch",
   "version": "0.21.0",
   "description": "Dispatch an underscore-prefixed caller to a sibling <name>-<subcmd> script",
   "bin": {

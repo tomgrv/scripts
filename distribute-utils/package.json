@@ -1,5 +1,5 @@
 {
-  "name": "distribute-utils",
+  "name": "@tomgrv/scripts-distribute-utils",
   "version": "0.18.0",
   "description": "Copy zz_*/utility scripts into a project's local scripts directory",
   "bin": {
@@ -9,8 +9,8 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "zz_args": "*",
-    "zz_colors": "*"
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_colors": "*"
   },
   "private": true
 }

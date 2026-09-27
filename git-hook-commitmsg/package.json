@@ -1,5 +1,5 @@
 {
-  "name": "git-hook-commitmsg",
+  "name": "@tomgrv/scripts-git-hook-commitmsg",
   "version": "0.18.0",
   "description": "Git commit-msg hook: apply commitlint rules and devmoji to the commit message",
   "bin": {
@@ -9,10 +9,10 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "git-hook-installplugins": "*",
-    "zz_args": "*",
-    "zz_colors": "*",
-    "zz_npx": "*"
+    "@tomgrv/scripts-git-hook-installplugins": "*",
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_npx": "*"
   },
   "private": true
 }

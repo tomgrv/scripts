@@ -104,10 +104,41 @@ set -e
 FORCE=0
 EXEC_TOOL=""
 _before=""
+
+# Read <dir>/package.json's peerDependencies keys (each a sibling repo
+# package, e.g. "@tomgrv/scripts-zz_args") and queue them into _before the
+# same way an explicit `zz_use zz_args ...` name would be — this is what
+# lets a functional script's run.sh just say `zz_use --pkg "$(dirname ...)"`
+# instead of hand-listing every internal dependency itself; only the
+# package's own declared deps come from here, so an external tool the
+# script also needs (jq, curl, ...) is still named explicitly alongside
+# --pkg. Uses jq when available (consistent with the rest of this script's
+# JSON handling); falls back to a plain grep/sed scan of the
+# "peerDependencies": { ... } block otherwise, since --pkg can run before
+# jq itself has been resolved.
+_queue_pkg_deps() {
+    _pkg_json="$1/package.json"
+    [ -f "$_pkg_json" ] || { printf '[e] --pkg: %s not found\n' "$_pkg_json" >&2; return 1; }
+    if command -v jq >/dev/null 2>&1; then
+        _deps=$(jq -r '.peerDependencies // {} | keys[]' "$_pkg_json")
+    else
+        _deps=$(sed -n '/"peerDependencies"[[:space:]]*:/,/}/p' "$_pkg_json" | grep -o '"[^"]*"[[:space:]]*:' | sed -e 's/"[[:space:]]*:$//' -e 's/^"//' | grep -v '^peerDependencies$')
+    fi
+    for _dep in $_deps; do
+        _before="${_before} '$(printf '%s' "$_dep" | sed "s/'/'\\\\''/g")'"
+    done
+}
+
 while [ $# -gt 0 ]; do
     case "$1" in
     --force | -f)
         FORCE=1
+        shift
+        ;;
+    --pkg)
+        shift
+        [ -n "${1:-}" ] || { printf '[e] --pkg requires a directory\n' >&2; exit 1; }
+        _queue_pkg_deps "$1" || exit 1
         shift
         ;;
     -x | --exec)
@@ -495,6 +526,17 @@ _use() {
     fi
 
     for tool_ref in "$@"; do
+        # This repo's own packages are named "@tomgrv/scripts-<tool>" (see
+        # each package.json's "name"), so a peerDependencies key queued by
+        # --pkg (or an explicit "@tomgrv/scripts-<tool>" request) arrives in
+        # that scoped-npm shape. Unwrap it back to the plain "<tool>" name
+        # up front so it resolves the normal, local, default-origin way
+        # below instead of being mistaken for an actual npm-registry
+        # package by the "@*" scheme arm further down.
+        case "$tool_ref" in
+        "@tomgrv/scripts-"*) tool_ref="${tool_ref#@tomgrv/scripts-}" ;;
+        esac
+
         # A leading "@" is the npm scheme sigil (an npm-registry origin is
         # simply its package name, e.g. "@myscope/pkg" for a scoped
         # package), not the "@ref" pin suffix — stripped and re-prepended

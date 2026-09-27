@@ -1,5 +1,5 @@
 {
-  "name": "bump-version",
+  "name": "@tomgrv/scripts-bump-version",
   "version": "0.10.0",
   "description": "Update version numbers in files (root and/or per-workspace) per package.json's bump-version config",
   "bin": {

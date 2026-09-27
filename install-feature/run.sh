@@ -3,7 +3,7 @@
 # run its install-*.sh lifecycle scripts, and symlink bin/ scripts onto a
 # writable PATH directory. Counterpart to configure-feature.sh.
 
-zz_use zz_colors zz_args zz_bindir
+zz_use --pkg "$(cd "$(dirname "$0")" && pwd)"
 . zz_colors
 
 eval $(

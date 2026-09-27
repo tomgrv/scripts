@@ -1,5 +1,5 @@
 {
-    "name": "git-fix-mode",
+    "name": "@tomgrv/scripts-git-fix-mode",
     "version": "0.4.0",
     "description": "Fix file mode changes from diff",
     "bin": {

@@ -1,5 +1,5 @@
 {
-    "name": "git-fix-message",
+    "name": "@tomgrv/scripts-git-fix-message",
     "version": "0.4.0",
     "description": "Rewrite an arbitrary commit message",
     "bin": {

@@ -5,7 +5,7 @@
 # Install as the repo's .git/hooks/pre-commit (or via husky) invoking
 # `git hook-precommit "$@"`.
 
-zz_use zz_colors zz_args zz_npx git-hook-installplugins
+zz_use --pkg "$(cd "$(dirname "$0")" && pwd)"
 . zz_colors
 
 eval $(

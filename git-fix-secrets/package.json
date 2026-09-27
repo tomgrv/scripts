@@ -1,5 +1,5 @@
 {
-    "name": "git-fix-secrets",
+    "name": "@tomgrv/scripts-git-fix-secrets",
     "version": "0.4.0",
     "description": "Redact a secret from files, commit messages and/or tag annotations across all git history",
     "bin": {

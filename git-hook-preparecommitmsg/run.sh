@@ -6,7 +6,7 @@
 # Install as .git/hooks/prepare-commit-msg (or via husky) invoking
 # `git hook-preparecommitmsg "$@"`.
 
-zz_use zz_colors zz_args zz_npx git-hook-installplugins git-cz
+zz_use --pkg "$(cd "$(dirname "$0")" && pwd)" git-cz
 . zz_colors
 
 eval $(

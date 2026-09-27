@@ -1,5 +1,5 @@
 {
-    "name": "git-fix-emoji",
+    "name": "@tomgrv/scripts-git-fix-emoji",
     "version": "0.4.0",
     "description": "Fix git emoji",
     "bin": {

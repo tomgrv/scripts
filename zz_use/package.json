@@ -1,5 +1,5 @@
 {
-  "name": "zz_use",
+  "name": "@tomgrv/scripts-zz_use",
   "version": "0.24.0",
   "description": "Activator: on-demand dependency management (apt/download, and single-shot zz_* bundle install)",
   "bin": {
