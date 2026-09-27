@@ -51,6 +51,13 @@ if [ -d $source/stubs ]; then
 
         mkdir -p $folder
 
+        # A dangling symlink fails every "-f $dest" test below, yet cp and
+        # chmod refuse to write through it: replace it with the stub.
+        if [ -L "$dest" ] && [ ! -e "$dest" ]; then
+            zz_log w "Destination {U $dest} is a dangling symlink to {U $(readlink "$dest")}, replacing it..."
+            rm -f "$dest"
+        fi
+
         if [ "$(basename $file | cut -c1)" = "#" ]; then
             dest=$(echo $dest | sed 's/\/\#/\//g')
             zz_log - "Add {U $dest} to .gitignore"
@@ -97,6 +104,13 @@ if [ -d $source/stubs ]; then
                 cp $file $dest
             elif [ $base != /dev/null ] && [ ! $file -nt $base ]; then
                 zz_log - "No change in {U $file} since last deploy, skipping merge into {U $dest}"
+            elif [ "$(head -n1 $file)" = "---" ]; then
+                # A file opening with a `---` frontmatter block (SKILL.md,
+                # *.instructions.md) is a single-owner document, not a
+                # fragment: its frontmatter must stay on line 1, and the
+                # reconciliation below appends new lines at the end.
+                zz_log - "Replacing {U $dest} with {U $file} (frontmatter document)..."
+                cp $file $dest
             else
                 zz_log - "Reconciling {U $file} into {U $dest}..."
 

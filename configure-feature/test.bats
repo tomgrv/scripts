@@ -51,6 +51,18 @@ teardown() {
     grep -q line1 "$WORK_DIR/plain.txt"
 }
 
+@test "configure-feature replaces a dangling destination symlink with the stub" {
+    mkdir -p src/stubs/sub
+    echo "line1" >src/stubs/sub/plain.md
+    mkdir -p sub
+    ln -s ../missing/plain.md sub/plain.md
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"dangling symlink"* ]]
+    [ ! -L sub/plain.md ]
+    grep -q line1 sub/plain.md
+}
+
 @test "configure-feature merges a json stub into an existing json file" {
     mkdir -p src/stubs
     echo '{"b":2}' >src/stubs/config.json
@@ -81,6 +93,17 @@ teardown() {
     grep -q existing1 frag.txt
     grep -q line1 frag.txt
     grep -q line2 frag.txt
+}
+
+@test "configure-feature replaces an existing file when the stub opens with frontmatter" {
+    mkdir -p src/stubs
+    printf -- '---\nname: skill\ndescription: d\n---\n\n# Skill\n' >src/stubs/SKILL.md
+    printf '# Skill\n\nold body\n' >SKILL.md
+
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(head -n1 SKILL.md)" = "---" ]
+    cmp -s src/stubs/SKILL.md SKILL.md
 }
 
 @test "configure-feature strips a leading underscore prefix from stub filenames" {

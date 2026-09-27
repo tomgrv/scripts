@@ -52,6 +52,18 @@ teardown() {
     [[ "$output" == *"not a valid YAML"* ]]
 }
 
+@test "merge-yaml errors clearly when yq is not mikefarah/yq" {
+    stub_script yq <<'EOF2'
+#!/bin/sh
+echo "yq 0.0.0"
+EOF2
+    printf 'a: 1\n' >target.yaml
+    printf 'b: 2\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"requires mikefarah/yq"* ]]
+}
+
 @test "merge-yaml merges a source object into the target file in place" {
     printf 'a: 1\n' >target.yaml
     printf 'b: 2\n' >source.yaml
