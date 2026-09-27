@@ -13,8 +13,7 @@
         "@tomgrv/scripts-zz_colors": "*",
         "@tomgrv/scripts-zz_log": "*",
         "@tomgrv/scripts-zz_persist": "*",
-        "@tomgrv/scripts-zz_prompt": "*",
-        "jq": "*"
+        "@tomgrv/scripts-zz_prompt": "*"
     },
     "private": true
 }
