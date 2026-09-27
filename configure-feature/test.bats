@@ -95,6 +95,17 @@ teardown() {
     grep -q line2 frag.txt
 }
 
+@test "configure-feature replaces an existing file when the stub opens with frontmatter" {
+    mkdir -p src/stubs
+    printf -- '---\nname: skill\ndescription: d\n---\n\n# Skill\n' >src/stubs/SKILL.md
+    printf '# Skill\n\nold body\n' >SKILL.md
+
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(head -n1 SKILL.md)" = "---" ]
+    cmp -s src/stubs/SKILL.md SKILL.md
+}
+
 @test "configure-feature strips a leading underscore prefix from stub filenames" {
     mkdir -p src/stubs
     echo "content" >src/stubs/_prefix.actual.txt

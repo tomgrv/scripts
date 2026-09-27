@@ -44,6 +44,7 @@ bats test.bats
 - errors without a feature argument, or when source doesn't exist
 - copies a new plain-text stub, merges a json stub into an existing file
 - reconciles a text fragment additively into an existing file
+- replaces an existing file wholesale when the stub opens with `---` frontmatter
 - strips leading `_` prefix and `.gitignore`s `#`-prefixed stub destinations
 - preserves executable bits and symlinks stub targets
 - processes `.clean` RMV/DEL directives, skips deploying `.clean` itself
