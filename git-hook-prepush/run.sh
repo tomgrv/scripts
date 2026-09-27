@@ -15,10 +15,8 @@ eval $(
 toplevel=$(git rev-parse --show-toplevel) || { zz_log e "Not inside a git repository."; exit 1; }
 cd "$toplevel"
 
-# Enable colors
 if [ -t 1 ]; then
 	exec >/dev/tty 2>&1
 fi
 
-# Check if the current Git branch name is valid
 zz_npx validate-branch-name

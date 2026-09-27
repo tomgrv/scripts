@@ -1,7 +1,4 @@
 #!/bin/sh
-
-# zz_input.sh
-# Utility for handling parameter, file, or stdin input
 # Usage: zz_input [input] [description]
 
 input="$1"

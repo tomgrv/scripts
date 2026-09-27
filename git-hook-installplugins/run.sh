@@ -15,7 +15,6 @@ eval $(
 	help
 )
 
-# Set defaults if not provided
 json_file=${json_file:-./package.json}
 
 if [ -z "$json_key" ]; then
@@ -31,36 +30,29 @@ if [ -z "$plugins" ]; then
 	exit 0
 fi
 
-# Load the config file, kept in the repo's git hook folder (not next to
-# this script) so it travels with the repo checkout instead of a shared
-# global install location
+# Config lives in the repo's git hook folder (not next to this script) so it
+# travels with the repo checkout instead of a shared global install location
 hookdir=$(git rev-parse --git-path hooks) || { zz_log e "Not inside a git repository."; exit 1; }
 config=$hookdir/PLUGINS
 
-# if config file only contains comments and empty lines, make it empty
 if [ -f "$config" ] && [ -z "$(grep -v -e '^#' -e '^$' $config)" ]; then
 	zz_log w "Config file {B $config} is empty or contains only comments, reset it."
 	cat /dev/null >$config
 fi
 
-# Create the config file if it doesn't exist
 if [ ! -f "$config" ]; then
 	zz_log w "Config file {B $config} does not exist, create it."
 	touch $config
 fi
 
-# foreach plugin, check if it is already installed
 for plugin in $plugins; do
 	echo "$plugin" | sed 's/^ *//;s/ *$//' | grep -v --file=$config >>$config
 done
 
-# Reload the plugins list
 plugins=$(cat $config | grep -v '^$' | tr '\n' ' ')
 
-# List of plugins to install
 zz_log i "Plugins to install: {B $plugins}"
 
-# Check which plugins are already installed with a single npm list call
 installed=$(npm list $global --depth=0)
 for plugin in $plugins; do
 	if echo "$installed" | grep -qF "$plugin@"; then
@@ -68,7 +60,6 @@ for plugin in $plugins; do
 	fi
 done
 
-# Install the plugins if there are any to install
 if [ -n "$plugins" ]; then
 	zz_log i "Installing plugins {B $plugins} ..."
 	if ! npm install $global --no-save $plugins 2>/dev/null 1>&2; then

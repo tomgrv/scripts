@@ -1,21 +1,17 @@
 #!/bin/sh
 
-# Handle parameters
 eval $(
 	zz_args "Discard changes made only of whitespace, blanks, quote/slash swaps" $0 "$@" <<-help
 		d -         dryrun      show files that would be discarded without changing them
 	help
 )
 
-# Navigate to repository root
 cd "$(git rev-parse --show-toplevel)" >/dev/null || exit 1
 
-# Temp workspace for normalized comparisons
 temp_dir=$(mktemp -d)
 changed_list="$temp_dir/changed-files.list"
 trap 'rm -rf "$temp_dir"' EXIT
 
-# Compare all tracked modified files from HEAD to working tree/index
 git diff --name-only --diff-filter=M HEAD -- >"$changed_list"
 
 if [ ! -s "$changed_list" ]; then
@@ -30,16 +26,16 @@ normalize_file() {
 	# guarantees every emitted line ends in a newline, so a change that only
 	# adds or removes the final newline normalizes away too.
 	case "$1" in
-		*.sh) sed -e '/^[[:space:]]*#/d' "$1" ;; # Remove comment lines in shell scripts
-		*.yml|*.yaml) sed -e '/^[[:space:]]*#/d' "$1" ;; # Remove comment lines in YAML files
-		*.md|*.markdown) sed -e '/^[[:space:]]*<!--.*-->/d' "$1" ;; # Remove HTML comments in Markdown files
-		*.php) sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*\/\*/d' -e '/^[[:space:]]*\*/d' "$1" ;; # Remove comment lines in PHP files
-		*.html|*.htm) sed -e '/^[[:space:]]*<!--.*-->/d' "$1" ;; # Remove HTML comments in HTML files
-		*.css) sed -e '/^[[:space:]]*\/\*/d' -e '/^[[:space:]]*\*/d' "$1" ;; # Remove comment lines in CSS files
-		*.js) sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*\/\*/d' -e '/^[[:space:]]*\*/d' "$1" ;; # Remove comment lines in JavaScript files
-		*.json) normalize-json -c -a -i -t 4 -f local -l true "$1" 2>/dev/null || cat "$1" ;; # Normalize JSON to stdout; fall back to raw content if normalization fails (never emit empty, which would be a false match)
+		*.sh) sed -e '/^[[:space:]]*#/d' "$1" ;;
+		*.yml|*.yaml) sed -e '/^[[:space:]]*#/d' "$1" ;;
+		*.md|*.markdown) sed -e '/^[[:space:]]*<!--.*-->/d' "$1" ;;
+		*.php) sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*\/\*/d' -e '/^[[:space:]]*\*/d' "$1" ;;
+		*.html|*.htm) sed -e '/^[[:space:]]*<!--.*-->/d' "$1" ;;
+		*.css) sed -e '/^[[:space:]]*\/\*/d' -e '/^[[:space:]]*\*/d' "$1" ;;
+		*.js) sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*\/\*/d' -e '/^[[:space:]]*\*/d' "$1" ;;
+		*.json) normalize-json -c -a -i -t 4 -f local -l true "$1" 2>/dev/null || cat "$1" ;; # fall back to raw content if normalization fails (never emit empty, which would be a false match)
 		*) cat "$1" ;;
-	esac | sed -e 's/[[:space:]]//g' -e "s/[\"']/\"/g" -e 's#[\\/]#/#g' -e '/^$/d' | awk '{ print }' # strip whitespace, unify quotes/slashes, drop blank lines, force trailing newline
+	esac | sed -e 's/[[:space:]]//g' -e "s/[\"']/\"/g" -e 's#[\\/]#/#g' -e '/^$/d' | awk '{ print }'
 }
 
 discarded=0
@@ -47,7 +43,6 @@ kept=0
 skipped=0
 
 while IFS= read -r file; do
-	# Ensure the file still exists in the working tree.
 	if [ ! -f "$file" ]; then
 		skipped=$((skipped + 1))
 		continue

@@ -2,7 +2,6 @@
 
 set -e
 
-# Function to print help and manage arguments
 eval $(
     zz_args "Delete all descendant tags and branches of a commit" $0 "$@" <<-help
 		p -      push       push to remote
@@ -11,10 +10,8 @@ eval $(
 	help
 )
 
-# Navigate to the repository root
 cd "$(git rev-parse --show-toplevel)" >/dev/null
 
-# Retrieve the commit SHA to fixup
 sha=$(git getcommit $force $sha)
 
 zz_log i "Deleting all tags that are descendants of $sha"

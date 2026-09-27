@@ -16,7 +16,6 @@ eval $(
 toplevel=$(git rev-parse --show-toplevel) || { zz_log e "Not inside a git repository."; exit 1; }
 cd "$toplevel"
 
-# Enable colors
 if [ -t 1 ]; then
 	exec >/dev/tty 2>&1
 fi
@@ -26,9 +25,7 @@ if [ -z "$msgfile" ]; then
 	exit 1
 fi
 
-# Install commitizen plugins
 git-hook-installplugins -g '[.config.commitizen.path // "", .commitlint.extends // ""]'
 
-# Apply commitlint rules to the latest commit message
 zz_log i "Applying commitlint rules to the latest commit..."
 zz_npx commitlint --edit "$msgfile" && zz_npx devmoji -e

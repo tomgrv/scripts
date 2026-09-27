@@ -1,14 +1,11 @@
 #!/bin/sh
 
-#### GOTO DIRECTORY
 cd "$(git rev-parse --show-toplevel)"
 
 pwd
 
-#### CONFIGURE REPO
 git config core.autocrlf false
 
-#### INTEGRATE MODIFICATIONS
 echo 'Integrate modifications...'
 git status --porcelain | sed 's/\(.*\)/-\1/g' | while read status; do
 	index=$(echo $status | cut -c2 | sed -e 's/^ *//' -e 's/ *$//')
@@ -31,5 +28,4 @@ git status --porcelain | sed 's/\(.*\)/-\1/g' | while read status; do
 	fi
 done
 
-#### BACK
 cd - >/dev/null

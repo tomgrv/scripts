@@ -1,7 +1,7 @@
 #!/bin/sh
-# Install mode: copy a feature's stubs/config/bin into a target directory,
-# run its install-*.sh lifecycle scripts, and symlink bin/ scripts onto a
-# writable PATH directory. Counterpart to configure-feature.sh.
+# Copies a feature's stubs/config/bin into a target directory, runs its
+# install-*.sh lifecycle scripts, and symlinks bin/ scripts onto a writable
+# PATH directory. Counterpart to configure-feature.sh.
 
 . zz_colors
 
@@ -55,8 +55,6 @@ find $source -maxdepth 1 -type f -name "install-*.sh" | while read script; do
     # multi-element "$@" forwards correctly regardless of element count.
     sh "$script" "$@" && zz_log s "Done!" || zz_log e "Failed!"
 done
-
-### Symlink bin/ scripts onto a writable PATH directory ###
 
 zz_log i "Installing bin scripts for {Purple $feature}..."
 zz_log i "Finding writable bin directory..."
