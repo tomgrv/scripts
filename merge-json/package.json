@@ -12,7 +12,8 @@
     "@tomgrv/scripts-normalize-json": "*",
     "@tomgrv/scripts-zz_args": "*",
     "@tomgrv/scripts-zz_colors": "*",
-    "@tomgrv/scripts-zz_log": "*"
+    "@tomgrv/scripts-zz_log": "*",
+    "jq": "*"
   },
   "private": true
 }
