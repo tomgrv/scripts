@@ -2,7 +2,6 @@
 # Export source/target folders depending on feature context (which feature's
 # install/configure flow is calling this, and where its files live/deploy to).
 
-zz_use --pkg "$0"
 . zz_colors
 
 eval $(

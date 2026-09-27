@@ -1,19 +1,20 @@
 {
-  "name": "@tomgrv/scripts-zz_call",
-  "version": "0.15.0",
-  "description": "Resolve a caller's declared env vars (ask + persist if missing), then run a command",
-  "bin": {
-    "zz_call": "run.sh"
-  },
-  "scripts": {
-    "test": "bats test.bats"
-  },
-  "peerDependencies": {
-    "@tomgrv/scripts-zz_args": "*",
-    "@tomgrv/scripts-zz_colors": "*",
-    "@tomgrv/scripts-zz_log": "*",
-    "@tomgrv/scripts-zz_persist": "*",
-    "@tomgrv/scripts-zz_prompt": "*"
-  },
-  "private": true
+    "name": "@tomgrv/scripts-zz_call",
+    "version": "0.15.0",
+    "description": "Resolve a caller's declared env vars (ask + persist if missing), then run a command",
+    "bin": {
+        "zz_call": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "@tomgrv/scripts-zz_args": "*",
+        "@tomgrv/scripts-zz_colors": "*",
+        "@tomgrv/scripts-zz_log": "*",
+        "@tomgrv/scripts-zz_persist": "*",
+        "@tomgrv/scripts-zz_prompt": "*",
+        "jq": "*"
+    },
+    "private": true
 }

@@ -1,17 +1,19 @@
 {
-  "name": "@tomgrv/scripts-load-json",
-  "version": "0.18.0",
-  "description": "Load JSON from a file or URL, tagging it with $id",
-  "bin": {
-    "load-json": "run.sh"
-  },
-  "scripts": {
-    "test": "bats test.bats"
-  },
-  "peerDependencies": {
-    "@tomgrv/scripts-zz_args": "*",
-    "@tomgrv/scripts-zz_colors": "*",
-    "@tomgrv/scripts-zz_log": "*"
-  },
-  "private": true
+    "name": "@tomgrv/scripts-load-json",
+    "version": "0.18.0",
+    "description": "Load JSON from a file or URL, tagging it with $id",
+    "bin": {
+        "load-json": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "@tomgrv/scripts-zz_args": "*",
+        "@tomgrv/scripts-zz_colors": "*",
+        "@tomgrv/scripts-zz_log": "*",
+        "curl": "*",
+        "jq": "*"
+    },
+    "private": true
 }

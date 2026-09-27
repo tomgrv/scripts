@@ -1,18 +1,19 @@
 {
-  "name": "@tomgrv/scripts-merge-json",
-  "version": "0.18.0",
-  "description": "Recursively merge one JSON file into another, arrays deduped and unioned",
-  "bin": {
-    "merge-json": "run.sh"
-  },
-  "scripts": {
-    "test": "bats test.bats"
-  },
-  "peerDependencies": {
-    "@tomgrv/scripts-normalize-json": "*",
-    "@tomgrv/scripts-zz_args": "*",
-    "@tomgrv/scripts-zz_colors": "*",
-    "@tomgrv/scripts-zz_log": "*"
-  },
-  "private": true
+    "name": "@tomgrv/scripts-merge-json",
+    "version": "0.18.0",
+    "description": "Recursively merge one JSON file into another, arrays deduped and unioned",
+    "bin": {
+        "merge-json": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "@tomgrv/scripts-normalize-json": "*",
+        "@tomgrv/scripts-zz_args": "*",
+        "@tomgrv/scripts-zz_colors": "*",
+        "@tomgrv/scripts-zz_log": "*",
+        "jq": "*"
+    },
+    "private": true
 }

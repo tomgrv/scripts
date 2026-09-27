@@ -5,7 +5,6 @@
 # Called by the other git-hook-* scripts before they run tools that expect
 # those plugins to already be installed.
 
-zz_use --pkg "$0" jq
 . zz_colors
 
 eval $(

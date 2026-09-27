@@ -1,7 +1,6 @@
 #!/bin/sh
 set -e
 
-zz_use --pkg "$0" jq yq
 . zz_colors
 
 eval $(

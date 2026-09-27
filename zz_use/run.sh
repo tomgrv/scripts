@@ -2,9 +2,17 @@
 # zz_use — the activator: on-demand dependency management, triggering
 # retrieval or install if and only if a command isn't already on PATH.
 #
-# Usage (each functional script calls this once, up front, for every
-# dependency it needs — including the zz_* utility scripts it sources):
-#   zz_use zz_log zz_args jq git
+# Usage — a functional script names only the tools it can't get any other
+# way (an external tool like jq, curl, or a pinned/other-origin script);
+# every dependency declared in its own package.json's peerDependencies
+# (sibling repo scripts and external tools alike) is installed
+# automatically, recursively, the moment the script itself gets installed
+# — see _install_peer_deps below. A script with nothing outside its
+# declared peerDependencies needs no zz_use call in its run.sh at all:
+#   zz_use git curl
+# installs git and curl (not repo scripts, so not something
+# peerDependencies alone could resolve) on top of whatever this script's
+# own package.json already declares.
 #
 # Any tool name accepts an optional [org/repo/] prefix and/or @<ref>
 # suffix, to pull it from a different GitHub repo and/or pin it to a
@@ -105,57 +113,10 @@ FORCE=0
 EXEC_TOOL=""
 _before=""
 
-# Read a script's package.json peerDependencies keys (each a sibling repo
-# package, e.g. "@tomgrv/scripts-zz_args") and queue them into _before the
-# same way an explicit `zz_use zz_args ...` name would be — this is what
-# lets a functional script's run.sh just say `zz_use --pkg "$0"` instead of
-# hand-listing every internal dependency itself; only the package's own
-# declared deps come from here, so an external tool the script also needs
-# (jq, curl, ...) is still named explicitly alongside --pkg.
-#
-# <script_path> is the calling script's own $0, not just its directory:
-# when run from a local checkout, package.json sits right next to run.sh
-# (dirname($0)/package.json). But a script installed by
-# _install_repo_script (the normal deployment path — e.g. copied to
-# /usr/local/bin/edit-script) has no such sibling: install-time also
-# copies package.json alongside it as a hidden ".<name>.package.json", so
-# it's still found post-install. A third layout — a plain symlink to
-# run.sh, not a copy (this repo's own bats tests symlink every script onto
-# a scratch PATH dir, see tests/helpers.bash) — has $0 pointing at the
-# symlink itself, whose directory has neither file; readlink -f resolves
-# through it back to the real run.sh, whose directory has the genuine
-# package.json. Uses jq when available (consistent with the rest of this
-# script's JSON handling); falls back to a plain grep/sed scan of the
-# "peerDependencies": { ... } block otherwise, since --pkg can run before
-# jq itself has been resolved.
-_queue_pkg_deps() {
-    _pkg_dir=$(cd "$(dirname "$1")" && pwd) || { printf '[e] --pkg: %s not found\n' "$1" >&2; return 1; }
-    _pkg_name=$(basename "$1")
-    _pkg_resolved=$(readlink -f "$1" 2>/dev/null) && _pkg_resolved_dir=$(dirname "$_pkg_resolved")
-    _pkg_json="${_pkg_resolved_dir:-$_pkg_dir}/package.json"
-    [ -f "$_pkg_json" ] || _pkg_json="${_pkg_dir}/package.json"
-    [ -f "$_pkg_json" ] || _pkg_json="${_pkg_dir}/.${_pkg_name}.package.json"
-    [ -f "$_pkg_json" ] || { printf '[e] --pkg: no package.json found for %s\n' "$1" >&2; return 1; }
-    if command -v jq >/dev/null 2>&1; then
-        _deps=$(jq -r '.peerDependencies // {} | keys[]' "$_pkg_json")
-    else
-        _deps=$(sed -n '/"peerDependencies"[[:space:]]*:/,/}/p' "$_pkg_json" | grep -o '"[^"]*"[[:space:]]*:' | sed -e 's/"[[:space:]]*:$//' -e 's/^"//' | grep -v '^peerDependencies$')
-    fi
-    for _dep in $_deps; do
-        _before="${_before} '$(printf '%s' "$_dep" | sed "s/'/'\\\\''/g")'"
-    done
-}
-
 while [ $# -gt 0 ]; do
     case "$1" in
     --force | -f)
         FORCE=1
-        shift
-        ;;
-    --pkg)
-        shift
-        [ -n "${1:-}" ] || { printf '[e] --pkg requires a directory\n' >&2; exit 1; }
-        _queue_pkg_deps "$1" || exit 1
         shift
         ;;
     -x | --exec)
@@ -431,6 +392,42 @@ _install_script_config() {
     done
 }
 
+# Install every dependency <name> declares in its own package.json's
+# peerDependencies — sibling repo scripts (e.g. "@tomgrv/scripts-zz_args")
+# and plain external tools (e.g. "jq") alike, recursively, each through the
+# ordinary _use resolution path — so a functional script's run.sh no
+# longer has to call zz_use for anything it already declares there; only a
+# genuinely ad-hoc dependency (a pinned ref, another origin) still needs an
+# explicit call. Runs against the *source* package.json in _SRC, before
+# install, so it works the same whether <name> is a fresh install or
+# already on PATH.
+#
+# _PEER_SEEN guards against reprocessing the same dependency twice in one
+# zz_use invocation (e.g. two sibling scripts sharing a dependency, or a
+# glob install) and against a cycle recursing forever — a real cycle would
+# otherwise never terminate, since the dependency doing the cycling back
+# isn't on PATH yet for _use's own "already available" skip to catch.
+_PEER_SEEN=""
+_install_peer_deps() {
+    _peer_json="${_SRC}/$1/package.json"
+    [ -f "$_peer_json" ] || return 0
+    if command -v jq >/dev/null 2>&1; then
+        _peers=$(jq -r '.peerDependencies // {} | keys[]' "$_peer_json")
+    else
+        _peers=$(sed -n '/"peerDependencies"[[:space:]]*:/,/}/p' "$_peer_json" | grep -o '"[^"]*"[[:space:]]*:' | sed -e 's/"[[:space:]]*:$//' -e 's/^"//' | grep -v '^peerDependencies$')
+    fi
+    for _peer in $_peers; do
+        case "$_peer" in
+        "@tomgrv/scripts-"*) _peer="${_peer#@tomgrv/scripts-}" ;;
+        esac
+        case " $_PEER_SEEN " in
+        *" $_peer "*) continue ;;
+        esac
+        _PEER_SEEN="${_PEER_SEEN} ${_peer}"
+        _use "$_peer" || return 1
+    done
+}
+
 # Install a single named script from this or another repo — functional or
 # core, always individually: nothing in this repo needs to be installed as
 # a group any more (setup.sh already puts the whole core set in place up
@@ -458,11 +455,8 @@ _install_repo_script() {
     chmod +x "${_dir}/.${_name}.$$"
     mv "${_dir}/.${_name}.$$" "${_dir}/${_name}"
     _install_script_config "${_SRC}/${_name}/config" "${_dir}/config"
-    # Carried alongside the installed script (hidden, "."-prefixed) so
-    # --pkg (see _queue_pkg_deps above) can still find its peerDependencies
-    # once it's running from here instead of a local checkout.
-    [ -f "${_SRC}/${_name}/package.json" ] && cp "${_SRC}/${_name}/package.json" "${_dir}/.${_name}.package.json"
     zz_log s "Installed {Purple ${_name}} to {U ${_dir}/${_name}}"
+    _install_peer_deps "$_name" || return 1
 }
 
 _apt_install() {
@@ -548,12 +542,15 @@ _use() {
 
     for tool_ref in "$@"; do
         # This repo's own packages are named "@tomgrv/scripts-<tool>" (see
-        # each package.json's "name"), so a peerDependencies key queued by
-        # --pkg (or an explicit "@tomgrv/scripts-<tool>" request) arrives in
-        # that scoped-npm shape. Unwrap it back to the plain "<tool>" name
-        # up front so it resolves the normal, local, default-origin way
-        # below instead of being mistaken for an actual npm-registry
-        # package by the "@*" scheme arm further down.
+        # each package.json's "name"), so an explicit "@tomgrv/scripts-<tool>"
+        # request (or one this same unwrap already applied, for a caller
+        # that composes tool_ref strings itself) arrives in that scoped-npm
+        # shape. Unwrap it back to the plain "<tool>" name up front so it
+        # resolves the normal, local, default-origin way below instead of
+        # being mistaken for an actual npm-registry package by the "@*"
+        # scheme arm further down. (_install_peer_deps above does this same
+        # unwrap itself, before ever calling _use, since it needs the bare
+        # name for its own _PEER_SEEN dedup.)
         case "$tool_ref" in
         "@tomgrv/scripts-"*) tool_ref="${tool_ref#@tomgrv/scripts-}" ;;
         esac

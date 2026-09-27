@@ -3,7 +3,6 @@
 # against this repo's naming convention before it's pushed. Install as
 # .git/hooks/pre-push (or via husky) invoking `git hook-prepush "$@"`.
 
-zz_use --pkg "$0"
 . zz_colors
 
 eval $(

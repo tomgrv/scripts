@@ -5,7 +5,6 @@
 # Install as .git/hooks/post-merge (or via husky) invoking
 # `git hook-postmerge "$@"` — git passes a squash flag (1 if `--squash`).
 
-zz_use --pkg "$0"
 . zz_colors
 
 eval $(

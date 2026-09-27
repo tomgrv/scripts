@@ -13,7 +13,9 @@
         "@tomgrv/scripts-merge-yaml": "*",
         "@tomgrv/scripts-zz_args": "*",
         "@tomgrv/scripts-zz_colors": "*",
-        "@tomgrv/scripts-zz_log": "*"
+        "@tomgrv/scripts-zz_log": "*",
+        "git": "*",
+        "sha1sum": "*"
     },
     "private": true
 }

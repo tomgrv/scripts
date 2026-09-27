@@ -1,6 +1,5 @@
 #!/bin/bash
 
-zz_use --pkg "$0" jq curl
 . zz_colors
 
 eval $(
