@@ -116,6 +116,13 @@ EOF
 
 @test "gv errors clearly when neither docker nor dotnet is available" {
     stub_docker_unreachable
+    # Shadows any real `dotnet` the CI runner may have preinstalled, so
+    # this test's "dotnet is unavailable" premise holds regardless of host.
+    cat >"$TEST_BIN/dotnet" <<'EOF'
+#!/bin/sh
+exit 1
+EOF
+    chmod +x "$TEST_BIN/dotnet"
     run gv -showvariable SemVer
     [ "$status" -ne 0 ]
     [[ "$output" == *"Could not run GitVersion --"* ]]

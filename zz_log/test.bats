@@ -50,7 +50,7 @@ teardown() {
 }
 
 @test "zz_log notice level uses the notice (cyan) pictogram" {
-    run bash -c 'zz_log n "heads up" 2>&1'
+    run bash -c 'unset GITHUB_ACTIONS; zz_log n "heads up" 2>&1'
     [[ "$output" == *$'\033[1;36m'* ]]
     [[ "$output" == *"heads up"* ]]
     [[ "$output" != *"✕"* ]]
@@ -58,13 +58,13 @@ teardown() {
 }
 
 @test "zz_log warning level uses the warning pictogram" {
-    run bash -c 'zz_log w "careful" 2>&1'
+    run bash -c 'unset GITHUB_ACTIONS; zz_log w "careful" 2>&1'
     [[ "$output" == *"!"* ]]
     [[ "$output" == *"careful"* ]]
 }
 
 @test "zz_log error level uses the error pictogram" {
-    run bash -c 'zz_log e "boom" 2>&1'
+    run bash -c 'unset GITHUB_ACTIONS; zz_log e "boom" 2>&1'
     [[ "$output" == *"✕"* ]]
     [[ "$output" == *"boom"* ]]
 }

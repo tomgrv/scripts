@@ -139,10 +139,10 @@ teardown() {
 }
 
 @test "zz_persist upsert into profile.d replaces an existing export line" {
-    skip_msg=""
-    if ! mkdir -p /etc/profile.d 2>/dev/null; then
+    if ! mkdir -p /etc/profile.d 2>/dev/null || ! touch /etc/profile.d/.zzwritetest 2>/dev/null; then
         skip "no write access to /etc/profile.d in this environment"
     fi
+    rm -f /etc/profile.d/.zzwritetest
     tmp=$(mktemp)
     run zz_persist -f "$tmp" -p zzptest2 KEY first
     [ "$status" -eq 0 ]

@@ -52,10 +52,10 @@ fi
 
 if [ -x "${target}" ]; then
     zz_log i "Dispatching to executable target: ${target}"
-    eval exec "${target}" $params
+    exec "${target}" "$@"
 elif [ -f "${target}" ]; then
     zz_log i "Dispatching to subshell target: ${target}"
-    eval exec sh "${target}" $params
+    exec sh "${target}" "$@"
 else
     zz_log w "No dispatch target found" && usage
 fi
