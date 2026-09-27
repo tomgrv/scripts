@@ -31,8 +31,8 @@ deployed as a stub.
 
 ## Dependencies
 
-Declared via `zz_use` at the top of `run.sh` and resolved on demand
-(installed if and only if missing) — see `run.sh` for the exact list.
+Declared as `peerDependencies` in `package.json` and installed by `zz_use`
+alongside this script (only if missing) — see `package.json` for the exact list.
 
 ## Tests
 
