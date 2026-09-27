@@ -119,14 +119,21 @@ _before=""
 # _install_repo_script (the normal deployment path — e.g. copied to
 # /usr/local/bin/edit-script) has no such sibling: install-time also
 # copies package.json alongside it as a hidden ".<name>.package.json", so
-# it's still found post-install. Uses jq when available (consistent with
-# the rest of this script's JSON handling); falls back to a plain grep/sed
-# scan of the "peerDependencies": { ... } block otherwise, since --pkg can
-# run before jq itself has been resolved.
+# it's still found post-install. A third layout — a plain symlink to
+# run.sh, not a copy (this repo's own bats tests symlink every script onto
+# a scratch PATH dir, see tests/helpers.bash) — has $0 pointing at the
+# symlink itself, whose directory has neither file; readlink -f resolves
+# through it back to the real run.sh, whose directory has the genuine
+# package.json. Uses jq when available (consistent with the rest of this
+# script's JSON handling); falls back to a plain grep/sed scan of the
+# "peerDependencies": { ... } block otherwise, since --pkg can run before
+# jq itself has been resolved.
 _queue_pkg_deps() {
     _pkg_dir=$(cd "$(dirname "$1")" && pwd) || { printf '[e] --pkg: %s not found\n' "$1" >&2; return 1; }
     _pkg_name=$(basename "$1")
-    _pkg_json="${_pkg_dir}/package.json"
+    _pkg_resolved=$(readlink -f "$1" 2>/dev/null) && _pkg_resolved_dir=$(dirname "$_pkg_resolved")
+    _pkg_json="${_pkg_resolved_dir:-$_pkg_dir}/package.json"
+    [ -f "$_pkg_json" ] || _pkg_json="${_pkg_dir}/package.json"
     [ -f "$_pkg_json" ] || _pkg_json="${_pkg_dir}/.${_pkg_name}.package.json"
     [ -f "$_pkg_json" ] || { printf '[e] --pkg: no package.json found for %s\n' "$1" >&2; return 1; }
     if command -v jq >/dev/null 2>&1; then
