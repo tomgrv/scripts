@@ -10,8 +10,10 @@
     },
     "peerDependencies": {
         "@tomgrv/scripts-merge-json": "*",
+        "@tomgrv/scripts-merge-yaml": "*",
         "@tomgrv/scripts-zz_args": "*",
-        "@tomgrv/scripts-zz_colors": "*"
+        "@tomgrv/scripts-zz_colors": "*",
+        "@tomgrv/scripts-zz_log": "*"
     },
     "private": true
 }

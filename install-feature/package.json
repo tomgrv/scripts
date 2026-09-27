@@ -9,9 +9,11 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
+    "@tomgrv/scripts-resolve-context": "*",
     "@tomgrv/scripts-zz_args": "*",
     "@tomgrv/scripts-zz_bindir": "*",
-    "@tomgrv/scripts-zz_colors": "*"
+    "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_log": "*"
   },
   "private": true
 }

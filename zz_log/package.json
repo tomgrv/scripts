@@ -8,5 +8,8 @@
   "scripts": {
     "test": "bats test.bats"
   },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_colors": "*"
+  },
   "private": true
 }

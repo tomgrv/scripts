@@ -8,5 +8,9 @@
     "scripts": {
         "test": "bats test.bats"
     },
+    "peerDependencies": {
+        "@tomgrv/scripts-gv": "*",
+        "@tomgrv/scripts-zz_log": "*"
+    },
     "private": true
 }

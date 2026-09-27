@@ -12,6 +12,7 @@
     "@tomgrv/scripts-git-hook-installplugins": "*",
     "@tomgrv/scripts-zz_args": "*",
     "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_log": "*",
     "@tomgrv/scripts-zz_npx": "*"
   },
   "private": true

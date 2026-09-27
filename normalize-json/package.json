@@ -9,8 +9,10 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
+    "@tomgrv/scripts-validate-json": "*",
     "@tomgrv/scripts-zz_args": "*",
-    "@tomgrv/scripts-zz_colors": "*"
+    "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_log": "*"
   },
   "private": true
 }

@@ -8,5 +8,11 @@
   "scripts": {
     "test": "bats test.bats"
   },
+  "peerDependencies": {
+    "@tomgrv/scripts-bump-tag": "*",
+    "@tomgrv/scripts-bump-version": "*",
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_log": "*"
+  },
   "private": true
 }
