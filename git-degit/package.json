@@ -1,16 +1,16 @@
 {
-    "name": "@tomgrv/scripts-git-degit",
-    "version": "0.4.0",
-    "description": "Clone and degit a repository",
-    "bin": {
-        "git-degit": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "peerDependencies": {
-        "@tomgrv/scripts-zz_args": "*",
-        "@tomgrv/scripts-zz_log": "*"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-git-degit",
+  "version": "0.25.0",
+  "description": "Clone and degit a repository",
+  "bin": {
+    "git-degit": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_log": "*"
+  },
+  "private": true
 }

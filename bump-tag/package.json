@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-bump-tag",
-  "version": "0.10.0",
+  "version": "0.25.0",
   "description": "Create or move a version tag (and its dependent major/minor tags), then push it",
   "bin": {
     "bump-tag": "run.sh"

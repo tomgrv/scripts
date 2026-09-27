@@ -1,16 +1,16 @@
 {
-    "name": "@tomgrv/scripts-git-fix-lock",
-    "version": "0.4.0",
-    "description": "Fix git lock files - resolve conflicts and regenerate lock files",
-    "bin": {
-        "git-fix-lock": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "peerDependencies": {
-        "@tomgrv/scripts-zz_args": "*",
-        "@tomgrv/scripts-zz_log": "*"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-git-fix-lock",
+  "version": "0.25.0",
+  "description": "Fix git lock files - resolve conflicts and regenerate lock files",
+  "bin": {
+    "git-fix-lock": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_log": "*"
+  },
+  "private": true
 }
