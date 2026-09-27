@@ -1,12 +1,15 @@
 {
-  "name": "zz_log",
-  "version": "0.22.0",
+  "name": "@tomgrv/scripts-zz_log",
+  "version": "0.25.0",
   "description": "Colored, leveled log line on stderr (i/w/e/s/-)",
   "bin": {
     "zz_log": "run.sh"
   },
   "scripts": {
     "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_colors": "*"
   },
   "private": true
 }

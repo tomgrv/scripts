@@ -1,12 +1,16 @@
 {
-    "name": "git-release-beta",
-    "version": "0.4.0",
-    "description": "Start a new release branch using Git Flow",
-    "bin": {
-        "git-release-beta": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-git-release-beta",
+  "version": "0.25.0",
+  "description": "Start a new release branch using Git Flow",
+  "bin": {
+    "git-release-beta": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-gv": "*",
+    "@tomgrv/scripts-zz_log": "*"
+  },
+  "private": true
 }

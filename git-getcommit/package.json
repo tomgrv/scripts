@@ -1,12 +1,17 @@
 {
-    "name": "git-getcommit",
-    "version": "0.4.0",
-    "description": "List git history and ask for a commit to fix up",
-    "bin": {
-        "git-getcommit": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-git-getcommit",
+  "version": "0.25.0",
+  "description": "List git history and ask for a commit to fix up",
+  "bin": {
+    "git-getcommit": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_log": "*",
+    "@tomgrv/scripts-zz_prompt": "*"
+  },
+  "private": true
 }

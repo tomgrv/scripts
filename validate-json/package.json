@@ -1,6 +1,6 @@
 {
-  "name": "validate-json",
-  "version": "0.18.0",
+  "name": "@tomgrv/scripts-validate-json",
+  "version": "0.25.0",
   "description": "Validate JSON against a local/inferred/remote JSON Schema",
   "bin": {
     "validate-json": "run.sh"
@@ -9,8 +9,10 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "zz_args": "*",
-    "zz_colors": "*"
+    "@tomgrv/scripts-load-json": "*",
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_log": "*"
   },
   "private": true
 }

@@ -1,6 +1,6 @@
 {
-  "name": "git-hook-installplugins",
-  "version": "0.21.0",
+  "name": "@tomgrv/scripts-git-hook-installplugins",
+  "version": "0.25.0",
   "description": "Install npm plugins declared in a package.json key, used by other git-hook-* scripts",
   "bin": {
     "git-hook-installplugins": "run.sh"
@@ -9,8 +9,9 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "zz_args": "*",
-    "zz_colors": "*"
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_log": "*"
   },
   "private": true
 }

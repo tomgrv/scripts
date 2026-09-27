@@ -1,12 +1,15 @@
 {
-    "name": "git-fix",
-    "version": "0.4.0",
-    "description": "Dispatch to git-fix-<subcommand> utilities",
-    "bin": {
-        "git-fix": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-git-fix",
+  "version": "0.25.0",
+  "description": "Dispatch to git-fix-<subcommand> utilities",
+  "bin": {
+    "git-fix": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_dispatch": "*"
+  },
+  "private": true
 }

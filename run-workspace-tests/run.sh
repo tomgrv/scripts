@@ -1,7 +1,6 @@
 #!/bin/sh
 set -e
 
-zz_use zz_colors zz_log zz_args jq
 . zz_colors
 
 eval $(

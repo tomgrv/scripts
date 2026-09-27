@@ -1,12 +1,12 @@
 {
-    "name": "git-unset",
-    "version": "0.4.0",
-    "description": "Unset all Git config keys starting with the given prefix",
-    "bin": {
-        "git-unset": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-git-unset",
+  "version": "0.25.0",
+  "description": "Unset all Git config keys starting with the given prefix",
+  "bin": {
+    "git-unset": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "private": true
 }

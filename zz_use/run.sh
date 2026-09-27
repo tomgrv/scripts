@@ -1,109 +1,68 @@
 #!/bin/sh
-# zz_use — the activator: on-demand dependency management, triggering
-# retrieval or install if and only if a command isn't already on PATH.
+# zz_use — the activator: on-demand dependency management, installing a
+# tool only if it isn't already on PATH.
 #
-# Usage (each functional script calls this once, up front, for every
-# dependency it needs — including the zz_* utility scripts it sources):
-#   zz_use zz_log zz_args jq git
+# Usage: a functional script names only the tools it can't get any other
+# way (an external tool like jq/curl, or a pinned/other-origin script);
+# peerDependencies declared in its own package.json are installed
+# automatically and recursively once the script itself installs (see
+# _install_peer_deps) — a script with nothing beyond that needs no
+# zz_use call at all.
 #
-# Any tool name accepts an optional [org/repo/] prefix and/or @<ref>
-# suffix, to pull it from a different GitHub repo and/or pin it to a
-# specific tag, branch, or commit instead of this repo's own default
-# (ZZ_ORIGIN, ZZ_ORIGIN_REF — see below):
+# A tool name accepts an optional origin prefix ("whatever comes before
+# <tool>'s own last /") and/or an @<ref> suffix to pin a version, instead
+# of this repo's own default (ZZ_ORIGIN/ZZ_ORIGIN_REF):
 #   zz_use validate-json@v2
 #   zz_use someorg/otherscripts/some-tool@v1
-# A pinned or other-origin request always (re)installs — the existing
-# "already available" skip only applies to a plain, default-origin
-# request, since there's no way to tell from an installed script alone
-# which repo/ref produced it. Each origin+ref gets its own cache slot (see
-# ZZ_CACHE_DIR below), so pinning one script doesn't disturb anything
-# already resolved at the default.
+#   zz_use ./some-dir/some-tool     # local path, relative to caller's cwd
+#   zz_use $some-dir/some-tool      # relative to the git repo's top level
+#   zz_use @myscope/pkg/some-tool   # scoped npm package
+#   zz_use mypkg/some-tool          # unscoped npm package
+# A pinned or non-default-origin request always (re)installs, since an
+# already-installed script carries no record of which origin/ref produced
+# it; each origin+ref gets its own cache slot (ZZ_CACHE_DIR) so pinning
+# one script doesn't disturb anything already resolved at the default.
+# A local ("./", "../", "/") or git-root ("$") origin is symlinked in
+# place with no cache/download, so edits to a sibling checkout show up
+# immediately.
 #
-# The [org/repo/] prefix is really "whatever comes before <tool>'s own
-# last /", so besides a GitHub "org/repo" it also accepts, by its leading
-# sigil:
-#   ./some-dir/some-tool   - a local path, relative to the caller's cwd
-#   ./some-tool            - ditto, the caller's cwd itself
-#   ../some-dir/some-tool  - ditto, one level up
-#   /abs/path/some-tool    - a local path, absolute
-#   $some-dir/some-tool    - relative to the current git repo's top level
-#   $/some-tool            - the git root itself, no subdirectory
-#   @myscope/pkg/some-tool - a scoped npm package, fetched from its registry
-#   mypkg/some-tool        - an unscoped npm package, ditto
-# A local ("./", "../", "/") or git-root ("$") origin is resolved as-is —
-# no cache dir, no download, just symlinked into place the same way this
-# repo's own zz_* scripts are, so edits to a local sibling checkout (or
-# another spot in the same git repo) show up on the next call with no
-# re-fetch. An npm origin — scoped ("@scope/pkg") or unscoped ("pkg"),
-# npm's own two valid package-name shapes — is cached and fetched like a
-# GitHub archive, just from the npm registry's tarball instead. A scoped
-# name is recognized by its leading "@" sigil; an unscoped one, by having
-# no "/" at all (a GitHub "org/repo" origin always has one, so a bare
-# single-component origin can only be this). Like any other non-default
-# origin, none of these are ever skipped as "already available" — only a
-# plain, default-origin request can be.
-#
-# Every tool, zz_* core or functional, installs the same way, one at a
-# time (a glob name such as "zz_*" just expands to every match and
-# recurses — that's how setup.sh gets the whole core set in place up
-# front, in one call, before anything else runs):
-#
-#   1. A script from this same repo (e.g. `zz_use load-json` installs
-#      load-json/run.sh, `zz_use zz_log` installs zz_log/run.sh) — from a
-#      local checkout when running from one, otherwise a local cache
-#      (ZZ_CACHE_DIR/<origin>/<ref>, default ~/.cache/zz_scripts), fetched
-#      fresh into that cache the first time it's needed. Use `zz_update`
-#      (or `zz_use --force ...`) to force a fresh download, bypassing the
+# Resolution order for a single tool name (a glob like "zz_*" expands to
+# every match in the source tree first — how setup.sh installs the whole
+# core set in one call):
+#   1. A script from this repo — from a local checkout when running from
+#      one, otherwise the local cache (ZZ_CACHE_DIR/<origin>/<ref>,
+#      default ~/.cache/zz_scripts). `zz_update`/`--force` bypasses the
 #      cache.
-#   2. Otherwise, looked up in config/zz_use.json (ZZ_USE_CONFIG to
-#      override):
-#        {"apt": "<pkg>"}  -> apt-get install -y <pkg> (sudo if not root)
-#        {"url": "...", "archive": "tar.gz"|"tar.xz"|"zip"|"raw",
-#         "binpath": "..."} -> download, extract if needed, resolve a
-#         writable bin dir, and install the binary as <tool>. Templates
-#         support {VERSION}, {OS} (uname -s, lowercased), {ARCH}
-#         (uname -m, mapped to amd64/arm64).
-#   3. No config entry -> fall back to `apt-get install -y <tool>` (same
-#      name) when apt-get is available. (@<ref> has no meaning for an
-#      apt package; it's simply ignored if this is the path taken.)
+#   2. Otherwise config/zz_use.json (ZZ_USE_CONFIG to override):
+#        {"apt": "<pkg>"} -> apt-get install
+#        {"url": "...", "archive": ..., "binpath": "..."} -> download,
+#        extract, install the binary. Templates support {VERSION}, {OS},
+#        {ARCH}.
+#   3. Fall back to `apt-get install -y <tool>`.
+# Still not on PATH afterwards -> error, exit 1.
 #
-# Still not found on PATH afterwards -> error, exit 1.
+# Idempotent: resolved tools are skipped in ~0ms via `command -v`, unless
+# --force or @<ref> is given.
 #
-# Idempotent: safe to call on every script invocation — resolved tools are
-# skipped in ~0ms via `command -v`, unless --force or @<ref> is given.
+# -x/--exec <tool> [arg...]: install <tool> and exec straight into it,
+# replacing this process, with everything after <tool> as its argv. Tool
+# names given before -x are resolved first as ordinary dependencies.
 #
-# -x/--exec <tool> [arg...]: install <tool> (through the same resolution
-# path as any other tool) and exec straight into it, replacing this
-# process, with every argument after <tool> passed through as its argv.
-# Any tool names given before -x are resolved first, as ordinary
-# dependencies:
-#   zz_use zz_log jq -x validate-json some-file.json
-# installs zz_log and jq as usual, then installs and execs
-# `validate-json some-file.json`.
-#
-# zz_use relies on zz_log (and its own siblings) already being on PATH —
-# setup.sh's `zz_use "zz_*"` call is what puts the whole core set there in
-# the first place; this script doesn't re-derive that bootstrapping.
+# zz_use relies on zz_log (and its siblings) already being on PATH —
+# setup.sh's `zz_use "zz_*"` call puts the whole core set there first.
 
 set -e
 
-# A single left-to-right scan handles every option zz_use recognizes
-# (--force/-f, -x/--exec) and rejects any other -leading word, instead of
-# splitting that job between a "just the first arg" check for --force and
-# a separate loop for everything else — the split let --force go
-# unrecognized (and get rejected as an "unknown option") whenever it
-# wasn't literally $1, e.g. `zz_use zz_log --force`. Any error printed
-# here uses plain stderr, not zz_log: this whole scan runs before any
-# tool — zz_log included — has been resolved, unlike every other error in
-# this script. Every non-option arg is single-quoted and appended to
-# _before (restored with `eval set --` further down), so it survives
-# intact even if it contains spaces or quotes. Everything from -x's
-# <tool> onward is left in "$@" as-is: <tool> is threaded straight to
-# `_use`, and whatever follows it is never parsed by zz_use at all — it
-# stays in "$@" untouched, ready to become the exec'd tool's own argv.
+# One left-to-right scan for every option (--force/-f, -x/--exec), so
+# --force is recognized anywhere, not just as literal $1. Errors here use
+# plain stderr, not zz_log: this runs before any tool, zz_log included,
+# is resolved. Non-option args are single-quoted into _before (restored
+# via `eval set --` further down). Everything from -x's <tool> onward is
+# left untouched in "$@", to become the exec'd tool's own argv.
 FORCE=0
 EXEC_TOOL=""
 _before=""
+
 while [ $# -gt 0 ]; do
     case "$1" in
     --force | -f)
@@ -131,43 +90,31 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-# Follow symlinks (an installed/linked "zz_use" on PATH is a symlink to this
-# file) so SCRIPT_DIR/ROOT_DIR resolve to the real checkout, not the link's
-# directory.
+# Follow symlinks (an installed "zz_use" on PATH is a symlink to this
+# file) so SCRIPT_DIR/ROOT_DIR resolve to the real checkout.
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 ZZ_USE_CONFIG="${ZZ_USE_CONFIG:-${SCRIPT_DIR}/config/zz_use.json}"
-# ZZ_ORIGIN (org/repo) and ZZ_ORIGIN_REF (tag/branch/commit) are the
-# default source for any tool name that doesn't specify its own — the
-# same two variables setup.sh uses to pick what it bootstraps from, so a
-# zz_use call defaults to wherever this install actually came from.
+# Default source for any tool name that doesn't specify its own origin —
+# the same variables setup.sh uses to bootstrap, so zz_use defaults to
+# wherever this install came from.
 ZZ_ORIGIN="${ZZ_ORIGIN:-tomgrv/scripts}"
 ZZ_ORIGIN_REF="${ZZ_ORIGIN_REF:-main}"
-# {ORIGIN} and {REF} are substituted with the requested org/repo and
-# tag/branch/commit — GitHub's archive endpoint accepts a tag, a branch,
-# or a commit SHA interchangeably in the {REF} position.
-#
-# The default is built as a separate plain assignment, not inlined into
-# ${ZZ_USE_REPO_URL:-...}: a literal "}" inside that expansion's default
-# text (from "{REF}") terminates the expansion early at parse time,
-# regardless of quoting — `${X:-a{REF}.b}` evaluates to `a{REF` with
-# literal `.b}` appended after, not the intended default string.
+# Built as a separate assignment, not inlined into ${ZZ_USE_REPO_URL:-...}:
+# a literal "}" in the default text (from "{REF}") would terminate that
+# expansion early at parse time regardless of quoting.
 _ZZ_USE_REPO_URL_DEFAULT='https://github.com/{ORIGIN}/archive/{REF}.tar.gz'
 ZZ_USE_REPO_URL="${ZZ_USE_REPO_URL:-$_ZZ_USE_REPO_URL_DEFAULT}"
 ZZ_CACHE_DIR="${ZZ_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zz_scripts}"
 
-# Every temp dir this script creates (a fresh cache download, a
-# _download_install extraction, _resolve_src's own symlink dir) is cleaned
-# up through this single mechanism instead of each having its own EXIT
-# trap (which would just clobber each other).
+# Every temp dir this script creates is cleaned up through this single
+# mechanism instead of each having its own EXIT trap (which would clobber
+# each other).
 _TMP_DIRS=""
 _add_tmp() { _TMP_DIRS="${_TMP_DIRS} $1"; }
-# Always returns 0: an EXIT trap's own exit status becomes the shell's
-# final exit code when the script ends by falling off the end rather than
-# an explicit `exit N` — without this, [ -n "$_TMP_DIRS" ] being false
-# (nothing to clean up, the common case) would silently turn every
-# otherwise-successful run into a reported failure.
+# Always returns 0, so an empty $_TMP_DIRS (nothing to clean up) doesn't
+# turn an otherwise-successful run into a reported failure.
 _cleanup() {
     [ -n "$_TMP_DIRS" ] && rm -rf $_TMP_DIRS
     return 0
@@ -176,34 +123,27 @@ trap _cleanup EXIT
 
 # _SRC: the resolved source tree for _SRC_ORIGIN/_SRC_REF (set by
 # _resolve_src). _SRC_RESOLVED guards against re-resolving the same
-# origin+ref more than once per run — even under --force, which only
-# needs to force *one* fresh download per origin+ref, not one per tool
-# requested at it (zz_update alone names 13 core tools at the same
-# default origin/ref). A different origin+ref requested later in the
-# same run re-resolves (and switches _SRC to it).
+# origin+ref more than once per run, even under --force (which only
+# needs one fresh download per origin+ref, not one per tool requested at
+# it). A different origin+ref requested later in the run re-resolves.
 _SRC=""
 _SRC_ORIGIN=""
 _SRC_REF=""
 _SRC_RESOLVED=0
 
-# True (0) if <cache_dir> already holds a fetched, well-formed archive
-# (a <name>/run.sh directly under it, same layout --strip-components=1
-# below always produces) — shared warm-cache test for every origin that
-# downloads and caches (GitHub archive, npm registry), so the same
-# "already there and looks right" rule applies to all of them.
+# True if <cache_dir> already holds a fetched, well-formed archive (a
+# <name>/run.sh directly under it) — shared warm-cache test for every
+# origin that downloads and caches.
 _cache_warm() {
     for _cw_d in "$1"/*/; do [ -f "${_cw_d}run.sh" ] && return 0; done
     return 1
 }
 
-# Fetch <url> (a tar.gz archive whose single top-level dir is stripped,
-# same as a GitHub codeload archive or an npm registry tarball) into
-# <cache_dir> unless it's already warm there (or --force), verifying the
-# result actually has <name>/run.sh scripts before replacing any existing
-# cache — shared by every origin below (GitHub archive, npm registry) so
-# the fetch/verify/replace dance is written once. <desc> is a
-# human-readable label for the log lines and any error. Sets _SRC on
-# success; <url> is unused (and may be left empty) when already warm.
+# Fetch <url> (a tar.gz archive whose single top-level dir is stripped)
+# into <cache_dir> unless already warm (or --force), verifying it has
+# <name>/run.sh scripts before replacing any existing cache. Shared by
+# every origin below. Sets _SRC on success; <url> may be empty when
+# already warm.
 _fetch_archive() {
     _cache_dir="$1" _url="$2" _desc="$3"
     if [ "$FORCE" -eq 1 ] || ! _cache_warm "$_cache_dir"; then
@@ -223,19 +163,11 @@ _fetch_archive() {
     _SRC="$_cache_dir"
 }
 
-# Fetch (or reuse the cache for) an npm-registry origin — scoped
-# ("@scope/pkg") or unscoped ("pkg") alike, npm's own two valid
-# package-name shapes (see
-# https://docs.npmjs.com/cli/v12/configuring-npm/package-json#name);
-# shared by both matching arms in _resolve_src's own case below since the
-# only difference between them is a scoped name's own "/" needing
-# percent-encoding for the registry URL, which the sed below is a no-op
-# for when there isn't one. <ref> is a dist-tag or exact version
-# (default: "latest") — registry.npmjs.org/<name>/<ref> resolves either
-# the same way, exactly like `npm view <name>@<ref>` would. Cached under
-# its own origin+ref slot exactly like a GitHub archive (_fetch_archive
-# above), just fetched from the npm registry's tarball instead of
-# GitHub's. Sets _SRC on success.
+# Fetch (or reuse the cache for) an npm-registry origin, scoped
+# ("@scope/pkg") or unscoped ("pkg") alike. <ref> is a dist-tag or exact
+# version (default "latest"). Cached under its own origin+ref slot like a
+# GitHub archive (_fetch_archive above), just fetched from the npm
+# registry's tarball. Sets _SRC on success.
 _resolve_npm() {
     command -v jq >/dev/null 2>&1 || { printf '[e] npm origin %s requires jq on PATH\n' "$_req_origin" >&2; return 1; }
     _npm_ref="${_req_ref:-latest}"
@@ -250,16 +182,13 @@ _resolve_npm() {
     _fetch_archive "$_cache_dir" "$_tarball" "npm package ({B ${_req_origin}@${_npm_ref}})"
 }
 
-# Resolve _SRC for <origin> (default: ZZ_ORIGIN) at <ref> (default:
-# ZZ_ORIGIN_REF) — a local checkout (ROOT_DIR, when zz_use is running from
-# within this repo, the requested origin is this repo's own default, and
-# no specific ref was asked for), otherwise the local cache for that
-# origin+ref (refreshed first when missing or under --force) — then
-# expose every zz_*/run.sh in it on PATH under its bare conventional name
-# (zz_colors, zz_log, zz_bindir, ...) via symlinks in a scratch dir.
-# That's what lets `zz_log ...` and `. zz_colors` — including from
-# *inside* a functional script's own source — all just resolve normally
-# from here on, with zero reimplementation of what those scripts do.
+# Resolve _SRC for <origin> (default ZZ_ORIGIN) at <ref> (default
+# ZZ_ORIGIN_REF): a local checkout (ROOT_DIR) when running from within
+# this repo at the default origin/ref, otherwise the local cache for
+# that origin+ref (refreshed first when missing or under --force). Then
+# exposes every zz_*/run.sh in it on PATH under its bare name (zz_colors,
+# zz_log, ...) via symlinks in a scratch dir, so `zz_log ...` and
+# `. zz_colors` resolve normally from here on.
 _resolve_src() {
     _req_origin="${1:-$ZZ_ORIGIN}"
     _req_ref="${2:-}"
@@ -272,24 +201,15 @@ _resolve_src() {
     else
         case "$_req_origin" in
         . | .. | ./* | ../* | /*)
-            # Local-path scheme: resolved directly relative to the caller's
-            # cwd (or absolute), no cache dir and no curl/tar — the whole
-            # point is to pick up a sibling checkout as-is (and its future
-            # edits) via symlink, exactly like ROOT_DIR above. A bare "." or
-            # ".." (the origin of "./tool" or "../tool", i.e. everything
-            # before the last "/") is a local path too — without these two
-            # arms it would fall through to the unscoped-npm "*)" arm below.
-            # Plain stderr, not zz_log: this can be the very first thing
-            # zz_use ever resolves (see the usage-error comment above), so
-            # zz_log itself may not be on PATH yet.
+            # Local-path scheme: resolved relative to the caller's cwd (or
+            # absolute), no cache/download — picks up a sibling checkout
+            # as-is via symlink. Plain stderr, not zz_log: this can be the
+            # very first thing zz_use resolves, before zz_log is on PATH.
             _SRC=$(cd "$_req_origin" 2>/dev/null && pwd) || { printf '[e] Local repo path %s not found\n' "$_req_origin" >&2; return 1; }
             ;;
         '$'*)
-            # Git-root scheme ("$" alone, or "$<subpath>"): resolved
-            # relative to the current git repository's top level — same
-            # no-cache/no-download handling as a local path, just anchored
-            # at the repo root instead of the caller's cwd, so it still
-            # works from a subdirectory.
+            # Git-root scheme ("$" or "$<subpath>"): same no-cache handling
+            # as a local path, anchored at the repo root instead of cwd.
             _git_root=$(git rev-parse --show-toplevel 2>/dev/null) || { printf '[e] %s: not inside a git repository\n' "$_req_origin" >&2; return 1; }
             _sub="${_req_origin#\$}"
             case "$_sub" in /*) _sub="${_sub#/}" ;; esac
@@ -300,31 +220,24 @@ _resolve_src() {
             fi
             ;;
         @*)
-            # npm scheme, scoped package (e.g. "@myscope/pkg") — see
-            # _resolve_npm above; the "*)" catch-all arm below handles
-            # npm's other, unscoped name shape.
+            # npm scheme, scoped package (e.g. "@myscope/pkg").
             _resolve_npm || return 1
             ;;
         */*)
             # GitHub-archive scheme: "org/repo" — always has a "/", unlike
-            # an unscoped npm name (caught by the "*)" arm below), which is
-            # what distinguishes the two.
+            # an unscoped npm name (caught by the "*)" arm below).
             _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_req_ref:-$ZZ_ORIGIN_REF}"
             _url=""
             if [ "$FORCE" -eq 1 ] || ! _cache_warm "$_cache_dir"; then
-                # "|" (not "/") as the sed delimiter: {ORIGIN} always contains
-                # "/" (org/repo), and {REF} can too (a branch name like
-                # "feature/foo") — either would break the s/// syntax with "/".
+                # "|" (not "/") as the sed delimiter: {ORIGIN} and {REF}
+                # can themselves contain "/" (org/repo, or a branch name
+                # like "feature/foo"), which would break s///.
                 _url=$(printf '%s' "$ZZ_USE_REPO_URL" | sed -e "s|{ORIGIN}|${_req_origin}|g" -e "s|{REF}|${_req_ref:-$ZZ_ORIGIN_REF}|g")
             fi
             _fetch_archive "$_cache_dir" "$_url" "repo scripts ({B ${_req_origin}@${_req_ref:-$ZZ_ORIGIN_REF}})" || return 1
             ;;
         *)
-            # npm scheme, unscoped package (e.g. "mypkg") — npm's other
-            # valid package-name shape, distinguished from the "org/repo"
-            # GitHub scheme above by having no "/" at all. See _resolve_npm
-            # above for the fetch/cache logic, shared with the scoped "@*"
-            # arm.
+            # npm scheme, unscoped package (e.g. "mypkg") — no "/" at all.
             _resolve_npm || return 1
             ;;
         esac
@@ -344,9 +257,7 @@ _resolve_src() {
 }
 
 # Resolve (and create if needed) a writable bin directory. Delegates to
-# the real zz_bindir — resolving _SRC first (if it isn't already on PATH)
-# makes that possible without reimplementing its candidate-directory logic
-# here too.
+# the real zz_bindir, resolving _SRC first if it isn't already on PATH.
 _bindir() {
     _t="$1"
     command -v zz_bindir >/dev/null 2>&1 || _resolve_src || return 1
@@ -354,10 +265,9 @@ _bindir() {
     printf '%s\n' "$dir"
 }
 
-# _bindir runs (and exports PATH) inside a subshell whenever it's captured
-# via $(...), so its PATH extension never reaches this script's own
-# environment. Re-apply it here so a tool installed just now is actually
-# found by this script's own `command -v` checks below.
+# _bindir runs inside a subshell whenever captured via $(...), so its PATH
+# extension never reaches this script's own environment — re-apply it
+# here so a tool installed just now is found by later `command -v` checks.
 _ensure_path() {
     case ":$PATH:" in
     *":$1:"*) ;;
@@ -365,12 +275,10 @@ _ensure_path() {
     esac
 }
 
-# A handful of scripts (validate-json's "-l true"/"use script folder"
-# fallback schema, in particular) resolve sibling data relative to their
-# own installed location - a bare bindir/config/<file> next to the script,
-# not the run.sh they were copied from. Since several scripts can each
-# ship a config/ dir, merge them all into one shared bindir/config/
-# instead of a single script "owning" it: copy in whatever isn't already
+# Some scripts (validate-json's "-l true" fallback schema, in particular)
+# resolve sibling data relative to their installed location, not their
+# source run.sh. Since several scripts can ship a config/ dir, merge them
+# all into one shared bindir/config/: copy in whatever isn't already
 # there, never overwrite (first script installed wins on a name clash).
 _install_script_config() {
     _cfg_src="$1" _cfg_dir="$2"
@@ -383,12 +291,39 @@ _install_script_config() {
     done
 }
 
-# Install a single named script from this or another repo — functional or
-# core, always individually: nothing in this repo needs to be installed as
-# a group any more (setup.sh already puts the whole core set in place up
-# front via a "zz_*" glob call). Returns non-zero (silently) when <name>
-# isn't a script in that repo at all, so the caller can fall through to
-# the apt/config lookup for genuinely external tools.
+# Install every dependency <name> declares in its own package.json's
+# peerDependencies — sibling repo scripts and external tools alike,
+# recursively, through the ordinary _use resolution path. Runs against
+# the *source* package.json in _SRC, before install.
+#
+# _PEER_SEEN guards against reprocessing the same dependency twice (two
+# siblings sharing one, or a glob install) and against a cycle recursing
+# forever, since the dependency causing the cycle isn't on PATH yet for
+# _use's own "already available" skip to catch.
+_PEER_SEEN=""
+_install_peer_deps() {
+    _peer_json="${_SRC}/$1/package.json"
+    [ -f "$_peer_json" ] || return 0
+    if command -v jq >/dev/null 2>&1; then
+        _peers=$(jq -r '.peerDependencies // {} | keys[]' "$_peer_json")
+    else
+        _peers=$(sed -n '/"peerDependencies"[[:space:]]*:/,/}/p' "$_peer_json" | grep -o '"[^"]*"[[:space:]]*:' | sed -e 's/"[[:space:]]*:$//' -e 's/^"//' | grep -v '^peerDependencies$')
+    fi
+    for _peer in $_peers; do
+        case "$_peer" in
+        "@tomgrv/scripts-"*) _peer="${_peer#@tomgrv/scripts-}" ;;
+        esac
+        case " $_PEER_SEEN " in
+        *" $_peer "*) continue ;;
+        esac
+        _PEER_SEEN="${_PEER_SEEN} ${_peer}"
+        _use "$_peer" || return 1
+    done
+}
+
+# Install a single named script from this or another repo. Returns
+# non-zero (silently) when <name> isn't a script in that repo at all, so
+# the caller can fall through to the apt/config lookup for external tools.
 _install_repo_script() {
     _name="$1"
     _origin="${2:-$ZZ_ORIGIN}"
@@ -400,17 +335,16 @@ _install_repo_script() {
     _ensure_path "$_dir"
 
     zz_log i "Installing {Purple ${_name}} from {U ${_SRC}/${_name}} to {U ${_dir}}..."
-    # Write to a temp file and `mv` it into place rather than `cp`ing over
-    # the target directly: <_name> can be zz_use itself (e.g. under
-    # zz_update, which force-refreshes the core scripts one by one,
-    # including zz_use), and an in-place cp can truncate a script the
-    # shell is still mid-read on. mv (same filesystem) is an atomic
-    # rename instead.
+    # Write to a temp file and `mv` into place rather than `cp` over the
+    # target directly: <_name> can be zz_use itself (e.g. under
+    # zz_update), and an in-place cp can truncate a script the shell is
+    # still mid-read on. mv (same filesystem) is an atomic rename instead.
     cp "${_SRC}/${_name}/run.sh" "${_dir}/.${_name}.$$"
     chmod +x "${_dir}/.${_name}.$$"
     mv "${_dir}/.${_name}.$$" "${_dir}/${_name}"
     _install_script_config "${_SRC}/${_name}/config" "${_dir}/config"
     zz_log s "Installed {Purple ${_name}} to {U ${_dir}/${_name}}"
+    _install_peer_deps "$_name" || return 1
 }
 
 _apt_install() {
@@ -481,26 +415,29 @@ _download_install() {
 }
 
 # The activator itself: resolve every requested tool, one at a time.
-# "[org/repo/]<tool>[@ref]" pulls that one tool from a specific GitHub
-# repo and/or pins it to a specific tag/branch/commit instead of this
-# repo's own default (ZZ_ORIGIN/ZZ_ORIGIN_REF); the origin/ref are
-# stripped from the name for command lookup/config/case matching and
-# threaded through to _resolve_src/_install_repo_script.
+# "[org/repo/]<tool>[@ref]" pulls that tool from a specific repo and/or
+# pins it to a tag/branch/commit instead of ZZ_ORIGIN/ZZ_ORIGIN_REF.
 _use() {
     if [ $# -eq 0 ]; then
-        # Plain stderr, not zz_log: the very first call into _use can
-        # happen before any tool (zz_log included) has been resolved.
+        # Plain stderr, not zz_log: this can run before zz_log itself has
+        # been resolved.
         printf '[e] Usage: zz_use <tool>[@ref] [tool[@ref]...]\n' >&2
         return 1
     fi
 
     for tool_ref in "$@"; do
-        # A leading "@" is the npm scheme sigil (an npm-registry origin is
-        # simply its package name, e.g. "@myscope/pkg" for a scoped
-        # package), not the "@ref" pin suffix — stripped and re-prepended
-        # around the *@* split below so it's never mistaken for one, the
-        # same way "@myscope/pkg/tool@1.2.3" still pins to "1.2.3" instead
-        # of splitting on the scope's own "@".
+        # This repo's own packages are named "@tomgrv/scripts-<tool>", so
+        # unwrap that scoped-npm shape back to the plain name up front, or
+        # it'd be mistaken for an actual npm-registry package by the "@*"
+        # arm below.
+        case "$tool_ref" in
+        "@tomgrv/scripts-"*) tool_ref="${tool_ref#@tomgrv/scripts-}" ;;
+        esac
+
+        # A leading "@" is the npm scheme sigil (e.g. "@myscope/pkg"), not
+        # the "@ref" pin suffix — stripped and re-prepended around the
+        # *@* split below so e.g. "@myscope/pkg/tool@1.2.3" still pins to
+        # "1.2.3" instead of splitting on the scope's own "@".
         case "$tool_ref" in
         @*)
             _at_sigil="@"
@@ -522,12 +459,9 @@ _use() {
             ;;
         esac
 
-        # The [org/repo/], [./local/path/], [$git/root/path/] or
-        # [@npm/pkg/] prefix is everything before <tool>'s own last "/" —
-        # one rule for every scheme, instead of a github-specific "exactly
-        # two components" pattern that a single-component local/git-root/npm
-        # origin (e.g. "$/tool") could never match. A tool name with no "/"
-        # at all still just defaults to ZZ_ORIGIN.
+        # The origin prefix is everything before <tool>'s own last "/" —
+        # one rule for every scheme. A tool name with no "/" at all
+        # defaults to ZZ_ORIGIN.
         case "$_name_part" in
         */*)
             origin="${_name_part%/*}"
@@ -540,16 +474,10 @@ _use() {
         esac
 
         # A glob tool name (e.g. "zz_*") expands to every matching script
-        # folder in the resolved source tree instead of naming one script
-        # directly — this is how setup.sh puts the whole core zz_* set in
-        # place with a single `zz_use "zz_*"` call. Each match is installed
-        # for real, unconditionally: _resolve_src's own symlink step (see
-        # above) puts every zz_* name on PATH as a side effect, so the
-        # ordinary "already available" skip below can't be trusted here —
-        # it would make every match after the first look already installed
-        # and skip the one thing this glob call exists to do. A glob
-        # matching nothing is a soft no-op (warn, don't fail) — unlike a
-        # literal unknown tool name, which still errors out below.
+        # folder in the source tree. Each match installs unconditionally:
+        # _resolve_src's own symlink step puts every zz_* name on PATH as
+        # a side effect, so the "already available" skip below can't be
+        # trusted here. A glob matching nothing warns rather than failing.
         case "$tool" in
         *\**)
             _resolve_src "$origin" "$ref" || return 1
@@ -564,12 +492,11 @@ _use() {
             ;;
         esac
 
-        # A plain, default-origin, unversioned request, not under --force
-        # (or --force on a non-zz_ tool, which --force doesn't apply to),
-        # can be skipped if already on PATH. A pinned ref and/or a
-        # non-default origin always (re)installs: there's no way to tell
-        # from an installed script alone which repo/ref produced it, so
-        # "already available" can't be trusted to mean "the requested one".
+        # A plain, default-origin, unversioned request (or --force on a
+        # non-zz_ tool, which --force doesn't apply to) can be skipped if
+        # already on PATH. A pinned ref or non-default origin always
+        # (re)installs, since an installed script carries no record of
+        # which repo/ref produced it.
         if [ -z "$ref" ] && [ "$origin" = "$ZZ_ORIGIN" ] && { [ "$FORCE" -eq 0 ] || [ "${tool#zz_}" = "$tool" ]; }; then
             if command -v "$tool" >/dev/null 2>&1; then
                 zz_log d "{Purple $tool} already available"
@@ -596,7 +523,7 @@ _use() {
                     || zz_log w "Download install of {Purple $tool} failed"
             fi
         elif _install_repo_script "$tool" "$origin" "$ref"; then
-            : # a functional (or core, requested by name) script from this or another repo
+            :
         else
             _apt_install "$tool" || true
         fi
@@ -609,15 +536,13 @@ _use() {
 }
 
 # -x/--exec: install EXEC_TOOL alongside the dependencies collected into
-# _before, then exec into it — replacing this process, remaining "$@"
-# (never touched by the parsing loop above) becoming its argv. Falls
+# _before, then exec into it, remaining "$@" becoming its argv. Falls
 # through to the plain _use call below when -x wasn't given.
 if [ -n "$EXEC_TOOL" ]; then
     eval "_use $_before \"\$EXEC_TOOL\"" || exit 1
-    # Same leading-"@" vs trailing-"@ref" split as in _use, and the same
-    # last-"/" origin strip: an npm-origin exec target (e.g.
-    # "@myscope/pkg/tool@1.2.3") must not have its command name mangled by
-    # naively splitting on the scope's own "@".
+    # Same leading-"@" vs trailing-"@ref" split as in _use: an npm-origin
+    # exec target (e.g. "@myscope/pkg/tool@1.2.3") must not have its
+    # command name mangled by splitting on the scope's own "@".
     case "$EXEC_TOOL" in
     @*)
         _exec_rest="${EXEC_TOOL#@}"

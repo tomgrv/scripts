@@ -1,12 +1,18 @@
 {
-  "name": "bump-changelog",
-  "version": "0.10.0",
+  "name": "@tomgrv/scripts-bump-changelog",
+  "version": "0.25.0",
   "description": "Generate a CHANGELOG.md entry from conventional commits, optionally bumping version files and tagging",
   "bin": {
     "bump-changelog": "run.sh"
   },
   "scripts": {
     "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-bump-tag": "*",
+    "@tomgrv/scripts-bump-version": "*",
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_log": "*"
   },
   "private": true
 }

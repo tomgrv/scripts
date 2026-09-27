@@ -1,26 +1,11 @@
 #!/bin/sh
-# zz_call — ensure a caller's declared env vars are set before running
-# something that needs them, vps-dispatch.sh style: ask for whatever's
-# missing (zz_prompt), persist the answer so nothing asks again next time
-# (zz_persist), then call — either exec a wrapped command with them
-# exported, or with no command, print filtered/formatted `export
-# VAR='value'` lines for the caller to `eval` (the same pattern zz_bindir
-# uses for `$dir`).
+# zz_call — resolve a caller's declared env vars (prompt+persist if
+# missing via zz_prompt/zz_persist), then either exec a wrapped command
+# with them exported, or print `export VAR='value'` lines for the caller
+# to `eval`.
 #
-# What to check/ask/set, and what to print back, is declared in a
-# package.json (default: ./package.json — the caller's own, since every
-# script in this repo has one right next to its run.sh) under `config`.
-# "input" and "output" entries share one schema:
-#
-#   {"var": "<name>", "as": "<export-name>", "question": "...", "default": "..."}
-#
-# - "var" (required): the env var checked, prompted for, and persisted.
-# - "as" (optional, default: var): the name it's exported/printed under —
-#   lets a command see a differently-named var than the one that was
-#   actually asked/persisted (e.g. ask for "DB_PASSWORD", export it to a
-#   psql-invoked command as "PGPASSWORD").
-# - "question"/"default": only meaningful on an "input" entry — offered to
-#   zz_prompt when "var" is missing.
+# Config comes from a package.json (default: ./package.json) under
+# `config`:
 #
 #   {
 #     "config": {
@@ -33,23 +18,21 @@
 #     }
 #   }
 #
-# - "input": one entry per env var to ensure is set. Each is checked
-#   against the environment first; only a missing (unset/empty) one is
-#   asked for (via "question", offering "default") and persisted (to
-#   "file", default ".env") — always under "var", regardless of "as". An
-#   already-set var is used as-is — nothing is asked, and nothing new is
-#   persisted for it. Every input entry is exported under "var", and
-#   additionally under "as" when the two differ.
-# - "output": which resolved vars to print as `export <as>='value'` lines,
-#   reading each one's current value from "var". Defaults to the "input"
-#   list itself when "output" is omitted.
+# - "var" (required): the env var checked, prompted for, and persisted.
+# - "as" (optional, default: var): export/print name, for a command that
+#   expects a different name (e.g. ask "DB_PASSWORD", export "PGPASSWORD").
+# - "question"/"default": used for "input" entries when "var" is unset.
+# - "input": vars to ensure are set — already-set ones are used as-is;
+#   missing ones are prompted, persisted to "file" (default ".env"), and
+#   exported under both "var" and "as".
+# - "output": which resolved vars to print as `export <as>='value'`.
+#   Defaults to "input" when omitted.
 #
 # Usage:
 #   zz_call [-p package.json] [command [args...]]
 
 set -e
 
-zz_use jq
 . zz_colors
 
 eval $(
@@ -104,9 +87,8 @@ for _entry in $_input_entries; do
 done
 IFS="$_old_ifs"
 
-if [ -n "$cmd" ]; then
-    eval exec $cmd
-    exit 0
+if [ "$#" -gt 0 ]; then
+    exec "$@"
 fi
 
 _output_entries=$(jq -c '(.config.output // .config.input // []) | .[]' "$pkg")

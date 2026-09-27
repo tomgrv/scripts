@@ -6,7 +6,6 @@
 # Install as .git/hooks/prepare-commit-msg (or via husky) invoking
 # `git hook-preparecommitmsg "$@"`.
 
-zz_use zz_colors zz_args zz_npx git-hook-installplugins git-cz
 . zz_colors
 
 eval $(
@@ -20,15 +19,12 @@ eval $(
 toplevel=$(git rev-parse --show-toplevel) || { zz_log e "Not inside a git repository."; exit 1; }
 cd "$toplevel"
 
-# Enable colors
 if [ -t 1 ]; then
 	exec >/dev/tty 2>&1
 fi
 
-# Install commitizen plugins
 git-hook-installplugins -g '[.config.commitizen.path // "", .commitlint.extends // ""]'
 
-# Edit commit message
 if [ $(grep -cv -e '^#' -e '^$' .git/COMMIT_EDITMSG) -eq 0 ]; then
 	(exec </dev/tty && zz_npx git-cz --hook || zz_log e "Unable to start commitizen.") || zz_log e "Commitizen failed."
 else

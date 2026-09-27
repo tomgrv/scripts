@@ -1,12 +1,10 @@
 #!/bin/sh
 
-# Parse arguments and print help if needed
 eval $(
     zz_args "Release production branch" $0 "$@" <<-help
 help
 )
 
-# Change to repository root
 cd "$(git rev-parse --show-toplevel)" >/dev/null
 
 # Refresh tags up front so the "already finished" checks below (which rely on
@@ -17,7 +15,6 @@ git fetch origin --tags >/dev/null 2>&1
 versiontag_prefix=$(git config gitflow.prefix.versiontag 2>/dev/null)
 versiontag_prefix="${versiontag_prefix:-v}"
 
-#### STEP: resolve which flow branch to finish -----------------------------
 # Prefer the branch we're already on, so a checked-out hotfix/release branch
 # is never overridden by an unrelated one that also happens to exist locally.
 current=$(git branch --show-current)
@@ -78,20 +75,17 @@ if [ -z "$flow" ]; then
     fi
 fi
 
-# Exit if no flow branch is found
 if [ -z "$flow" ] || [ -z "$name" ]; then
     zz_log e "No flow branch found"
     exit 1
 fi
 
-# Switch to the resolved branch
 if ! git checkout "$flow/$name" >/dev/null 2>&1; then
     zz_log e "Cannot switch to $flow/$name branch"
     exit 1
 fi
 zz_log s "On branch: {Blue $flow/$name}"
 
-#### STEP: determine target version + whether finish already happened ------
 GBV=$(gv -showvariable MajorMinorPatch)
 if [ -z "$GBV" ]; then
     zz_log e "Cannot get version from .gitversion"
@@ -107,18 +101,15 @@ if git rev-parse -q --verify "refs/tags/${versiontag_prefix}${GBV}" >/dev/null; 
     finished=true
 fi
 
-# Prevent git editor prompt during finish
 export GIT_EDITOR=:
 
 if [ -z "$finished" ]; then
 
-    # Ensure working directory is clean
     if [ -n "$(git status --porcelain)" ]; then
         zz_log e "Working directory is not clean. Please commit or stash changes."
         exit 1
     fi
 
-    # Ensure the flow branch has an up-to-date remote
     if ! git fetch origin >/dev/null 2>&1; then
         zz_log e "Cannot fetch from remote"
         exit 1
@@ -132,8 +123,7 @@ if [ -z "$finished" ]; then
         exit 1
     fi
 
-    #### STEP: bump version/changelog + commit (idempotent -- skip if a
-    #### previous run already made this exact commit)
+    # Idempotent: skip if a previous run already made this exact commit.
     if [ "$(git log -1 --pretty=%s)" = "chore(release): $GBV" ]; then
         zz_log i "Version & CHANGELOG already committed for $GBV, skipping bump"
     else
@@ -148,14 +138,13 @@ if [ -z "$finished" ]; then
         fi
     fi
 
-    #### STEP: push (safe to repeat -- no-op once the remote already has it)
+    # Safe to repeat -- no-op once the remote already has it.
     if ! git push --set-upstream origin "$flow/$name"; then
         zz_log e "Cannot push $flow/$name, re-run this command to retry"
         exit 1
     fi
     zz_log s "Version & CHANGELOG committed and pushed"
 
-    # Ensure develop branch is up-to-date before finishing release
     if ! git fetch origin develop:develop; then
         zz_log e "Cannot fetch develop branch from remote"
         exit 1
@@ -166,7 +155,6 @@ if [ -z "$finished" ]; then
         exit 1
     fi
 
-    #### STEP: finish (merge to main/develop + tag + push)
     # git flow finish prepends gitflow.prefix.versiontag to --tagname itself,
     # so pass the bare version here -- prefixing it ourselves would tag "vv$GBV".
     if git flow "$flow" finish "$name" --push --tagname "$GBV" --message "$GBV" ; then
@@ -178,7 +166,6 @@ if [ -z "$finished" ]; then
     fi
 fi
 
-#### STEP: tag follow-up + cleanup (both idempotent, safe to repeat) -------
 bump-tag "$GBV"
 # Clear release state only once the release has actually finished.
 rm -f .git/RELEASE

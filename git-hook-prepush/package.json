@@ -1,6 +1,6 @@
 {
-  "name": "git-hook-prepush",
-  "version": "0.21.0",
+  "name": "@tomgrv/scripts-git-hook-prepush",
+  "version": "0.25.0",
   "description": "Git pre-push hook: validate the current branch name",
   "bin": {
     "git-hook-prepush": "run.sh"
@@ -9,9 +9,10 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "zz_args": "*",
-    "zz_colors": "*",
-    "zz_npx": "*"
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_log": "*",
+    "@tomgrv/scripts-zz_npx": "*"
   },
   "private": true
 }

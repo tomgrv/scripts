@@ -1,6 +1,6 @@
 {
-  "name": "merge-json",
-  "version": "0.18.0",
+  "name": "@tomgrv/scripts-merge-json",
+  "version": "0.25.0",
   "description": "Recursively merge one JSON file into another, arrays deduped and unioned",
   "bin": {
     "merge-json": "run.sh"
@@ -9,8 +9,10 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "zz_args": "*",
-    "zz_colors": "*"
+    "@tomgrv/scripts-normalize-json": "*",
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_log": "*"
   },
   "private": true
 }

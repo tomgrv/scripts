@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-zz_use zz_colors zz_args jq
 . zz_colors
 
 eval $(

@@ -1,6 +1,6 @@
 {
-  "name": "normalize-json",
-  "version": "0.18.0",
+  "name": "@tomgrv/scripts-normalize-json",
+  "version": "0.25.0",
   "description": "Sort JSON object keys per schema and alphabetically, optional in-place write",
   "bin": {
     "normalize-json": "run.sh"
@@ -9,8 +9,10 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "zz_args": "*",
-    "zz_colors": "*"
+    "@tomgrv/scripts-validate-json": "*",
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_log": "*"
   },
   "private": true
 }

@@ -1,12 +1,12 @@
 {
-    "name": "git-integrate",
-    "version": "0.4.0",
-    "description": "Integrate modifications from the remote repository",
-    "bin": {
-        "git-integrate": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-git-integrate",
+  "version": "0.25.0",
+  "description": "Integrate modifications from the remote repository",
+  "bin": {
+    "git-integrate": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "private": true
 }

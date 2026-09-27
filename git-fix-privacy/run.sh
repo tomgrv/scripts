@@ -1,6 +1,5 @@
 #!/bin/sh
 
-# Function to print help and manage arguments
 eval $(
 	zz_args "Fix privacy in history" $0 "$@" <<-help
 		f -      force      force overwrite backup
@@ -12,35 +11,27 @@ eval $(
 	help
 )
 
-# Navigate to the repository root
 cd "$(git rev-parse --show-toplevel)" >/dev/null
 
-# Fetch updates from the remote repository
 git fetch --progress --prune --recurse-submodules=no origin >/dev/null
 
-# Check if the old option is set
 if [ -z "$old" ]; then
 	zz_log w "Old email is not specified, it will be taken from the last commit"
 	old=$(git log -1 --pretty=format:'%ae')
 
-	# Asks for confirmation to proceed with the old email
 	[ "$(zz_ask Yn "Do you want to proceed with this <$old> as old email?")" = "y" ] || exit 1
 fi
 
-# Check if the new option is set
 if [ -z "$new" ]; then
 	zz_log w "New email is not specified, it will be taken from the specified commit"
 fi
 
-# Check if the author option is set
 if [ -z "$author" ]; then
 	zz_log w "Author is not specified, it will be taken from the specified commit"
 fi
 
-# Retrieve the commit SHA to fixup
 sha=$(git getcommit $force $sha)
 
-# Log the commit SHA to be fixed up
 zz_log i "Fix privacy from commit: $sha"
 
 if [ -n "$new" ]; then
@@ -80,7 +71,7 @@ else
 	zz_log w "Changes are not pushed to remote, use -p option to push"
 fi
 
-# Clean up the original refs
+# filter-branch leaves rewritten refs behind; purge them so the old history is unreachable
 rm -rf .git/refs/original/
 git reflog expire --expire=now --all
 git gc --prune=now
