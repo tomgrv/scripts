@@ -1,5 +1,5 @@
 {
-    "name": "git-pick",
+    "name": "@tomgrv/scripts-git-pick",
     "version": "0.4.0",
     "description": "Pick files from a specific commit",
     "bin": {
@@ -7,6 +7,10 @@
     },
     "scripts": {
         "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "@tomgrv/scripts-zz_args": "*",
+        "@tomgrv/scripts-zz_log": "*"
     },
     "private": true
 }

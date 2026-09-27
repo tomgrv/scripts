@@ -1,5 +1,5 @@
 {
-  "name": "zz_args",
+  "name": "@tomgrv/scripts-zz_args",
   "version": "0.14.0",
   "description": "Parse $@ per a heredoc spec, print eval-able var=value assignments",
   "bin": {
@@ -7,6 +7,9 @@
   },
   "scripts": {
     "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_colors": "*"
   },
   "private": true
 }

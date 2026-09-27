@@ -1,5 +1,5 @@
 {
-  "name": "zz_persist",
+  "name": "@tomgrv/scripts-zz_persist",
   "version": "0.15.0",
   "description": "Upsert a KEY=VALUE pair into an env file and/or /etc/profile.d",
   "bin": {
@@ -7,6 +7,11 @@
   },
   "scripts": {
     "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_log": "*"
   },
   "private": true
 }

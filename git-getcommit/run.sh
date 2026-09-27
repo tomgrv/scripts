@@ -1,6 +1,5 @@
 #!/bin/sh
 
-# Function to print help and manage arguments
 eval $(
     zz_args "List git history and asks for commit" $0 "$@" <<-help
 		    f -        force     allow overwritting pushed history
@@ -9,10 +8,8 @@ eval $(
 	help
 )
 
-#### Go to repository root
 cd "$(git rev-parse --show-toplevel)"
 
-# Fetch updates from the remote repository
 git fetch --progress --prune --recurse-submodules=no origin >/dev/null
 
 if [ -z "$sha" ]; then
@@ -26,12 +23,11 @@ if [ -z "$sha" ]; then
 fi
 
 
-#### A sha of '0' means the very first commit in the current history
+# A sha of '0' means the very first commit in the current history
 if [ "$sha" = "0" ]; then
     sha=$(git rev-list --max-parents=0 HEAD | tail -1)
 fi
 
-#### Display commit to fixup, keep only the sha, remove new line
 sha=$(git rev-parse --verify "$sha^{commit}" | cut -d' ' -f1 | tr -d '\n')
 
 if [ -n "$previous" ]; then

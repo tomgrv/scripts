@@ -1,5 +1,5 @@
 {
-  "name": "resolve-context",
+  "name": "@tomgrv/scripts-resolve-context",
   "version": "0.18.0",
   "description": "Resolve a feature's source/target directories from the calling script",
   "bin": {
@@ -9,8 +9,9 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "zz_args": "*",
-    "zz_colors": "*"
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_log": "*"
   },
   "private": true
 }

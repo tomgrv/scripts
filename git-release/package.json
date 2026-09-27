@@ -1,5 +1,5 @@
 {
-    "name": "git-release",
+    "name": "@tomgrv/scripts-git-release",
     "version": "0.4.0",
     "description": "Dispatch to git-release-<subcommand> utilities",
     "bin": {
@@ -7,6 +7,9 @@
     },
     "scripts": {
         "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "@tomgrv/scripts-zz_dispatch": "*"
     },
     "private": true
 }

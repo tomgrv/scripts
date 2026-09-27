@@ -1,14 +1,9 @@
 #!/bin/sh
 
-# Bump changelog utility - streamlined changelog generation with fluent data processing
-# Used by git-release-changelog script
-#
-# This script generates structured changelogs from git commit history using conventional commit format.
-# It supports both incremental updates and full rebuilds, with buffered writing for safety.
-# The changelog format includes sections for breaking changes, scopes, and commit types.
+# Generates structured changelogs from git commit history using conventional
+# commit format. Used by git-release-changelog. Supports incremental updates
+# and full rebuilds, with buffered writing for safety.
 
-# Parse command line arguments using zz_args helper
-# Supports version specification, dry-run mode, rebuild mode, and custom output file
 eval $(
     zz_args "Bump changelog utility" $0 "$@" <<- help
         f   version version     Force version for changelog entry
@@ -22,16 +17,12 @@ eval $(
 help
 )
 
-# Set default output file if not specified by user
 file="${file:-CHANGELOG.md}"
 
-# Change to repository root to ensure we're working from the correct directory
 cd "$(git rev-parse --show-toplevel)" > /dev/null
 
-# ===== CONFIGURATION AND UTILITY FUNCTIONS =====
-
 # Get supported commit types and their sections from package.json or use defaults
-# This defines how commits are categorized in the changelog (feat -> Features, fix -> Bug Fixes, etc.)
+# (feat -> Features, fix -> Bug Fixes, etc.)
 get_supported_types() {
     [ -f "package.json" ] && command -v jq > /dev/null 2>&1 \
         && jq -r '."bump-changelog".types[]? | select(.hidden != true) | "\(.type) \(.section)"' package.json 2> /dev/null \
@@ -45,39 +36,25 @@ test Tests
 chore Maintenance"
 }
 
-# Extract repository URL from package.json for generating commit links
-# Returns empty string if not found or jq not available
 get_repo_url() {
     [ -f "package.json" ] && command -v jq > /dev/null 2>&1 \
         && jq -r '.repository.url // empty' package.json 2> /dev/null | sed -e 's/^git+//' -e 's/\.git$//' || echo ""
 }
 
-# ===== GIT TAG AND RANGE FUNCTIONS =====
-
-# Get all git tags in reverse chronological order (newest first)
-# Filters to semantic version tags and includes the initial commit
 get_all_tags() {
-    # Get semantic version tags sorted by version number
     git tag -l --sort=-version:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' || echo ""
     # Include the initial commit as a reference point
     git rev-list --max-parents=0 HEAD
 }
 
-# Get the latest semantic version tag from git history
-# Returns the most recent tag that matches semantic versioning pattern
 get_latest_tag() {
     get_all_tags | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | head -1
 }
 
-# Determine git commit range from current and previous references
-# Parameters:
-#   current_ref: Git ref to generate changelog up to (default: HEAD)
-#   previous_ref: Git ref to start from (if empty, starts from repo origin)
-# Output: Git range specification (e.g., "v1.0.0..HEAD", "abc123..def456")
+# Output: git range specification (e.g., "v1.0.0..HEAD", "abc123..def456")
 list_changelog_range() {
     read -r current_ref previous_ref
 
-    # Determine commit range - either between two refs or from repo origin
     if [ -n "$previous_ref" ]; then
         echo "${previous_ref}..${current_ref}"
     else
@@ -86,28 +63,21 @@ list_changelog_range() {
         if [ -n "$initial_commit" ]; then
             echo "${initial_commit}..${current_ref}"
         else
-            # Fallback to all commits if can't find initial commit
             echo "$current_ref"
         fi
     fi
 }
 
-
-# ===== CHANGELOG GENERATION FUNCTIONS =====
-
-# List changelog entries between two git references as structured data
-# This extracts and processes commits without formatting them into markdown
+# Extracts and processes commits between two refs into structured data
+# (without formatting them into markdown).
 # Input: range via stdin (e.g., "v1.0.0..HEAD")
 # Output: pipe-separated data: priority|scope|section|message|link
 list_changelog_between() {
-    # Read range from stdin
     local range
     read -r range
 
-    # Determine repo URL for commit links
     local repo_url="$(get_repo_url)"
 
-    # Extract current and previous refs from range for output
     local current_ref="${range##*..}"
     local previous_ref="${range%%...*}"
     if [ "$current_ref" = "$range" ]; then
@@ -115,7 +85,6 @@ list_changelog_between() {
         current_ref="$range"
         previous_ref=""
     else
-        # Swap the logic - in "v1.0.0..HEAD", current_ref should be HEAD
         local temp_current="${range##*..}"
         local temp_previous="${range%%...*}"
         current_ref="$temp_current"
@@ -137,37 +106,30 @@ list_changelog_between() {
 
     zz_log i "Processing commits in range: $range"
 
-    # Log scope filtering if active
     if [ -n "$scope" ]; then
         zz_log w "Filtering commits to scope: $scope"
     fi
 
-    # Main commit processing pipeline - extract structured data
     git log --oneline --format="%H|%s" "$range" 2> /dev/null \
         | while IFS='|' read -r commit_hash commit_msg; do
             # Extract scope from conventional commit format: type(scope): message
             commit_scope=$(echo "$commit_msg" | sed -n 's/^[^(]*(\([^)]*\)):.*/\1/p')
 
-            # Skip commits that don't match the specified scope filter
-            # If scope filter is specified, only include commits with exact scope match
             if [ -n "$scope" ] && [ "$commit_scope" != "$scope" ]; then
                 continue
             fi
 
-            # Clean up message by removing type prefix
             clean_msg=$(echo "$commit_msg" | sed 's/^[^:]*: //')
 
-            # Check for breaking changes - highest priority for changelog organization
+            # Breaking changes get the highest priority so they sort first
             if git show --format="%B" -s "$commit_hash" | grep -q "BREAKING CHANGE:" || echo "$commit_msg" | grep -q "!:"; then
-                # Extract breaking change description if available
                 breaking_desc=$(git show --format="%B" -s "$commit_hash" | sed -n 's/.*BREAKING CHANGE: //p' | head -1)
                 [ -n "$breaking_desc" ] && clean_msg="$breaking_desc"
-                priority="3_BREAKING" # Highest priority - will appear first
+                priority="3_BREAKING"
             else
-                priority="4_CHANGES" # Normal priority
+                priority="4_CHANGES"
             fi
 
-            # Map commit type to changelog section using supported types
             section=$(get_supported_types \
                 | awk -v msg="$commit_msg" '
             $1 {
@@ -182,24 +144,20 @@ list_changelog_between() {
             }
             }')
 
-            # Generate commit link if repository URL is available
             commit_link=""
             if [ -n "$repo_url" ]; then
                 commit_link="([$(echo "$commit_hash" | cut -c1-7)]($repo_url/commit/$commit_hash))"
             fi
 
-            # Output structured data for sorting: priority|scope|section|message|link
-            # Using "!!!!" as placeholder for empty scope to ensure proper sorting
+            # "!!!!" as placeholder for empty scope to ensure proper sorting
             printf "%s|%s|%s|%s|%s\n" "$priority" "${commit_scope}" "${section:-Other changes}" "$clean_msg" "$commit_link"
         done | sort -t'|' -k1,1g -k2,2
 }
 
-# Build markdown changelog from structured data
 # Takes structured data from list_changelog_between and formats it into markdown
 build_changelog() {
     zz_log i "Building markdown changelog..."
 
-    # Format the sorted data into markdown changelog structure
     awk -F'|' -v version="$1" '
     BEGIN { 
         prev_scope = ""
@@ -213,10 +171,9 @@ build_changelog() {
         section = $4
         message = $5
         link = $6
-        
+
         # Handle range information (1_RANGE) - generate version header
         if (entry == 1) {
-            # Generate version header with appropriate label and date
             if (current_ref == "HEAD") {
                 version_label = (version ? version : "Unreleased")
                 version_date = strftime("%Y-%m-%d")
@@ -228,26 +185,25 @@ build_changelog() {
                 close(cmd)
                 if (!version_date) version_date = "unknown"
             }
-            
+
             prev_scope = "!"
             print "## " version_label " (" version_date ")"
             print ""
             print "*Commits from: " $5 "*"
             next
         }
-        
-        # Handle commit entries (3_BREAKING for breaking, 4_CHANGES for normal)
+
         if (entry<3) {
             next  # Skip unknown entry types
         }
-        
+
         # Adjust field positions since we removed 0_VERSION
         scope = $2
         section = $3  
         message = $4
         link = $5
-        
-        # Handle breaking changes section - always appears first
+
+        # Breaking changes section always appears first
         if (entry == 3 && !breaking_printed) {
             if (prev_scope != "" || prev_section != "") print ""
             print "### 💥 BREAKING CHANGES"
@@ -256,31 +212,28 @@ build_changelog() {
             prev_scope = "BREAKING"
             prev_section = "BREAKING"
         }
-        
-        # Handle scope changes (organize commits by package/module scope)
+
+        # Organize commits by package/module scope
         if (entry > 3 && scope != prev_scope) {
             if (prev_scope != "" && prev_scope != "BREAKING") print ""
             if (scope != "") {
                 print "### 📦 " scope " changes"
                 print ""
             } else {
-                # No scope specified - use "main" as default
                 print "### 📂 Unscoped changes"
                 print ""
             }
             prev_scope = scope
             prev_section = ""
         }
-        
-        # Handle section changes within scope (feat, fix, docs, etc.)
+
         if (entry > 3 && section != prev_section && prev_section != "BREAKING") {
             if (prev_section != "" && scope == prev_scope) print ""
             print "#### " section
             print ""
             prev_section = section
         }
-        
-        # Output the actual commit line with optional link
+
         if (link != "") {
             print "- " message " " link
         } else {
@@ -294,13 +247,12 @@ build_changelog() {
     zz_log s "Changelog built."
 }
 
-# Rebuild complete changelog by iterating through all git tags
-# Processes each tag pair to generate changelog sections chronologically
+# Rebuild complete changelog by iterating through all git tags,
+# processing each tag pair chronologically
 list_changelog() {
 
     local prev_tag="HEAD"
 
-    # Process all existing tags in reverse chronological order
     while read -r tag; do
 
         # if $tag is on a commit that is the most recent commit, skip it to avoid empty range
@@ -310,14 +262,11 @@ list_changelog() {
             zz_log w "Skipping tag $tag as it points to the same commit as $prev_tag"
             continue
         fi
-        
-        # Calculate range for this tag pair and pipe it to list_changelog_between
+
         echo "${prev_tag:-HEAD}" "$tag" | list_changelog_range | list_changelog_between
         prev_tag="$tag"
     done
 }
-
-# ===== MAIN EXECUTION LOGIC =====
 
 # bump-version is dry run only if dry_run is set and bump is not set
 bump_version_dry_run=""
@@ -325,7 +274,6 @@ if [ -n "$dry_run" ] || [ -z "$bump" ]; then
     bump_version_dry_run="-d"
 fi
 
-# Determine version and range using the bump-version script
 determined_version=$(bump-version $minimal ${bump_version_dry_run} $version)
 version=$(echo "$determined_version" | awk '{print $2}')
 range=$(echo "$determined_version" | awk '{print $1}')
@@ -340,7 +288,6 @@ fi
 # Echo version to stdout for consumption by calling scripts
 echo "$version"
 
-# If tag flag is set, create git tag after bumping files
 if [ -n "$tag" ]; then
     zz_log i "Creating git tag for version $version using bump-tag"
     if bump-tag "$version"; then
@@ -351,29 +298,21 @@ if [ -n "$tag" ]; then
     fi
 fi
 
-# Main execution flow - handles both rebuild and incremental update modes
 if [ -n "$rebuild" ]; then
-    # REBUILD MODE: Generate complete changelog from all git history
     zz_log i "Rebuilding complete $file from all git history..."
     get_all_tags | list_changelog
 else
-    # INCREMENTAL MODE: Add new entry for current version since last tag
     zz_log i "Generating $file entry for version $version since last tag..."
     echo "$range" | list_changelog_between
 fi | if [ -n "$dry_run" ]; then
-    # DRY RUN MODE: Show what would be written without making changes
     zz_log w "Dry run mode - no changes will be made."
     cat
 else
-    # LIVE MODE: Write changes to file with safety measures
-
     # Create temporary file for atomic operations - prevents corruption
     temp_changelog=$(mktemp "${TMPDIR:-/tmp}/changelog.XXXXXX")
 
-    # Ensure temporary file cleanup on script exit (success or failure)
     trap 'rm -f "$temp_changelog"' EXIT
 
-    # Combine new changelog content with existing file content if not rebuilding
     if [ -z "$rebuild" ] && [ -f "$file" ]; then
         build_changelog "$version"
         # Extract existing content: start from first ## (version header) and stop at --- (footer)
@@ -383,7 +322,7 @@ else
     fi | {
         echo "# Changelog"
         echo ""
-        cat # Insert the generated changelog content here
+        cat
         echo ""
         echo "---"
         echo "*Generated on $(date +%Y-%m-%d) by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*"
@@ -397,10 +336,8 @@ else
         mv "$temp_changelog" "$file"
         zz_log s "$file updated."
 
-        # Stage the file for git commit
         git add "$file"
 
-        # If tag flag is set and we're not in dry run mode, create git tag
         if [ -n "$tag" ] && [ -z "$bump" ]; then
             zz_log i "Creating git tag for version $version using bump-tag"
             if bump-tag "$version"; then
@@ -410,7 +347,6 @@ else
             fi
         fi
     else
-        # Error handling - temporary file creation failed
         zz_log e "Failed to generate changelog - temporary file is empty or missing"
         exit 1
     fi

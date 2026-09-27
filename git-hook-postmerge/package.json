@@ -1,5 +1,5 @@
 {
-  "name": "git-hook-postmerge",
+  "name": "@tomgrv/scripts-git-hook-postmerge",
   "version": "0.18.0",
   "description": "Git post-merge hook: keep merged lockfiles and prompt to reinstall dependencies",
   "bin": {
@@ -9,8 +9,9 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "zz_args": "*",
-    "zz_colors": "*"
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_log": "*"
   },
   "private": true
 }

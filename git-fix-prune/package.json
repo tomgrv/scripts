@@ -1,5 +1,5 @@
 {
-    "name": "git-fix-prune",
+    "name": "@tomgrv/scripts-git-fix-prune",
     "version": "0.4.0",
     "description": "Prune remote-tracking references that no longer exist on the remote",
     "bin": {
@@ -7,6 +7,10 @@
     },
     "scripts": {
         "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "@tomgrv/scripts-zz_args": "*",
+        "@tomgrv/scripts-zz_log": "*"
     },
     "private": true
 }

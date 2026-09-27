@@ -1,5 +1,5 @@
 {
-    "name": "git-release-prod",
+    "name": "@tomgrv/scripts-git-release-prod",
     "version": "0.4.0",
     "description": "Finish a release or hotfix branch using Git Flow",
     "bin": {
@@ -7,6 +7,13 @@
     },
     "scripts": {
         "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "@tomgrv/scripts-bump-changelog": "*",
+        "@tomgrv/scripts-bump-tag": "*",
+        "@tomgrv/scripts-gv": "*",
+        "@tomgrv/scripts-zz_args": "*",
+        "@tomgrv/scripts-zz_log": "*"
     },
     "private": true
 }

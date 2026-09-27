@@ -1,9 +1,7 @@
 #!/bin/sh
 
-#### Goto repository root
 cd "$(git rev-parse --show-toplevel)" >/dev/null
 
-# Parse arguments and print help if needed
 eval $(
     zz_args "Create HotFix branch" $0 "$@" <<-help
         r -         rebase      force rebase of current commits onto hotfix branch
@@ -11,7 +9,7 @@ eval $(
 help
 )
 
-#### GET last vX.Y.Z tag on the main branch and replace the last number with 'X' (leading 'v' is kept)
+# Get last vX.Y.Z tag on the main branch and replace the last number with 'X' (leading 'v' is kept)
 main_tag=$(git describe --tags --abbrev=0 --match "v[0-9]*.[0-9]*.[0-9]*" main)
 
 if [ -z "$main_tag" ]; then
@@ -28,8 +26,8 @@ hotfix=$(echo "$main_tag" | sed -E 's/([0-9]+)\.([0-9]+)\.([0-9]+)/\1.\2.X/')
 # itself rather than whatever branch happens to be checked out at the time.
 develop_rev=$(git rev-parse develop)
 
-#### STEP: resolve the hotfix branch (idempotent -- reuse it if a previous
-#### run already created it, instead of failing on `git flow hotfix start`)
+# Idempotent: reuse the hotfix branch if a previous run already created it,
+# instead of failing on `git flow hotfix start`.
 resumed=""
 if git show-ref --verify --quiet "refs/heads/hotfix/$hotfix"; then
     resumed=true
@@ -40,8 +38,6 @@ if git show-ref --verify --quiet "refs/heads/hotfix/$hotfix"; then
     fi
 fi
 
-# Check if all commits since the last tag are conventional commits of 'fix:' type
-# or if rebase is forced via command line option
 if [ -n "$rebase" ]; then
     zz_log i "Rebase forced via command line option, will rebase commits onto hotfix branch"
 elif git log --reverse --pretty=oneline --format=%B develop --not origin/develop --no-merges | grep -vE "^$|^fix(\(.+\))?:" >/dev/null; then
@@ -69,9 +65,8 @@ if [ -n "$rebase" ]; then
     fi
 fi
 
-#### STEP: stash local changes, if any, before creating the branch (idempotent
-#### -- reclaim a stash left over from an interrupted previous run instead of
-#### stashing again on top of it or leaving it stuck)
+# Idempotent: reclaim a stash left over from an interrupted previous run
+# instead of stashing again on top of it or leaving it stuck.
 pending_stash=$(git stash list | grep -m1 "Hotfix stash:" | cut -d: -f1)
 
 if [ -z "$resumed" ]; then
@@ -86,17 +81,15 @@ elif [ -n "$pending_stash" ]; then
     zz_log i "Found stash left over from a previous run ($pending_stash), will reapply it"
 fi
 
-# Set GIT_EDITOR to no-op to avoid opening editor during rebase or cherry-pick
 export GIT_EDITOR=:
 
-#### STEP: create hotfix branch (bail out if it fails, so we don't pop the
-#### stash or rebase onto the wrong branch)
+# Bail out if it fails, so we don't pop the stash or rebase onto the wrong branch.
 if [ -z "$resumed" ] && ! git flow hotfix start "$hotfix"; then
     zz_log e "Failed to start hotfix branch $hotfix"
     exit 1
 fi
 
-#### STEP: reapply any pending stash (idempotent -- no-op when there is none)
+# Idempotent: no-op when there is no pending stash.
 if [ -n "$pending_stash" ]; then
     zz_log i "Applying stashed changes ($pending_stash)..."
     if ! git stash pop --index "$pending_stash"; then
@@ -105,10 +98,8 @@ if [ -n "$pending_stash" ]; then
     fi
 fi
 
-#### STEP: pick all "fix" commits from develop branch and rebase them onto
-#### hotfix branch, then reset develop branch to the main tag. Naturally
-#### idempotent: it only moves commits still ahead of the hotfix branch, so a
-#### re-run after everything already moved is a no-op.
+# Naturally idempotent: only moves commits still ahead of the hotfix branch,
+# so a re-run after everything already moved is a no-op.
 if [ -n "$rebase" ]; then
     zz_log i "Rebasing develop commits onto hotfix branch..."
     git fix base -p "hotfix/$hotfix" develop

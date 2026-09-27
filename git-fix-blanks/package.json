@@ -1,5 +1,5 @@
 {
-    "name": "git-fix-blanks",
+    "name": "@tomgrv/scripts-git-fix-blanks",
     "version": "0.4.0",
     "description": "Discard changes made only of whitespace, blanks, quote/slash swaps",
     "bin": {
@@ -7,6 +7,11 @@
     },
     "scripts": {
         "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "@tomgrv/scripts-normalize-json": "*",
+        "@tomgrv/scripts-zz_args": "*",
+        "@tomgrv/scripts-zz_log": "*"
     },
     "private": true
 }

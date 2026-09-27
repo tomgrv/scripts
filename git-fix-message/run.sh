@@ -1,6 +1,5 @@
 #!/bin/sh
 
-# Function to print help and manage arguments
 eval $(
 	zz_args "Rewrite an arbitrary commit message" $0 "$@" <<-help
 			f -        force     allow overwritting pushed history
@@ -10,45 +9,36 @@ eval $(
 	help
 )
 
-# Navigate to the repository root
 cd "$(git rev-parse --show-toplevel)" >/dev/null
 
-# Fetch updates from the remote repository
 git fetch --progress --prune --recurse-submodules=no origin >/dev/null
 
-# Make sure we don't have uncommitted changes
 if ! git diff-index --quiet HEAD --; then
 	zz_log e "You have uncommitted changes. Please commit or stash them before running this script."
 	exit 1
 fi
 
-# Prevent running while a rebase is in progress
 if git isRebase >/dev/null 2>&1; then
 	zz_log e "A rebase is in progress. Please finish or abort it before running this script."
 	exit 1
 fi
 
-# Retrieve the commit SHA to edit
 sha=$(git getcommit $force $sha)
 
-# Validate commit exists
 if ! git rev-parse --verify --quiet "$sha^{commit}" >/dev/null; then
 	zz_log e "Invalid commit: $sha"
 	exit 1
 fi
 
-# Ensure commit belongs to current branch history
 if ! git merge-base --is-ancestor "$sha" HEAD; then
 	zz_log e "Commit $(echo "$sha" | cut -c1-7) is not in the current branch history."
 	exit 1
 fi
 
-# Ask for the new message if not provided as argument
 if [ -z "$msg" ]; then
 	msg=$(zz_prompt "New commit message:")
 fi
 
-# Ensure message is not empty
 if [ -z "$msg" ]; then
 	zz_log e "Commit message cannot be empty."
 	exit 1
@@ -65,7 +55,7 @@ if [ "$(zz_ask "Yn" "Do you want to proceed?")" != "y" ]; then
 	exit 1
 fi
 
-# Build a minimal range that includes target commit and descendants.
+# A minimal range including target commit and descendants speeds up the rewrite over --all
 if [ -n "$(git rev-list --parents -n 1 "$sha" | cut -d' ' -f2)" ]; then
 	range="$sha^..HEAD"
 else
@@ -80,12 +70,11 @@ TARGET_SHA="$sha" NEW_MESSAGE="$msg" git filter-branch --msg-filter '
 	fi
 ' --tag-name-filter cat -- $range
 
-# Clean up the original refs
+# filter-branch leaves rewritten refs behind; purge them so the old history is unreachable
 rm -rf .git/refs/original/
 git reflog expire --expire=now --all
 git gc --prune=now
 
-# Push rewritten history if requested
 if [ -n "$push" ]; then
 	if git rev-parse --verify --quiet origin/HEAD >/dev/null; then
 		zz_log i "Pushing to remote..."

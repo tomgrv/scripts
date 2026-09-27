@@ -1,5 +1,5 @@
 {
-    "name": "zz_bindir",
+    "name": "@tomgrv/scripts-zz_bindir",
     "version": "0.4.0",
     "description": "Resolve (and create if needed) a writable bin directory on PATH",
     "bin": {
@@ -7,6 +7,10 @@
     },
     "scripts": {
         "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "@tomgrv/scripts-zz_colors": "*",
+        "@tomgrv/scripts-zz_log": "*"
     },
     "private": true
 }

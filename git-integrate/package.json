@@ -1,5 +1,5 @@
 {
-    "name": "git-integrate",
+    "name": "@tomgrv/scripts-git-integrate",
     "version": "0.4.0",
     "description": "Integrate modifications from the remote repository",
     "bin": {

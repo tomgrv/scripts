@@ -6,6 +6,7 @@ setup() {
     setup_scripts_path
     WORK_DIR=$(mktemp -d)
     cd "$WORK_DIR" || exit 1
+    git init -q
 }
 
 teardown() {

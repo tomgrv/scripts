@@ -1,5 +1,5 @@
 {
-  "name": "bump-tag",
+  "name": "@tomgrv/scripts-bump-tag",
   "version": "0.10.0",
   "description": "Create or move a version tag (and its dependent major/minor tags), then push it",
   "bin": {
@@ -7,6 +7,10 @@
   },
   "scripts": {
     "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_log": "*"
   },
   "private": true
 }

@@ -1,5 +1,5 @@
 {
-    "name": "zz_prompt",
+    "name": "@tomgrv/scripts-zz_prompt",
     "version": "0.4.0",
     "description": "Interactive free-form input with an optional default",
     "bin": {
@@ -7,6 +7,9 @@
     },
     "scripts": {
         "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "@tomgrv/scripts-zz_colors": "*"
     },
     "private": true
 }

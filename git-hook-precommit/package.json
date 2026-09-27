@@ -1,5 +1,5 @@
 {
-  "name": "git-hook-precommit",
+  "name": "@tomgrv/scripts-git-hook-precommit",
   "version": "0.24.0",
   "description": "Git pre-commit hook: sync lockfiles, install prettier plugins, run pre-commit checks and lint-staged",
   "bin": {
@@ -9,10 +9,11 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "git-hook-installplugins": "*",
-    "zz_args": "*",
-    "zz_colors": "*",
-    "zz_npx": "*"
+    "@tomgrv/scripts-git-hook-installplugins": "*",
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_log": "*",
+    "@tomgrv/scripts-zz_npx": "*"
   },
   "private": true
 }

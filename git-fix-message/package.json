@@ -1,5 +1,5 @@
 {
-    "name": "git-fix-message",
+    "name": "@tomgrv/scripts-git-fix-message",
     "version": "0.4.0",
     "description": "Rewrite an arbitrary commit message",
     "bin": {
@@ -7,6 +7,12 @@
     },
     "scripts": {
         "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "@tomgrv/scripts-zz_args": "*",
+        "@tomgrv/scripts-zz_ask": "*",
+        "@tomgrv/scripts-zz_log": "*",
+        "@tomgrv/scripts-zz_prompt": "*"
     },
     "private": true
 }

@@ -1,6 +1,5 @@
 #!/bin/sh
 
-# Function to print help and manage arguments
 eval $(
 	zz_args "Redact a secret from files, commit messages and/or tag annotations across all git history" $0 "$@" <<-help
 		f -      force      allow overwriting pushed history
@@ -15,13 +14,10 @@ eval $(
 	help
 )
 
-# Navigate to the repository root
 cd "$(git rev-parse --show-toplevel)" >/dev/null
 
-# Fetch updates from the remote repository
 git fetch --progress --prune --recurse-submodules=no origin >/dev/null
 
-# Check if the glob option is set
 if [ -z "$glob" ]; then
 	glob=$(zz_prompt "Glob pattern of files to search (e.g. **/*.env):")
 fi
@@ -31,7 +27,6 @@ if [ -z "$glob" ]; then
 	exit 1
 fi
 
-# Check if the secret option is set
 if [ -z "$secret" ]; then
 	secret=$(zz_prompt "Secret value to redact:")
 fi
@@ -41,22 +36,18 @@ if [ -z "$secret" ]; then
 	exit 1
 fi
 
-# Default replacement string
 replace="${replace:-****}"
 
-# Make sure we don't have uncommitted changes
 if ! git diff-index --quiet HEAD --; then
 	zz_log e "You have uncommitted changes. Please commit or stash them before running this script."
 	exit 1
 fi
 
-# Prevent running while a rebase is in progress
 if git isRebase >/dev/null 2>&1; then
 	zz_log e "A rebase is in progress. Please finish or abort it before running this script."
 	exit 1
 fi
 
-# Retrieve the commit SHA to fix from
 sha=$(git getcommit $force $sha)
 
 zz_log i "Searching for secret in files matching '$glob'"
@@ -140,12 +131,13 @@ fi
 
 git filter-branch $force --tree-filter "$tree_filter" --msg-filter "$msg_filter" --tag-name-filter cat -- --branches --tags ${sha:---all}${sha:+..HEAD}
 
-# Clean up the original refs
+# filter-branch leaves rewritten refs behind; purge them so the old history is unreachable
 rm -rf .git/refs/original/
 git reflog expire --expire=now --all
 git gc --prune=now
 
-# Redact secret from annotated tag messages (filter-branch does not rewrite tag content)
+# filter-branch does not rewrite tag content, so redact annotated tag messages separately
+
 if [ -n "$fixtags" ]; then
 	zz_log i "Redacting secret from tag annotations"
 	for t in $(git tag -l); do
