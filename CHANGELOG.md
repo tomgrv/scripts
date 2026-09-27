@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.26.0 (2026-09-27)
+
+*Commits from: v0.25.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v0.25.0' into develop
+### 📦 scripts-configure-feature changes
+
+#### Bug Fixes
+
+- 🐛 handle dangling stub symlinks and require mikefarah yq (#47)
+- 🐛 replace frontmatter documents instead of reconciling them (#46)
+
 ## 0.25.0 (2026-09-27)
 
 *Commits from: v0.24.0..HEAD*
@@ -419,6 +435,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 
