@@ -49,7 +49,7 @@
 
 set -e
 
-zz_use --pkg "$(cd "$(dirname "$0")" && pwd)" jq
+zz_use --pkg "$0" jq
 . zz_colors
 
 eval $(

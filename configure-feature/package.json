@@ -1,16 +1,17 @@
 {
-  "name": "@tomgrv/scripts-configure-feature",
-  "version": "0.18.0",
-  "description": "Deploy a feature's stubs into the cwd (merging), run configure-*.sh",
-  "bin": {
-    "configure-feature": "run.sh"
-  },
-  "scripts": {
-    "test": "bats test.bats"
-  },
-  "peerDependencies": {
-    "@tomgrv/scripts-zz_args": "*",
-    "@tomgrv/scripts-zz_colors": "*"
-  },
-  "private": true
+    "name": "@tomgrv/scripts-configure-feature",
+    "version": "0.18.0",
+    "description": "Deploy a feature's stubs into the cwd (merging), run configure-*.sh",
+    "bin": {
+        "configure-feature": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "@tomgrv/scripts-merge-json": "*",
+        "@tomgrv/scripts-zz_args": "*",
+        "@tomgrv/scripts-zz_colors": "*"
+    },
+    "private": true
 }

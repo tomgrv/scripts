@@ -105,20 +105,30 @@ FORCE=0
 EXEC_TOOL=""
 _before=""
 
-# Read <dir>/package.json's peerDependencies keys (each a sibling repo
+# Read a script's package.json peerDependencies keys (each a sibling repo
 # package, e.g. "@tomgrv/scripts-zz_args") and queue them into _before the
 # same way an explicit `zz_use zz_args ...` name would be — this is what
-# lets a functional script's run.sh just say `zz_use --pkg "$(dirname ...)"`
-# instead of hand-listing every internal dependency itself; only the
-# package's own declared deps come from here, so an external tool the
-# script also needs (jq, curl, ...) is still named explicitly alongside
-# --pkg. Uses jq when available (consistent with the rest of this script's
-# JSON handling); falls back to a plain grep/sed scan of the
-# "peerDependencies": { ... } block otherwise, since --pkg can run before
-# jq itself has been resolved.
+# lets a functional script's run.sh just say `zz_use --pkg "$0"` instead of
+# hand-listing every internal dependency itself; only the package's own
+# declared deps come from here, so an external tool the script also needs
+# (jq, curl, ...) is still named explicitly alongside --pkg.
+#
+# <script_path> is the calling script's own $0, not just its directory:
+# when run from a local checkout, package.json sits right next to run.sh
+# (dirname($0)/package.json). But a script installed by
+# _install_repo_script (the normal deployment path — e.g. copied to
+# /usr/local/bin/edit-script) has no such sibling: install-time also
+# copies package.json alongside it as a hidden ".<name>.package.json", so
+# it's still found post-install. Uses jq when available (consistent with
+# the rest of this script's JSON handling); falls back to a plain grep/sed
+# scan of the "peerDependencies": { ... } block otherwise, since --pkg can
+# run before jq itself has been resolved.
 _queue_pkg_deps() {
-    _pkg_json="$1/package.json"
-    [ -f "$_pkg_json" ] || { printf '[e] --pkg: %s not found\n' "$_pkg_json" >&2; return 1; }
+    _pkg_dir=$(cd "$(dirname "$1")" && pwd) || { printf '[e] --pkg: %s not found\n' "$1" >&2; return 1; }
+    _pkg_name=$(basename "$1")
+    _pkg_json="${_pkg_dir}/package.json"
+    [ -f "$_pkg_json" ] || _pkg_json="${_pkg_dir}/.${_pkg_name}.package.json"
+    [ -f "$_pkg_json" ] || { printf '[e] --pkg: no package.json found for %s\n' "$1" >&2; return 1; }
     if command -v jq >/dev/null 2>&1; then
         _deps=$(jq -r '.peerDependencies // {} | keys[]' "$_pkg_json")
     else
@@ -441,6 +451,10 @@ _install_repo_script() {
     chmod +x "${_dir}/.${_name}.$$"
     mv "${_dir}/.${_name}.$$" "${_dir}/${_name}"
     _install_script_config "${_SRC}/${_name}/config" "${_dir}/config"
+    # Carried alongside the installed script (hidden, "."-prefixed) so
+    # --pkg (see _queue_pkg_deps above) can still find its peerDependencies
+    # once it's running from here instead of a local checkout.
+    [ -f "${_SRC}/${_name}/package.json" ] && cp "${_SRC}/${_name}/package.json" "${_dir}/.${_name}.package.json"
     zz_log s "Installed {Purple ${_name}} to {U ${_dir}/${_name}}"
 }
 

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-zz_use --pkg "$(cd "$(dirname "$0")" && pwd)"
+zz_use --pkg "$0"
 . zz_colors
 
 eval $(

@@ -3,7 +3,7 @@
 # (merging into files that already exist there) and run its
 # configure-*.sh lifecycle scripts. Counterpart to install-feature.sh.
 
-zz_use --pkg "$(cd "$(dirname "$0")" && pwd)" git sha1sum
+zz_use --pkg "$0" git sha1sum
 . zz_colors
 
 eval $(

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-zz_use --pkg "$(cd "$(dirname "$0")" && pwd)" jq curl
+zz_use --pkg "$0" jq curl
 . zz_colors
 
 eval $(
