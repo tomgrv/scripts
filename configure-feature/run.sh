@@ -51,6 +51,13 @@ if [ -d $source/stubs ]; then
 
         mkdir -p $folder
 
+        # A dangling symlink fails every "-f $dest" test below, yet cp and
+        # chmod refuse to write through it: replace it with the stub.
+        if [ -L "$dest" ] && [ ! -e "$dest" ]; then
+            zz_log w "Destination {U $dest} is a dangling symlink to {U $(readlink "$dest")}, replacing it..."
+            rm -f "$dest"
+        fi
+
         if [ "$(basename $file | cut -c1)" = "#" ]; then
             dest=$(echo $dest | sed 's/\/\#/\//g')
             zz_log - "Add {U $dest} to .gitignore"

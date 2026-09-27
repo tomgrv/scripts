@@ -51,6 +51,18 @@ teardown() {
     grep -q line1 "$WORK_DIR/plain.txt"
 }
 
+@test "configure-feature replaces a dangling destination symlink with the stub" {
+    mkdir -p src/stubs/sub
+    echo "line1" >src/stubs/sub/plain.md
+    mkdir -p sub
+    ln -s ../missing/plain.md sub/plain.md
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"dangling symlink"* ]]
+    [ ! -L sub/plain.md ]
+    grep -q line1 sub/plain.md
+}
+
 @test "configure-feature merges a json stub into an existing json file" {
     mkdir -p src/stubs
     echo '{"b":2}' >src/stubs/config.json

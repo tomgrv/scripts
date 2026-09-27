@@ -16,6 +16,15 @@ if [ -z "$target" ] || [ -z "$source" ]; then
     exit 1
 fi
 
+# The yq/jq pipeline below needs mikefarah/yq v4 (`yq eval`, `-o=json`,
+# `-P`); the unrelated python yq (a jq wrapper, e.g. apt's `yq`) rejects
+# that syntax, which would otherwise surface as "not a valid YAML".
+command -v yq >/dev/null 2>&1 || zz_use yq
+if ! yq --version 2>/dev/null | grep -q mikefarah; then
+    zz_log e "merge-yaml requires mikefarah/yq v4, found {U $(command -v yq || echo none)}"
+    exit 1
+fi
+
 if [ ! -f "$target" ]; then
     zz_log e "Target file {U $target} not found"
     exit 1
