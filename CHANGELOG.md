@@ -1,6 +1,19 @@
-<!-- @format -->
-
 # Changelog
+
+## 0.28.0 (2026-09-28)
+
+*Commits from: v0.27.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v0.27.0' into develop
+### 📦 scripts-merge-yaml changes
+
+#### Bug Fixes
+
+- 🐛 use kislyuk/yq (jq wrapper) instead of mikefarah/yq (#49)
 
 ## 0.27.0 (2026-09-28)
 
@@ -472,6 +485,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 - install a script's config/ dir alongside it in the bin dir
 
----
 
-_Generated on 2026-09-28 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)_
+---
+*Generated on 2026-09-28 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*

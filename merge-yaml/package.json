@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-merge-yaml",
-  "version": "0.26.0",
+  "version": "0.28.0",
   "description": "Recursively merge one YAML file into another, arrays deduped and unioned",
   "bin": {
     "merge-yaml": "run.sh"
