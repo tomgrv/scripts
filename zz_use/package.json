@@ -1,17 +1,17 @@
 {
-    "name": "@tomgrv/scripts-zz_use",
-    "version": "0.27.0",
-    "description": "Activator: on-demand dependency management (apt/download, and single-shot zz_* bundle install)",
-    "bin": {
-        "zz_use": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "peerDependencies": {
-        "@tomgrv/scripts-zz_bindir": "*",
-        "@tomgrv/scripts-zz_colors": "*",
-        "@tomgrv/scripts-zz_log": "*"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-zz_use",
+  "version": "0.29.0",
+  "description": "Activator: on-demand dependency management (apt/download, and single-shot zz_* bundle install)",
+  "bin": {
+    "zz_use": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_bindir": "*",
+    "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_log": "*"
+  },
+  "private": true
 }
