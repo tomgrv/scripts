@@ -52,16 +52,36 @@ teardown() {
     [[ "$output" == *"not a valid YAML"* ]]
 }
 
-@test "merge-yaml errors clearly when yq is not mikefarah/yq" {
+@test "merge-yaml errors clearly when yq is not kislyuk/yq" {
     stub_script yq <<'EOF2'
 #!/bin/sh
-echo "yq 0.0.0"
+echo "yq (https://github.com/mikefarah/yq/) version v4.44.3"
 EOF2
     printf 'a: 1\n' >target.yaml
     printf 'b: 2\n' >source.yaml
     run merge-yaml target.yaml source.yaml
     [ "$status" -ne 0 ]
-    [[ "$output" == *"requires mikefarah/yq"* ]]
+    [[ "$output" == *"requires kislyuk/yq"* ]]
+}
+
+@test "merge-yaml keeps a GitHub workflow 'on' key unquoted" {
+    printf 'on:\n  push: {}\n' >target.yaml
+    printf 'on:\n  pull_request: {}\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    run cat target.yaml
+    [[ "$output" == *"on:"* ]]
+    [[ "$output" != *"'on'"* ]]
+    [[ "$output" != *"true:"* ]]
+    [[ "$output" == *"pull_request"* ]]
+}
+
+@test "merge-yaml reports the yq parse error for invalid YAML" {
+    printf ':\n  - broken: [\n' >target.yaml
+    printf 'a: 1\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"not a valid YAML: "?* ]]
 }
 
 @test "merge-yaml merges a source object into the target file in place" {
@@ -104,10 +124,10 @@ EOF2
     [[ "$result" == *"b: 2"* ]]
 }
 
-@test "merge-yaml -i sets indentation size" {
+@test "merge-yaml accepts -i but always writes 2-space indents" {
     printf 'nested:\n  a: 1\n' >target.yaml
     printf 'nested:\n  b: 2\n' >source.yaml
     run merge-yaml -i 4 target.yaml source.yaml
     [ "$status" -eq 0 ]
-    grep -qE '^    a: 1' target.yaml
+    grep -qE '^  a: 1' target.yaml
 }
