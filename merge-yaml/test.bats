@@ -52,16 +52,16 @@ teardown() {
     [[ "$output" == *"not a valid YAML"* ]]
 }
 
-@test "merge-yaml errors clearly when yq is not kislyuk/yq" {
+@test "merge-yaml errors clearly when yq is not mikefarah/yq" {
     stub_script yq <<'EOF2'
 #!/bin/sh
-echo "yq (https://github.com/mikefarah/yq/) version v4.44.3"
+echo "yq 3.4.3"
 EOF2
     printf 'a: 1\n' >target.yaml
     printf 'b: 2\n' >source.yaml
     run merge-yaml target.yaml source.yaml
     [ "$status" -ne 0 ]
-    [[ "$output" == *"requires kislyuk/yq"* ]]
+    [[ "$output" == *"requires mikefarah/yq"* ]]
 }
 
 @test "merge-yaml keeps a GitHub workflow 'on' key unquoted" {
@@ -124,10 +124,68 @@ EOF2
     [[ "$result" == *"b: 2"* ]]
 }
 
-@test "merge-yaml accepts -i but always writes 2-space indents" {
+@test "merge-yaml keeps the target's comments, key order and flow style" {
+    printf '# header\nz: 1 # keep\nlist: [1, 2]\na: {x: 1}\n' >target.yaml
+    printf 'b: 2\nlist: [2, 3]\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    run cat target.yaml
+    [ "${lines[0]}" = "# header" ]
+    [ "${lines[1]}" = "z: 1 # keep" ]
+    [ "${lines[2]}" = "list: [1, 2, 3]" ]
+    [ "${lines[3]}" = "a: {x: 1}" ]
+    [ "${lines[4]}" = "b: 2" ]
+}
+
+@test "merge-yaml keeps target values on conflicts" {
+    printf 'a: 1\nm: {k: 1}\nl: [1]\n' >target.yaml
+    printf 'a: 2\nm: 3\nl: x\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    [ "$(yq -o=json -I0 . target.yaml)" = '{"a":1,"m":{"k":1},"l":[1]}' ]
+}
+
+@test "merge-yaml writes 2-space indents by default" {
+    printf 'nested:\n  a: 1\n' >target.yaml
+    printf 'nested:\n  b: 2\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    grep -qE '^  a: 1' target.yaml
+}
+
+@test "merge-yaml honours -i for the output indent" {
     printf 'nested:\n  a: 1\n' >target.yaml
     printf 'nested:\n  b: 2\n' >source.yaml
     run merge-yaml -i 4 target.yaml source.yaml
     [ "$status" -eq 0 ]
-    grep -qE '^  a: 1' target.yaml
+    grep -qE '^    a: 1' target.yaml
+}
+
+@test "merge-yaml fills an empty target from the source" {
+    : >target.yaml
+    printf 'a: 1\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    [ "$(cat target.yaml)" = "a: 1" ]
+}
+
+@test "merge-yaml keeps an explicit null target" {
+    printf 'null\n' >target.yaml
+    printf 'a: 1\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    [ "$(yq -o=json . target.yaml)" = "null" ]
+}
+
+@test "merge-yaml fills a comments-only target from the source" {
+    printf '# only a comment\n\n' >target.yaml
+    printf 'a: 1\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    [ "$(yq -o=json -I0 . target.yaml)" = '{"a":1}' ]
+}
+
+@test "merge-yaml writes intermediates to a private temp dir" {
+    ! grep -q '/tmp/\$\$' "$BATS_TEST_DIRNAME/run.sh"
+    grep -q 'mktemp -d' "$BATS_TEST_DIRNAME/run.sh"
 }
