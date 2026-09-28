@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.29.0 (2026-09-28)
+
+*Commits from: v0.28.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v0.28.0' into develop
+### 📦 scripts-merge-yaml changes
+
+#### Bug Fixes
+
+- 🐛 use mikefarah/yq instead of kislyuk/yq (#50)
+
 ## 0.28.0 (2026-09-28)
 
 *Commits from: v0.27.0..HEAD*
@@ -484,6 +499,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 ---
