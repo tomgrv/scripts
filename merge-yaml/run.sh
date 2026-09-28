@@ -41,11 +41,13 @@ fi
 
 zz_log i "Merging YAML from {U $source} into {U $target}..."
 
-# An empty document yields no JSON at all: treat it as null, like jq would.
+# An empty document reads as null: an empty target takes the source as is,
+# an empty source leaves the target unchanged.
 target_json=$(yq -o=json . "$target")
 source_json=$(yq -o=json . "$source")
+case "$target_json" in "" | null) target_json= ;; esac
 
-jq -n --argjson a "${target_json:-null}" --argjson b "${source_json:-null}" '
+jq -n --argjson a "${target_json:-"{}"}" --argjson b "${source_json:-null}" '
 def dedupe_ordered:
   reduce .[] as $x ([]; if any(.[]; . == $x) then . else . + [$x] end);
 
@@ -69,4 +71,17 @@ def merge($a; $b):
   end;
 
 merge($a; $b)
-' | yq -p=json -o=yaml -P -I "$indent" . >/tmp/$$.merge && mv /tmp/$$.merge "$target" && zz_log s "YAML merged successfully"
+' | yq -p=json -o=yaml -P . >/tmp/$$.merged
+
+# jq only computes the merged values; overlay them onto the original target
+# (yq "merge files" idiom) so its comments, key order and flow/block styles
+# survive. The merged document is a superset of the target with the target's
+# values, so the overlay only extends arrays and adds keys.
+# See https://mikefarah.gitbook.io/yq/usage/tips-and-tricks
+if [ -n "$target_json" ]; then
+    yq ea -I "$indent" 'select(fi == 0) * select(fi == 1)' "$target" /tmp/$$.merged >/tmp/$$.merge
+else
+    yq -I "$indent" . /tmp/$$.merged >/tmp/$$.merge
+fi
+rm -f /tmp/$$.merged
+mv /tmp/$$.merge "$target" && zz_log s "YAML merged successfully"

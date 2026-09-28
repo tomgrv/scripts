@@ -124,6 +124,27 @@ EOF2
     [[ "$result" == *"b: 2"* ]]
 }
 
+@test "merge-yaml keeps the target's comments, key order and flow style" {
+    printf '# header\nz: 1 # keep\nlist: [1, 2]\na: {x: 1}\n' >target.yaml
+    printf 'b: 2\nlist: [2, 3]\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    run cat target.yaml
+    [ "${lines[0]}" = "# header" ]
+    [ "${lines[1]}" = "z: 1 # keep" ]
+    [ "${lines[2]}" = "list: [1, 2, 3]" ]
+    [ "${lines[3]}" = "a: {x: 1}" ]
+    [ "${lines[4]}" = "b: 2" ]
+}
+
+@test "merge-yaml keeps target values on conflicts" {
+    printf 'a: 1\nm: {k: 1}\nl: [1]\n' >target.yaml
+    printf 'a: 2\nm: 3\nl: x\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    [ "$(yq -o=json -I0 . target.yaml)" = '{"a":1,"m":{"k":1},"l":[1]}' ]
+}
+
 @test "merge-yaml writes 2-space indents by default" {
     printf 'nested:\n  a: 1\n' >target.yaml
     printf 'nested:\n  b: 2\n' >source.yaml
@@ -138,4 +159,12 @@ EOF2
     run merge-yaml -i 4 target.yaml source.yaml
     [ "$status" -eq 0 ]
     grep -qE '^    a: 1' target.yaml
+}
+
+@test "merge-yaml fills an empty target from the source" {
+    : >target.yaml
+    printf 'a: 1\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    [ "$(cat target.yaml)" = "a: 1" ]
 }

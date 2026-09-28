@@ -4,8 +4,11 @@ Recursively merge one YAML file into another, arrays deduped and unioned.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `merge-yaml`. Mirrors `merge-json`'s semantics
-(same recursive-merge/array-dedupe rules), round-tripping through JSON so
-both tools share one merge implementation.
+(same recursive-merge/array-dedupe rules): jq computes the merged values
+from a JSON view of both files, then yq overlays them onto the original
+target (`yq ea 'select(fi == 0) * select(fi == 1)'`, see yq's
+[tips and tricks](https://mikefarah.gitbook.io/yq/usage/tips-and-tricks)),
+so the target's comments, key order and flow/block styles are kept.
 
 ## Usage
 
@@ -37,4 +40,7 @@ bats test.bats
 - merges a source object into the target file in place
 - merges from stdin when source is `-`
 - unions and dedupes array values, recursively merges nested objects
+- keeps the target's comments, key order and flow style
+- keeps target values on scalar and type conflicts
+- fills an empty target from the source
 - writes 2-space indents by default, honours `-i` otherwise
