@@ -260,12 +260,15 @@ EOF
     stub_script curl <<EOF
 #!/bin/sh
 url=""
-for a in "\$@"; do
-    case "\$a" in
-    -*) ;;
-    *) url="\$a" ;;
+out=""
+while [ \$# -gt 0 ]; do
+    case "\$1" in
+    -o) out="\$2"; shift 2 ;;
+    -*) shift ;;
+    *) url="\$1"; shift ;;
     esac
 done
+[ -z "\$out" ] || exec >"\$out"
 case "\$url" in
 ${registry_url_glob})
     printf '{"dist":{"tarball":"http://fake-registry.invalid/tarball.tgz"}}'
@@ -314,12 +317,15 @@ EOF
     stub_script curl <<EOF
 #!/bin/sh
 url=""
-for a in "\$@"; do
-    case "\$a" in
-    -*) ;;
-    *) url="\$a" ;;
+out=""
+while [ \$# -gt 0 ]; do
+    case "\$1" in
+    -o) out="\$2"; shift 2 ;;
+    -*) shift ;;
+    *) url="\$1"; shift ;;
     esac
 done
+[ -z "\$out" ] || exec >"\$out"
 case "\$url" in
 *'registry.npmjs.org/@myscope%2fpkg/1.2.3'*)
     printf '{"dist":{"tarball":"http://fake-registry.invalid/tarball.tgz"}}'
@@ -347,4 +353,105 @@ EOF
     run env PATH="/usr/bin:/bin" "$zz_use_bin" -x
     [ "$status" -ne 0 ]
     [[ "$output" == *"requires a tool name"* ]]
+}
+
+@test "zz_use persists a script's zz_* peers, not just the scratch boot-dir copies" {
+    bindir=$(mktemp -d)
+    zz_use_bin=$(command -v zz_use)
+    run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" git-hook-commitmsg
+    [ "$status" -eq 0 ]
+    for tool in git-hook-commitmsg git-hook-installplugins zz_args zz_colors zz_log zz_npx; do
+        [ -x "$bindir/$tool" ]
+    done
+    rm -rf "$bindir"
+}
+
+# A local-origin fixture repo: a-tool peers on b-tool (only in the
+# fixture) and zz_log (default origin); c-tool has no peers.
+_local_fixture() {
+    fx=$(mktemp -d)
+    for t in a-tool b-tool c-tool; do
+        mkdir -p "$fx/$t"
+        printf '#!/bin/sh\necho fixture-%s\n' "$t" >"$fx/$t/run.sh"
+        chmod +x "$fx/$t/run.sh"
+    done
+    cat >"$fx/a-tool/package.json" <<'JSON'
+{ "peerDependencies": { "@tomgrv/scripts-b-tool": "*", "@tomgrv/scripts-zz_log": "*" } }
+JSON
+}
+
+@test "zz_use resolves a local-origin script's peers from that same origin" {
+    _local_fixture
+    bindir=$(mktemp -d)
+    zz_use_bin=$(command -v zz_use)
+    run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" "$fx/a-tool"
+    [ "$status" -eq 0 ]
+    [[ "$("$bindir/b-tool")" == "fixture-b-tool" ]]
+    [ -x "$bindir/zz_log" ]
+    rm -rf "$fx" "$bindir"
+}
+
+@test "zz_use keeps a glob's origin for every match, even after peers resolve elsewhere" {
+    _local_fixture
+    bindir=$(mktemp -d)
+    zz_use_bin=$(command -v zz_use)
+    run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" "$fx/*-tool"
+    [ "$status" -eq 0 ]
+    for t in a-tool b-tool c-tool; do
+        [[ "$("$bindir/$t")" == "fixture-$t" ]]
+    done
+    rm -rf "$fx" "$bindir"
+}
+
+@test "zz_use skips a pinned re-request whose install stamp matches" {
+    src=$(mktemp -d)
+    mkdir -p "$src/repo-v1/some-tool"
+    printf '#!/bin/sh\necho pinned\n' >"$src/repo-v1/some-tool/run.sh"
+    tarball="$src/repo.tar.gz"
+    tar -C "$src" -czf "$tarball" repo-v1
+    cache=$(mktemp -d)
+    bindir=$(mktemp -d)
+    zz_use_bin=$(command -v zz_use)
+    run env ZZ_USE_REPO_URL="file://$tarball" ZZ_CACHE_DIR="$cache" INSTALL_BIN_DIR="$bindir" PATH="$TEST_BIN:/usr/bin:/bin" "$zz_use_bin" someorg/repo/some-tool@v1
+    [ "$status" -eq 0 ]
+    [[ "$("$bindir/some-tool")" == "pinned" ]]
+    run env ZZ_DEBUG=1 ZZ_USE_REPO_URL="file://$tarball" ZZ_CACHE_DIR="$cache" INSTALL_BIN_DIR="$bindir" PATH="$bindir:$TEST_BIN:/usr/bin:/bin" "$zz_use_bin" someorg/repo/some-tool@v1
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"already installed from"* ]]
+    [[ "$output" != *"Installing"* ]]
+    rm -rf "$src" "$cache" "$bindir"
+}
+
+# zz_log comes from $TEST_BIN here: these origins never resolve the
+# default source that would otherwise put it on PATH.
+_sha_payload() {
+    payload=$(mktemp)
+    printf '#!/bin/sh\necho downloaded\n' >"$payload"
+}
+_sha_config() {
+    cfg=$(mktemp)
+    printf '{"fake-dl-tool":{"url":"file://%s","archive":"raw","sha256":"%s"}}' "$payload" "$1" >"$cfg"
+}
+
+@test "zz_use installs a download whose sha256 matches" {
+    _sha_payload
+    _sha_config "$(sha256sum "$payload" | cut -d' ' -f1)"
+    bindir=$(mktemp -d)
+    zz_use_bin=$(command -v zz_use)
+    run env ZZ_USE_CONFIG="$cfg" INSTALL_BIN_DIR="$bindir" PATH="$TEST_BIN:/usr/bin:/bin" "$zz_use_bin" fake-dl-tool
+    [ "$status" -eq 0 ]
+    [[ "$("$bindir/fake-dl-tool")" == "downloaded" ]]
+    rm -rf "$payload" "$cfg" "$bindir"
+}
+
+@test "zz_use rejects a download whose sha256 doesn't match" {
+    _sha_payload
+    _sha_config 0000000000000000000000000000000000000000000000000000000000000000
+    bindir=$(mktemp -d)
+    zz_use_bin=$(command -v zz_use)
+    run env ZZ_USE_CONFIG="$cfg" INSTALL_BIN_DIR="$bindir" PATH="$TEST_BIN:/usr/bin:/bin" "$zz_use_bin" fake-dl-tool
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Checksum mismatch"* ]]
+    [ ! -e "$bindir/fake-dl-tool" ]
+    rm -rf "$payload" "$cfg" "$bindir"
 }
