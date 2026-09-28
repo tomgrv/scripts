@@ -1,0 +1,25 @@
+{
+    "scripts": {
+        "lint": "npx --yes lint-staged -p false"
+    },
+    "optionalDependencies": {
+        "@tomgrv/devcontainer-features-common-utils": ">=5"
+    },
+    "peerDependencies": {
+        "prettier": "^3"
+    },
+    "lint-staged": {
+        "!(*schema).json": [
+            "normalize-json -c -w -a -i -t 4 -f local -l true"
+        ],
+        "*.{js,jsx,ts,tsx,md,html,css,vue,yaml,yml,json}": [
+            "npx --yes prettier --write"
+        ],
+        "composer.json": [
+            "composer validate --no-check-all --no-check-lock --no-check-publish"
+        ],
+        "package.json": [
+            "npm pkg fix"
+        ]
+    }
+}

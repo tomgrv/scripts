@@ -1,0 +1,8 @@
+{
+    "scripts": {
+        "prepare": "sh .husky/install.sh || echo 'Husky not installed'"
+    },
+    "devDependencies": {
+        "husky": "*"
+    }
+}
