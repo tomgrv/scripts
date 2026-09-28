@@ -168,3 +168,24 @@ EOF2
     [ "$status" -eq 0 ]
     [ "$(cat target.yaml)" = "a: 1" ]
 }
+
+@test "merge-yaml keeps an explicit null target" {
+    printf 'null\n' >target.yaml
+    printf 'a: 1\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    [ "$(yq -o=json . target.yaml)" = "null" ]
+}
+
+@test "merge-yaml fills a comments-only target from the source" {
+    printf '# only a comment\n\n' >target.yaml
+    printf 'a: 1\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    [ "$(yq -o=json -I0 . target.yaml)" = '{"a":1}' ]
+}
+
+@test "merge-yaml writes intermediates to a private temp dir" {
+    ! grep -q '/tmp/\$\$' "$BATS_TEST_DIRNAME/run.sh"
+    grep -q 'mktemp -d' "$BATS_TEST_DIRNAME/run.sh"
+}

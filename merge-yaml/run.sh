@@ -41,11 +41,15 @@ fi
 
 zz_log i "Merging YAML from {U $source} into {U $target}..."
 
-# An empty document reads as null: an empty target takes the source as is,
-# an empty source leaves the target unchanged.
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+# An empty source reads as null and leaves the target unchanged. A target
+# with no content (blank or comments only) takes the source as is; an
+# explicit null target is content and wins like any other value.
 target_json=$(yq -o=json . "$target")
 source_json=$(yq -o=json . "$source")
-case "$target_json" in "" | null) target_json= ;; esac
+grep -q '^[[:space:]]*[^#[:space:]]' "$target" || target_json=
 
 jq -n --argjson a "${target_json:-"{}"}" --argjson b "${source_json:-null}" '
 def dedupe_ordered:
@@ -71,7 +75,7 @@ def merge($a; $b):
   end;
 
 merge($a; $b)
-' | yq -p=json -o=yaml -P . >/tmp/$$.merged
+' | yq -p=json -o=yaml -P . >"$tmp/merged"
 
 # jq only computes the merged values; overlay them onto the original target
 # (yq "merge files" idiom) so its comments, key order and flow/block styles
@@ -79,9 +83,8 @@ merge($a; $b)
 # values, so the overlay only extends arrays and adds keys.
 # See https://mikefarah.gitbook.io/yq/usage/tips-and-tricks
 if [ -n "$target_json" ]; then
-    yq ea -I "$indent" 'select(fi == 0) * select(fi == 1)' "$target" /tmp/$$.merged >/tmp/$$.merge
+    yq ea -I "$indent" 'select(fi == 0) * select(fi == 1)' "$target" "$tmp/merged" >"$tmp/merge"
 else
-    yq -I "$indent" . /tmp/$$.merged >/tmp/$$.merge
+    yq -I "$indent" . "$tmp/merged" >"$tmp/merge"
 fi
-rm -f /tmp/$$.merged
-mv /tmp/$$.merge "$target" && zz_log s "YAML merged successfully"
+mv "$tmp/merge" "$target" && zz_log s "YAML merged successfully"
