@@ -1,14 +1,37 @@
+<!-- @format -->
+
 # Changelog
+
+## 0.27.0 (2026-09-28)
+
+_Commits from: v0.26.0..HEAD_
+
+### 📂 Unscoped changes
+
+#### Bug Fixes
+
+- 🐛 correct peerDependencies for multiple packages
+
+#### Other changes
+
+- Merge tag 'v0.26.0' into develop
+
+### 📦 scripts-zz_use changes
+
+#### Bug Fixes
+
+- 🐛 harden dependency resolution (#48)
 
 ## 0.26.0 (2026-09-27)
 
-*Commits from: v0.25.0..HEAD*
+_Commits from: v0.25.0..HEAD_
 
 ### 📂 Unscoped changes
 
 #### Other changes
 
 - Merge tag 'v0.25.0' into develop
+
 ### 📦 scripts-configure-feature changes
 
 #### Bug Fixes
@@ -18,7 +41,7 @@
 
 ## 0.25.0 (2026-09-27)
 
-*Commits from: v0.24.0..HEAD*
+_Commits from: v0.24.0..HEAD_
 
 ### 📂 Unscoped changes
 
@@ -29,7 +52,7 @@
 
 ## 0.24.0 (2026-09-26)
 
-*Commits from: v0.23.0..HEAD*
+_Commits from: v0.23.0..HEAD_
 
 ### 📂 Unscoped changes
 
@@ -37,6 +60,7 @@
 
 - Merge tag 'v0.23.0' into develop
 - 🔧 update devcontainer configuration
+
 ### 📦 git-hook-precommit changes
 
 #### Other changes
@@ -51,13 +75,14 @@
 
 ## 0.23.0 (2026-09-26)
 
-*Commits from: v0.22.0..HEAD*
+_Commits from: v0.22.0..HEAD_
 
 ### 📂 Unscoped changes
 
 #### Other changes
 
 - Merge tag 'v0.22.0' into develop
+
 ### 📦 zz_use changes
 
 #### Features
@@ -66,13 +91,14 @@
 
 ## 0.22.0 (2026-09-25)
 
-*Commits from: v0.21.0..HEAD*
+_Commits from: v0.21.0..HEAD_
 
 ### 📂 Unscoped changes
 
 #### Other changes
 
 - Merge tag 'v0.21.0' into develop
+
 ### 📦 zz_log changes
 
 #### Bug Fixes
@@ -81,7 +107,7 @@
 
 ## 0.21.0 (2026-09-25)
 
-*Commits from: v0.20.0..HEAD*
+_Commits from: v0.20.0..HEAD_
 
 ### 📂 Unscoped changes
 
@@ -89,6 +115,7 @@
 
 - Merge tag 'v0.20.0' into develop
 - update color customizations for title bar
+
 ### 📦 git-hook-installplugins changes
 
 #### Bug Fixes
@@ -109,7 +136,7 @@
 
 ## 0.20.0 (2026-09-15)
 
-*Commits from: v0.19.0..HEAD*
+_Commits from: v0.19.0..HEAD_
 
 ### 📂 Unscoped changes
 
@@ -123,7 +150,7 @@
 
 ## 0.19.0 (2026-09-15)
 
-*Commits from: v0.18.0..HEAD*
+_Commits from: v0.18.0..HEAD_
 
 ### 📂 Unscoped changes
 
@@ -138,13 +165,14 @@
 
 ## 0.18.0 (2026-09-14)
 
-*Commits from: v0.17.0..HEAD*
+_Commits from: v0.17.0..HEAD_
 
 ### 📂 Unscoped changes
 
 #### Other changes
 
 - Merge tag 'v0.17.0' into develop
+
 ### 📦 run-workspace-tests changes
 
 #### Features
@@ -153,13 +181,14 @@
 
 ## 0.17.0 (2026-09-14)
 
-*Commits from: v0.16.0..HEAD*
+_Commits from: v0.16.0..HEAD_
 
 ### 📂 Unscoped changes
 
 #### Other changes
 
 - Merge tag 'v0.16.0' into develop
+
 ### 📦 run-workspace-tests changes
 
 #### Features
@@ -168,7 +197,7 @@
 
 ## 0.16.0 (2026-09-14)
 
-*Commits from: v0.15.0..HEAD*
+_Commits from: v0.15.0..HEAD_
 
 ### 📂 Unscoped changes
 
@@ -179,6 +208,7 @@
 #### Other changes
 
 - Merge tag 'v0.15.0' into develop
+
 ### 📦 run-workspace-tests changes
 
 #### Features
@@ -187,13 +217,14 @@
 
 ## 0.15.0 (2026-09-13)
 
-*Commits from: v0.14.0..HEAD*
+_Commits from: v0.14.0..HEAD_
 
 ### 📂 Unscoped changes
 
 #### Other changes
 
 - Merge tag 'v0.14.0' into develop
+
 ### 📦 zz_colors changes
 
 #### Bug Fixes
@@ -202,7 +233,7 @@
 
 ## 0.14.0 (2026-09-13)
 
-*Commits from: v0.13.0..HEAD*
+_Commits from: v0.13.0..HEAD_
 
 ### 📂 Unscoped changes
 
@@ -213,6 +244,7 @@
 #### Other changes
 
 - Merge tag 'v0.13.0' into develop
+
 ### 📦 zz_args changes
 
 #### Bug Fixes
@@ -227,7 +259,7 @@
 
 ## 0.13.0 (2026-09-12)
 
-*Commits from: v0.12.0..HEAD*
+_Commits from: v0.12.0..HEAD_
 
 ### 📂 Unscoped changes
 
@@ -242,7 +274,7 @@
 
 ## 0.12.0 (2026-09-12)
 
-*Commits from: v0.11.0..HEAD*
+_Commits from: v0.11.0..HEAD_
 
 ### 📂 Unscoped changes
 
@@ -254,6 +286,7 @@
 
 - Merge tag 'v0.11.0' into develop
 - 📚️ update zz_persist's README table entry for -i/-v/-s (#19)
+
 ### 📦 devcontainer changes
 
 #### Features
@@ -268,7 +301,7 @@
 
 ## 0.11.0 (2026-09-11)
 
-*Commits from: v0.10.0..HEAD*
+_Commits from: v0.10.0..HEAD_
 
 ### 📂 Unscoped changes
 
@@ -279,6 +312,7 @@
 #### Other changes
 
 - Merge tag 'v0.10.0' into develop
+
 ### 📦 zz_persist changes
 
 #### Features
@@ -287,7 +321,7 @@
 
 ## 0.10.0 (2026-09-08)
 
-*Commits from: v0.9.0..HEAD*
+_Commits from: v0.9.0..HEAD_
 
 ### 📂 Unscoped changes
 
@@ -302,7 +336,7 @@
 
 ## 0.9.0 (2026-09-08)
 
-*Commits from: v0.8.0..HEAD*
+_Commits from: v0.8.0..HEAD_
 
 ### 📂 Unscoped changes
 
@@ -316,13 +350,14 @@
 
 ## 0.8.0 (2026-09-08)
 
-*Commits from: v0.7.0..HEAD*
+_Commits from: v0.7.0..HEAD_
 
 ### 📂 Unscoped changes
 
 #### Other changes
 
 - Merge tag 'v0.7.0' into develop
+
 ### 📦 zz_log changes
 
 #### Bug Fixes
@@ -331,13 +366,14 @@
 
 ## 0.7.0 (2026-09-08)
 
-*Commits from: v0.6.0..HEAD*
+_Commits from: v0.6.0..HEAD_
 
 ### 📂 Unscoped changes
 
 #### Other changes
 
 - Merge tag 'v0.6.0' into develop
+
 ### 📦 devcontainer-features-ai-coding changes
 
 #### Features
@@ -346,7 +382,7 @@
 
 ## 0.6.0 (2026-09-07)
 
-*Commits from: v0.5.0..HEAD*
+_Commits from: v0.5.0..HEAD_
 
 ### 📂 Unscoped changes
 
@@ -356,7 +392,7 @@
 
 ## 0.5.0 (2026-09-07)
 
-*Commits from: v0.4.0..HEAD*
+_Commits from: v0.4.0..HEAD_
 
 ### 📂 Unscoped changes
 
@@ -436,27 +472,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 - install a script's config/ dir alongside it in the bin dir
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ---
-*Generated on 2026-09-27 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+
+_Generated on 2026-09-28 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)_
