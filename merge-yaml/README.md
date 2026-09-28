@@ -26,8 +26,10 @@ bats test.bats
 
 - help/usage output and exit code
 - errors with no arguments, only a target, or a missing target file
-- errors when the target file is not valid YAML
+- errors when the target file is not valid YAML, showing yq's parse error
+- errors clearly when `yq` is not kislyuk/yq
+- keeps a GitHub workflow `on:` key unquoted
 - merges a source object into the target file in place
 - merges from stdin when source is `-`
 - unions and dedupes array values, recursively merges nested objects
-- `-i` sets the written indentation size
+- `-i` is accepted but ignored: output always uses 2-space indents
