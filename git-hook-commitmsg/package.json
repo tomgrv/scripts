@@ -1,6 +1,6 @@
 {
     "name": "@tomgrv/scripts-git-hook-commitmsg",
-    "version": "0.25.0",
+    "version": "0.27.0",
     "description": "Git commit-msg hook: apply commitlint rules and devmoji to the commit message",
     "bin": {
         "git-hook-commitmsg": "run.sh"

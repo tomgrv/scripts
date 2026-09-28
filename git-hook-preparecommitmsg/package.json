@@ -1,6 +1,6 @@
 {
     "name": "@tomgrv/scripts-git-hook-preparecommitmsg",
-    "version": "0.25.0",
+    "version": "0.27.0",
     "description": "Git prepare-commit-msg hook: install commitizen plugins and launch the commitizen prompt",
     "bin": {
         "git-hook-preparecommitmsg": "run.sh"
