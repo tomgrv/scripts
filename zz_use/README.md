@@ -16,8 +16,15 @@ zz_use [tool...] -x "<tool>" [arg...] # install <tool>, then exec it
 
 ## Dependencies
 
-Declared via `zz_use` at the top of `run.sh` and resolved on demand
-(installed if and only if missing) — see `run.sh` for the exact list.
+Declared in `package.json` `peerDependencies` (installed recursively,
+from the same origin/ref as the script when it ships them). npm packages
+a script only runs through `npx`/`zz_npx` go in `dependencies`, which
+`zz_use` ignores. `config/zz_use.json` entries may carry a `sha256` (a
+single hash, or an object keyed `<os>_<arch>`) verified before install.
+
+Environment: `ZZ_CACHE_TTL` (minutes, default 1440, `0` = never) sets
+when a cached archive for a mutable ref (branch, npm `latest`) is
+refetched; tags and commit shas never expire.
 
 ## Tests
 
@@ -40,3 +47,8 @@ bats test.bats
 - `-x` resolves leading dependencies before installing/exec'ing the target
 - `-x` strips an `[org/repo/]` prefix from the exec target's command name
 - `-x` without a tool name errors
+- persists a script's zz_* peers, not just the scratch boot-dir copies
+- resolves a local-origin script's peers from that same origin
+- keeps a glob's origin for every match
+- skips a pinned re-request whose install stamp matches
+- verifies a download's sha256, rejecting a mismatch
