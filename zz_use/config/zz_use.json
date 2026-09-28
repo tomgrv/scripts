@@ -32,6 +32,8 @@
         "version": "0.10.0"
     },
     "yq": {
-        "apt": "yq"
+        "archive": "raw",
+        "url": "https://github.com/mikefarah/yq/releases/download/v{VERSION}/yq_{OS}_{ARCH}",
+        "version": "4.47.1"
     }
 }

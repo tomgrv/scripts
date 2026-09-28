@@ -52,16 +52,16 @@ teardown() {
     [[ "$output" == *"not a valid YAML"* ]]
 }
 
-@test "merge-yaml errors clearly when yq is not kislyuk/yq" {
+@test "merge-yaml errors clearly when yq is not mikefarah/yq" {
     stub_script yq <<'EOF2'
 #!/bin/sh
-echo "yq (https://github.com/mikefarah/yq/) version v4.44.3"
+echo "yq 3.4.3"
 EOF2
     printf 'a: 1\n' >target.yaml
     printf 'b: 2\n' >source.yaml
     run merge-yaml target.yaml source.yaml
     [ "$status" -ne 0 ]
-    [[ "$output" == *"requires kislyuk/yq"* ]]
+    [[ "$output" == *"requires mikefarah/yq"* ]]
 }
 
 @test "merge-yaml keeps a GitHub workflow 'on' key unquoted" {
@@ -124,10 +124,18 @@ EOF2
     [[ "$result" == *"b: 2"* ]]
 }
 
-@test "merge-yaml accepts -i but always writes 2-space indents" {
+@test "merge-yaml writes 2-space indents by default" {
+    printf 'nested:\n  a: 1\n' >target.yaml
+    printf 'nested:\n  b: 2\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    grep -qE '^  a: 1' target.yaml
+}
+
+@test "merge-yaml honours -i for the output indent" {
     printf 'nested:\n  a: 1\n' >target.yaml
     printf 'nested:\n  b: 2\n' >source.yaml
     run merge-yaml -i 4 target.yaml source.yaml
     [ "$status" -eq 0 ]
-    grep -qE '^  a: 1' target.yaml
+    grep -qE '^    a: 1' target.yaml
 }

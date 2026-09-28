@@ -5,7 +5,7 @@ set -e
 
 eval $(
     zz_args "Merge 2 yaml files" $0 "$@" <<-help
-        i indent      indent    ignored (kislyuk/yq always writes 2-space indents)
+        i indent      indent    indent size (default: 2)
         - target      target		Target YAML file to merge into
         - source      source		Source YAML file to merge from
 help
@@ -16,22 +16,21 @@ if [ -z "$target" ] || [ -z "$source" ]; then
     exit 1
 fi
 
-# The pipeline below uses kislyuk/yq (python, a jq wrapper; apt's `yq`):
-# `yq .` transcodes YAML to JSON, `yq -y` transcodes JSON back to YAML.
-# mikefarah/yq (Go) has an incompatible CLI.
+# The pipeline below uses mikefarah/yq (Go, v4): `yq -o=json` transcodes
+# YAML to JSON, `yq -p=json -o=yaml` transcodes JSON back to YAML.
+# kislyuk/yq (python jq wrapper; apt's `yq`) has an incompatible CLI.
 command -v yq >/dev/null 2>&1 || zz_use yq
-if ! yq --help 2>&1 | grep -q 'jq wrapper'; then
-    zz_log e "merge-yaml requires kislyuk/yq (jq wrapper), found {U $(command -v yq || echo none)}"
+if ! yq --version 2>&1 | grep -q 'mikefarah'; then
+    zz_log e "merge-yaml requires mikefarah/yq (https://github.com/mikefarah/yq), found {U $(command -v yq || echo none)}"
     exit 1
 fi
 
-# kislyuk/yq always emits 2-space indents; -i is accepted for compatibility.
-[ -z "$indent" ] || [ "$indent" = 2 ] || zz_log d "Indent {U $indent} not supported by kislyuk/yq, using 2"
+indent=${indent:-2}
 
 if [ ! -f "$target" ]; then
     zz_log e "Target file {U $target} not found"
     exit 1
-elif ! yq_err=$(yq . "$target" 2>&1 >/dev/null); then
+elif ! yq_err=$(yq -o=json . "$target" 2>&1 >/dev/null); then
     zz_log e "Target file {U $target} is not a valid YAML: $yq_err"
     exit 1
 fi
@@ -42,10 +41,11 @@ fi
 
 zz_log i "Merging YAML from {U $source} into {U $target}..."
 
-target_json=$(yq . "$target")
-source_json=$(yq . "$source")
+# An empty document yields no JSON at all: treat it as null, like jq would.
+target_json=$(yq -o=json . "$target")
+source_json=$(yq -o=json . "$source")
 
-jq -n --argjson a "$target_json" --argjson b "$source_json" '
+jq -n --argjson a "${target_json:-null}" --argjson b "${source_json:-null}" '
 def dedupe_ordered:
   reduce .[] as $x ([]; if any(.[]; . == $x) then . else . + [$x] end);
 
@@ -69,4 +69,4 @@ def merge($a; $b):
   end;
 
 merge($a; $b)
-' | yq -y --yaml-output-grammar-version 1.2 --width 4096 . >/tmp/$$.merge && mv /tmp/$$.merge "$target" && zz_log s "YAML merged successfully"
+' | yq -p=json -o=yaml -P -I "$indent" . >/tmp/$$.merge && mv /tmp/$$.merge "$target" && zz_log s "YAML merged successfully"

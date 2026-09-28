@@ -18,6 +18,11 @@ merge-yaml [-i indent] <target> <source>
 Declared via `zz_use` at the top of `run.sh` and resolved on demand
 (installed if and only if missing) — see `run.sh` for the exact list.
 
+Requires [mikefarah/yq](https://github.com/mikefarah/yq) v4 (Go). When no
+`yq` is on `PATH`, `zz_use yq` downloads the pinned release binary. A
+different `yq` already on `PATH` (e.g. apt's python kislyuk/yq) is rejected
+with an explicit error rather than silently shadowed.
+
 ## Tests
 
 ```sh
@@ -27,9 +32,9 @@ bats test.bats
 - help/usage output and exit code
 - errors with no arguments, only a target, or a missing target file
 - errors when the target file is not valid YAML, showing yq's parse error
-- errors clearly when `yq` is not kislyuk/yq
+- errors clearly when `yq` is not mikefarah/yq
 - keeps a GitHub workflow `on:` key unquoted
 - merges a source object into the target file in place
 - merges from stdin when source is `-`
 - unions and dedupes array values, recursively merges nested objects
-- `-i` is accepted but ignored: output always uses 2-space indents
+- writes 2-space indents by default, honours `-i` otherwise
