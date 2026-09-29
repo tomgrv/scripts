@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.30.0 (2026-09-29)
+
+*Commits from: v0.29.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v0.29.0' into develop
+### 📦 scripts-zz_install changes
+
+#### Features
+
+- ✨ add multi-OS system package install utility (#52)
+
 ## 0.29.0 (2026-09-28)
 
 *Commits from: v0.28.0..HEAD*
@@ -502,5 +517,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-09-28 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-09-29 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*

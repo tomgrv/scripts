@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz_install",
-  "version": "0.25.0",
+  "version": "0.30.0",
   "description": "Install a system package with whichever package manager is available",
   "bin": {
     "zz_install": "run.sh"
