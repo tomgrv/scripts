@@ -237,7 +237,7 @@ flowchart TD
 | `zz_npx [-s] <tool>`                                                   | run a local `node_modules/.bin` binary, falling back to `npx`                                                                                         |
 | `zz_persist [-f\|-p] [-i <question> [-v\|-s <default>]] <key> [value]` | upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`; with `-i`, ask interactively instead (`-s` for a secret, masked when already set) |
 | `zz_call [-p package.json] [command...]`                               | resolve a caller's declared env vars (`config.input`/`config.output` in `package.json`; ask + persist if missing), then run a command                 |
-| `zz_install <pkg> [<manager>=<name>...]`                               | install a system package via apt/apk/dnf/yum/brew/pacman/zypper (sudo-aware), with per-manager name overrides                                         |
+| `zz_install <pkg> [<manager>=<name>...]`                               | install a system package via apt/apk/dnf/yum/brew/pacman/zypper/winget, with per-manager name overrides                                               |
 
 ## Functional scripts
 

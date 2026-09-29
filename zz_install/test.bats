@@ -85,6 +85,14 @@ set_uid() {
     [ "$(cat "$CALLS")" = "sudo apk add --no-cache -q jq" ]
 }
 
+@test "zz_install installs through winget by exact name, without root" {
+    set_uid 1000
+    stub winget
+    run_install jq winget=jqlang.jq
+    [ "$status" -eq 0 ]
+    [ "$(cat "$CALLS")" = "winget install -s winget -e --name jqlang.jq" ]
+}
+
 @test "zz_install fails when not root and sudo is missing" {
     set_uid 1000
     stub apk

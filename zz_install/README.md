@@ -20,7 +20,7 @@ zz_install git-flow apk=gitflow-avh dnf=gitflow yum=gitflow \
 
 `<pkg>` is the default package name; append `<manager>=<name>` pairs where a
 manager names it differently. Managers, tried in order: `apt` (`apt-get`),
-`apk`, `dnf`, `yum`, `brew`, `pacman`, `zypper`. Exits 1 when none is found,
+`apk`, `dnf`, `yum`, `brew`, `pacman`, `zypper`, `winget` (Git Bash on Windows, no root needed). Exits 1 when none is found,
 or when root is needed and neither root nor `sudo` is available.
 
 ## Dependencies
@@ -38,4 +38,5 @@ bats test.bats
 - applies a `<manager>=<name>` override for the selected manager only
 - ignores overrides for other managers
 - goes through `sudo` when not root
+- installs through `winget` by exact name (no root/sudo)
 - fails without a package manager, or without root/sudo

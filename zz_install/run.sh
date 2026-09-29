@@ -1,7 +1,7 @@
 #!/bin/sh
 # zz_install <pkg> [<manager>=<name>...] — install a system package with
 # whichever package manager is available (apt-get, apk, dnf, yum, brew,
-# pacman, zypper), escalating through sudo when not root.
+# pacman, zypper, winget), escalating through sudo when not root.
 #
 # <pkg> is the default package name. Append <manager>=<name> pairs where
 # a manager names it differently, e.g.:
@@ -46,7 +46,7 @@ as_root() {
 }
 
 # Overrides are keyed by the short manager name (apt, not apt-get)
-for key in apt apk dnf yum brew pacman zypper; do
+for key in apt apk dnf yum brew pacman zypper winget; do
     bin=$key
     [ "$key" = apt ] && bin=apt-get
     command -v "$bin" >/dev/null 2>&1 || continue
@@ -62,6 +62,7 @@ for key in apt apk dnf yum brew pacman zypper; do
     brew) brew install -q "$name" ;;
     pacman) as_root pacman -S --noconfirm --needed "$name" ;;
     zypper) as_root zypper --non-interactive --quiet install "$name" ;;
+    winget) winget install -s winget -e --name "$name" ;;
     esac
     exit $?
 done
