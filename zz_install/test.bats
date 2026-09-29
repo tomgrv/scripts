@@ -7,7 +7,7 @@ setup() {
     # STUBS holds the fake package managers plus just the tools run.sh
     # needs: exposing /usr/bin would surface the host's real managers.
     STUBS=$(mktemp -d)
-    for tool in sh cat tr sed grep dirname readlink basename; do
+    for tool in sh cat tr sed awk grep dirname readlink basename; do
         ln -s "$(command -v $tool)" "$STUBS/$tool"
     done
     export CALLS="$STUBS/calls"
@@ -20,7 +20,7 @@ teardown() {
 }
 
 # Run zz_install seeing only the stubs (bats itself keeps the full PATH).
-zz_install() {
+run_install() {
     PATH="$TEST_BIN:$STUBS" run command zz_install "$@"
 }
 
@@ -42,7 +42,7 @@ set_uid() {
 }
 
 @test "zz_install with no argument prints usage and fails" {
-    zz_install
+    run_install
     [ "$status" -eq 1 ]
     [[ "$output" == *"Usage"* ]]
 }
@@ -50,28 +50,28 @@ set_uid() {
 @test "zz_install uses the default package name with the first manager found" {
     stub apk
     stub dnf
-    zz_install jq
+    run_install jq
     [ "$status" -eq 0 ]
     [ "$(cat "$CALLS")" = "apk add --no-cache -q jq" ]
 }
 
 @test "zz_install applies the override for the selected manager" {
     stub dnf
-    zz_install git-flow apk=gitflow-avh dnf=gitflow
+    run_install git-flow apk=gitflow-avh dnf=gitflow
     [ "$status" -eq 0 ]
     [ "$(cat "$CALLS")" = "dnf install -y -q gitflow" ]
 }
 
 @test "zz_install ignores overrides for other managers" {
     stub apk
-    zz_install git-flow dnf=gitflow
+    run_install git-flow dnf=gitflow
     [ "$status" -eq 0 ]
     [ "$(cat "$CALLS")" = "apk add --no-cache -q git-flow" ]
 }
 
 @test "zz_install keys apt-get overrides as apt" {
     stub apt-get
-    zz_install git-flow apt=gitflow-x
+    run_install git-flow apt=gitflow-x
     [ "$status" -eq 0 ]
     [[ "$(cat "$CALLS")" == *"apt-get install -y -qq gitflow-x" ]]
 }
@@ -80,7 +80,7 @@ set_uid() {
     set_uid 1000
     stub apk
     stub sudo
-    zz_install jq
+    run_install jq
     [ "$status" -eq 0 ]
     [ "$(cat "$CALLS")" = "sudo apk add --no-cache -q jq" ]
 }
@@ -88,13 +88,13 @@ set_uid() {
 @test "zz_install fails when not root and sudo is missing" {
     set_uid 1000
     stub apk
-    zz_install jq
+    run_install jq
     [ "$status" -eq 1 ]
     [[ "$output" == *"requires root/sudo"* ]]
 }
 
 @test "zz_install fails when no package manager is found" {
-    zz_install jq
+    run_install jq
     [ "$status" -eq 1 ]
     [[ "$output" == *"No supported package manager"* ]]
 }
