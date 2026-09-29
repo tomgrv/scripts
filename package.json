@@ -46,6 +46,7 @@
     "zz_npx",
     "zz_persist",
     "zz_call",
+    "zz_install",
     "load-json",
     "validate-json",
     "normalize-json",
