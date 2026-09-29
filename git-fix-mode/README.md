@@ -22,3 +22,4 @@ bats test.bats
 - does nothing (exit 0) when there is no mode diff
 - reverts a tracked file's mode change back to what git recorded
 - leaves deleted files alone
+- restores modes from a subdirectory, with spaces in paths, without warnings

@@ -2,17 +2,21 @@
 
 # Reapply file mode changes (chmod) from the working tree diff without touching content
 
-deleted_files=$(git ls-files --deleted)
+cd "$(git rev-parse --show-toplevel)" >/dev/null || exit 0
 
-diff_output=$(git diff -p -R --no-color | grep -E "^(diff|(old|new) mode)" --color=never)
-
-if [ -n "$diff_output" ]; then
-    if [ -n "$deleted_files" ]; then
-        # Deleted files have no mode to restore and would make git apply fail
-        echo "$diff_output" | grep -vF "$deleted_files" | git apply --allow-empty --no-index
-    else
-        echo "$diff_output" | git apply --allow-empty --no-index
-    fi
-fi
+# Restore the mode recorded in the index straight from `git diff --raw`, instead of replaying a
+# reverse patch through `git apply`, which warns ("has type X, expected Y") whenever a file's
+# on-disk mode no longer matches the patch. Deleted files have no mode to restore and are skipped.
+git diff --raw -z --no-renames --diff-filter=M | while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
+    # shellcheck disable=SC2086
+    set -- $meta
+    old=${1#:}
+    new=$2
+    [ "$old" != "$new" ] || continue
+    case "$old" in
+    100755) chmod 755 -- "$path" ;;
+    100644) chmod 644 -- "$path" ;;
+    esac
+done
 
 exit 0

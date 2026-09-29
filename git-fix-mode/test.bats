@@ -59,3 +59,19 @@ teardown() {
     run git status --porcelain
     [[ "$output" == *"D script.sh"* ]] || [[ "$output" == *" D script.sh"* ]]
 }
+
+@test "git-fix-mode restores modes from a subdirectory, with spaces in paths, without warnings" {
+    mkdir sub
+    echo hi > "sub/a b.sh"
+    chmod 755 "sub/a b.sh"
+    git add . && git commit -qm "add"
+
+    chmod 644 "sub/a b.sh"
+    cd sub
+    run git-fix-mode
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+
+    [ "$(stat -c '%a' "a b.sh")" = "755" ]
+    [ -z "$(git status --porcelain)" ]
+}
