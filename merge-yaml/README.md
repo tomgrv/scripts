@@ -10,6 +10,10 @@ target (`yq ea 'select(fi == 0) * select(fi == 1)'`, see yq's
 [tips and tricks](https://mikefarah.gitbook.io/yq/usage/tips-and-tricks)),
 so the target's comments, key order and flow/block styles are kept.
 
+Array elements that are objects are reconciled by identity: elements sharing
+the same `id` (or, when there is no `id`, the same `name`) are merged into one
+entry instead of duplicated. Elements with neither key are deduped by equality.
+
 ## Usage
 
 ```sh

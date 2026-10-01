@@ -55,14 +55,32 @@ jq -n --argjson a "${target_json:-"{}"}" --argjson b "${source_json:-null}" '
 def dedupe_ordered:
   reduce .[] as $x ([]; if any(.[]; . == $x) then . else . + [$x] end);
 
+# Identity key of an array element: "id" if present, else "name", else none.
+def idkey:
+  if type == "object" then
+    (if has("id") then "id" elif has("name") then "name" else null end)
+  else null end;
+
 def merge($a; $b):
+  # Reconcile arrays: elements sharing the same id (or name) are merged in
+  # place; other elements are unioned and deduped as plain values.
+  def merge_arrays($a; $b):
+    reduce $b[] as $x ($a | dedupe_ordered;
+      ($x | idkey) as $k
+      | if $k != null then
+          (to_entries
+           | map(select(.value | type == "object" and has($k) and .[$k] == $x[$k]))
+           | first | .key) as $i
+          | if $i != null then .[$i] = merge(.[$i]; $x) else . + [$x] end
+        elif any(.[]; . == $x) then .
+        else . + [$x] end);
   if ($a | type) == "object" and ($b | type) == "object" then
     (($a | keys_unsorted) + (($b | keys_unsorted) - ($a | keys_unsorted))) as $k_all
     | reduce $k_all[] as $k ({};
       .[$k] =
         if ($a | has($k)) then
           if ($a[$k] | type) == "array" and ($b[$k] | type) == "array" then
-            ($a[$k] + $b[$k]) | dedupe_ordered
+            merge_arrays($a[$k]; $b[$k])
           else
             merge($a[$k]; $b[$k])
           end
