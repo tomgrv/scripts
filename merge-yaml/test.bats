@@ -114,6 +114,30 @@ EOF2
     [[ "$result" == *"- 4"* ]]
 }
 
+@test "merge-yaml reconciles array objects by id" {
+    printf 'l:\n  - id: 1\n    v: a\n  - id: 2\n    v: b\n' >target.yaml
+    printf 'l:\n  - id: 2\n    v: z\n    w: c\n  - id: 3\n    v: d\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    [ "$(yq -o=json -I0 . target.yaml)" = '{"l":[{"id":1,"v":"a"},{"id":2,"v":"b","w":"c"},{"id":3,"v":"d"}]}' ]
+}
+
+@test "merge-yaml reconciles array objects by name when no id" {
+    printf 'l:\n  - name: x\n    v: 1\n' >target.yaml
+    printf 'l:\n  - name: x\n    w: 2\n  - name: y\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    [ "$(yq -o=json -I0 . target.yaml)" = '{"l":[{"name":"x","v":1,"w":2},{"name":"y"}]}' ]
+}
+
+@test "merge-yaml dedupes array objects without id or name by equality" {
+    printf 'l:\n  - {a: 1}\n' >target.yaml
+    printf 'l:\n  - {a: 1}\n  - {a: 2}\n' >source.yaml
+    run merge-yaml target.yaml source.yaml
+    [ "$status" -eq 0 ]
+    [ "$(yq -o=json -I0 . target.yaml)" = '{"l":[{"a":1},{"a":2}]}' ]
+}
+
 @test "merge-yaml recursively merges nested objects" {
     printf 'nested:\n  a: 1\n' >target.yaml
     printf 'nested:\n  b: 2\n' >source.yaml
