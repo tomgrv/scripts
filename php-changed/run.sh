@@ -3,7 +3,7 @@
 eval $(
     zz_args "List PHP test parts (core, modules, packages) affected by a change" $0 "$@" <<-help
         b   base    base    Base ref to diff against (default: origin/\$GITHUB_BASE_REF, origin/develop, origin/main)
-        f   format  format  Output format: names (default), suites or json
+        f   format  format  Output format: names (default), paths, suites or json
         a   -       all     Ignore the diff and select every part
 help
 )
@@ -97,6 +97,11 @@ json)
     echo "$selected" | sed '/^$/d' | while read -r dir; do
         jq -nc --arg n "$dir" --arg s "$(suite_of "$dir")" '{name:$n,suite:$s,path:(if $n=="core" then "tests" else $n+"/tests" end)}'
     done | jq -sc '.'
+    ;;
+paths)
+    echo "$selected" | sed '/^$/d' | while read -r dir; do
+        if [ "$dir" = core ]; then echo tests; else echo "$dir/tests"; fi
+    done
     ;;
 suites)
     echo "$selected" | sed '/^$/d' | while read -r dir; do suite_of "$dir"; done

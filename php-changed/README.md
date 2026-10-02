@@ -11,7 +11,7 @@ and linked onto `PATH` as `php-changed`.
 ## Usage
 
 ```sh
-php-changed [-b <base>] [-f names|suites|json] [-a]
+php-changed [-b <base>] [-f names|paths|suites|json] [-a]
 ```
 
 - Parts are discovered from `extra.merge-plugin.include` globs in the root
@@ -26,8 +26,9 @@ php-changed [-b <base>] [-f names|suites|json] [-a]
 - `-b` defaults to `origin/$GITHUB_BASE_REF`, then `origin/develop`, `origin/main`.
   The diff is taken from the merge-base, so uncommitted changes count.
 
-Formats: `names` (part paths, default), `suites` (testsuite names, `core` is
-`Unit,Feature`), `json` (`[{name,suite,path}]`, ready for a CI matrix).
+Formats: `names` (part paths, default), `paths` (test directories, safe to pass
+to pest/phpunit whatever the testsuite names are), `suites` (testsuite names
+assuming they match directory names, `core` is `Unit,Feature`), `json` (`[{name,suite,path}]`, ready for a CI matrix).
 
 ## Dependencies
 

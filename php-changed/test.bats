@@ -98,3 +98,9 @@ packages/acme/lib" ]
     [[ "$output" == *"core"* ]]
     [[ "$output" == *"modules/Shop"* ]]
 }
+
+@test "paths format emits test directories" {
+    change tests/Unit/a.php
+    run php-changed -b main -f paths
+    [ "$output" = "tests" ]
+}
