@@ -1,0 +1,15 @@
+{
+  "name": "@tomgrv/scripts-php-changed",
+  "version": "0.1.0",
+  "description": "List PHP test parts (core, modules, packages) affected by a change",
+  "bin": {
+    "php-changed": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_args": "*"
+  },
+  "private": true
+}
