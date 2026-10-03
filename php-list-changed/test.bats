@@ -34,40 +34,40 @@ change() {
     git add -A && git commit -qm change
 }
 
-@test "php-changed is on PATH and syntactically valid" {
-    command -v php-changed
+@test "php-list-changed is on PATH and syntactically valid" {
+    command -v php-list-changed
     run sh -n "$BATS_TEST_DIRNAME/run.sh"
     [ "$status" -eq 0 ]
 }
 
 @test "no change selects nothing" {
-    run php-changed -b main
+    run php-list-changed -b main
     [ "$status" -eq 0 ]
     [ -z "$output" ]
 }
 
 @test "module change selects only that module" {
     change modules/Shop/tests/t.php
-    run php-changed -b main
+    run php-list-changed -b main
     [ "$output" = "modules/Shop" ]
 }
 
 @test "package change also selects dependent modules" {
     change packages/acme/lib/tests/t.php
-    run php-changed -b main
+    run php-list-changed -b main
     [ "$output" = "modules/Blog
 packages/acme/lib" ]
 }
 
 @test "core test change selects core only" {
     change tests/Unit/a.php
-    run php-changed -b main
+    run php-list-changed -b main
     [ "$output" = "core" ]
 }
 
 @test "shared core change selects every part with tests" {
     change app/a.php
-    run php-changed -b main
+    run php-list-changed -b main
     [ "$output" = "core
 modules/Blog
 modules/Shop
@@ -77,30 +77,30 @@ packages/acme/lib" ]
 @test "parts without tests are never listed" {
     touch packages/acme/notests/f.php
     change packages/acme/notests/f.php
-    run php-changed -b main
+    run php-list-changed -b main
     [ -z "$output" ]
 }
 
 @test "json format emits a matrix" {
     change modules/Shop/tests/t.php
-    run php-changed -b main -f json
+    run php-list-changed -b main -f json
     [ "$output" = '[{"name":"modules/Shop","suite":"Shop","path":"modules/Shop/tests"}]' ]
 }
 
 @test "suites format maps core to Unit,Feature" {
     change tests/Unit/a.php
-    run php-changed -b main -f suites
+    run php-list-changed -b main -f suites
     [ "$output" = "Unit,Feature" ]
 }
 
 @test "-a selects everything regardless of the diff" {
-    run php-changed -b main -a
+    run php-list-changed -b main -a
     [[ "$output" == *"core"* ]]
     [[ "$output" == *"modules/Shop"* ]]
 }
 
 @test "paths format emits test directories" {
     change tests/Unit/a.php
-    run php-changed -b main -f paths
+    run php-list-changed -b main -f paths
     [ "$output" = "tests" ]
 }
