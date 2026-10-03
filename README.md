@@ -308,6 +308,7 @@ lifecycle — only the script implementations moved.
 | `git-release-prod`          | finish a release/hotfix branch via Git Flow                              |
 | `git-unset`                 | unset all git config keys starting with a given prefix                   |
 | `git-workspaces`            | list workspace directories and affected workspaces                       |
+| `php-list-changed`          | list PHP test parts (core/modules/packages) affected by a change         |
 
 ## Usage
 
