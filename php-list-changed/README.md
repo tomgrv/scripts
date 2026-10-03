@@ -1,17 +1,17 @@
 <!-- @format -->
 
-# php-changed
+# php-list-changed
 
 List the PHP test parts (`core`, modules, packages) affected by a change, so
 only those test suites need to run.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
-and linked onto `PATH` as `php-changed`.
+and linked onto `PATH` as `php-list-changed`.
 
 ## Usage
 
 ```sh
-php-changed [-b <base>] [-f names|paths|suites|json] [-a]
+php-list-changed [-b <base>] [-f names|paths|suites|json] [-a]
 ```
 
 - Parts are discovered from `extra.merge-plugin.include` globs in the root

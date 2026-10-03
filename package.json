@@ -101,7 +101,7 @@
     "bump-changelog",
     "bump-version",
     "run-workspace-tests",
-    "php-changed"
+    "php-list-changed"
   ],
   "prettier": {
     "insertPragma": true,
