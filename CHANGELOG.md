@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.31.0 (2026-10-03)
+
+*Commits from: v0.30.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v0.30.0' into develop
+### 📦 scripts-merge-yaml changes
+
+#### Bug Fixes
+
+- 🐛 reconcile array objects by id, then name (#53)
+
+### 📦 scripts-php-changed changes
+
+#### Features
+
+- ✨ add script listing PHP test parts affected by a change (#54)
+
+### 📦 scripts-php-list-changed changes
+
+#### Other changes
+
+- ♻️ rename php-changed to php-list-changed (#55)
+
 ## 0.30.0 (2026-09-29)
 
 *Commits from: v0.29.0..HEAD*
@@ -518,5 +545,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-09-29 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-10-03 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
