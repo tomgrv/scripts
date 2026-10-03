@@ -100,7 +100,8 @@
     "bump-tag",
     "bump-changelog",
     "bump-version",
-    "run-workspace-tests"
+    "run-workspace-tests",
+    "php-changed"
   ],
   "prettier": {
     "insertPragma": true,
