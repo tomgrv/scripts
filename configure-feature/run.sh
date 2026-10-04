@@ -174,6 +174,33 @@ if [ -d $source/stubs ]; then
                     rm -f -- "$path"
                 fi
                 ;;
+            KEY)
+                # KEY <json-file> <path>: drop one key from a JSON file the
+                # stubs were merged into (merge-json only ever adds keys).
+                # <path> is a JSON array of keys, e.g. ["lint-staged","*.json"],
+                # handed to jq as data (delpaths), never evaluated as a filter.
+                keyfile=${path%% *}
+                keypath=${path#"$keyfile"}
+                keypath=${keypath# }
+                if [ -z "$keyfile" ] || [ -z "$keypath" ] || [ "$keypath" = "$path" ]; then
+                    zz_log w "Invalid .clean directive {U $line}, expected: KEY <json-file> <json-array-path>"
+                elif [ ! -f "$keyfile" ]; then
+                    :
+                elif ! echo "$keypath" | jq -e 'type == "array" and length > 0 and all(.[]; type == "string" or type == "number")' >/dev/null 2>&1; then
+                    zz_log w "Invalid key path in .clean directive {U $line}, expected a non-empty JSON array of strings or numbers"
+                elif ! jq empty "$keyfile" >/dev/null 2>&1; then
+                    zz_log w "Skipping {U $line}: {U $keyfile} is not valid JSON"
+                elif jq -e --argjson p "$keypath" 'getpath($p) != null' "$keyfile" >/dev/null 2>&1; then
+                    zz_log - "Removing key {U $keypath} from {U $keyfile}..."
+                    keytmp=$(mktemp)
+                    if jq --indent "${tabSize:-4}" --argjson p "$keypath" 'delpaths([$p])' "$keyfile" >"$keytmp"; then
+                        cat "$keytmp" >"$keyfile"
+                    else
+                        zz_log w "Could not remove key {U $keypath} from {U $keyfile}"
+                    fi
+                    rm -f "$keytmp"
+                fi
+                ;;
             *)
                 zz_log w "Unknown .clean directive {U $line}, skipping"
                 ;;
