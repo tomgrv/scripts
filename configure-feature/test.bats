@@ -168,6 +168,84 @@ teardown() {
     ! git ls-files --error-unmatch obsolete.txt >/dev/null 2>&1
 }
 
+@test "configure-feature .clean KEY removes a key from a JSON file" {
+    cat >package.json <<'EOF'
+{
+    "name": "t",
+    "lint-staged": {
+        "old-glob.json": ["old"],
+        "keep.json": ["keep"]
+    }
+}
+EOF
+    mkdir -p src/stubs
+    echo 'KEY package.json ["lint-staged","old-glob.json"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(jq -r '."lint-staged" | has("old-glob.json")' package.json)" = "false" ]
+    [ "$(jq -r '."lint-staged" | has("keep.json")' package.json)" = "true" ]
+    [ "$(jq -r '.name' package.json)" = "t" ]
+}
+
+@test "configure-feature .clean KEY handles keys with glob characters and spaces in the path list" {
+    cat >package.json <<'EOF'
+{
+    "lint-staged": {
+        "!(*schema).json": ["normalize"],
+        "*.php": ["lint"]
+    }
+}
+EOF
+    mkdir -p src/stubs
+    printf '%s\n' 'KEY package.json ["lint-staged", "!(*schema).json"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(jq -r '."lint-staged" | keys | join(",")' package.json)" = "*.php" ]
+}
+
+@test "configure-feature .clean KEY is a no-op when the key or file is missing" {
+    echo '{"a": 1}' >data.json
+    cp data.json data.before
+    mkdir -p src/stubs
+    printf '%s\n' 'KEY data.json ["missing","key"]' 'KEY nofile.json ["a"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    cmp data.json data.before
+    [ ! -f nofile.json ]
+}
+
+@test "configure-feature .clean KEY rejects a path that is not a JSON array and leaves the file alone" {
+    echo '{"a": {"b": 1}}' >data.json
+    cp data.json data.before
+    mkdir -p src/stubs
+    printf '%s\n' 'KEY data.json .a.b' 'KEY data.json []' 'KEY data.json' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    cmp data.json data.before
+    [[ "$output" == *"Invalid"* ]]
+}
+
+@test "configure-feature .clean KEY skips a file that is not valid JSON" {
+    printf '%s\n' '{ not json' >broken.json
+    cp broken.json broken.before
+    mkdir -p src/stubs
+    printf '%s\n' 'KEY broken.json ["a"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    cmp broken.json broken.before
+}
+
+@test "configure-feature .clean KEY runs after the stub merge, so it drops a key the merge kept" {
+    mkdir -p src/stubs
+    echo '{"keep": 1, "legacy": 2}' >src/stubs/data.json
+    echo '{"legacy": 0}' >data.json
+    echo 'KEY data.json ["legacy"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(jq -r 'has("keep")' data.json)" = "true" ]
+    [ "$(jq -r 'has("legacy")' data.json)" = "false" ]
+}
+
 @test "configure-feature does not deploy .clean itself as a stub" {
     mkdir -p src/stubs
     echo "RMV foo.txt" >src/stubs/.clean
