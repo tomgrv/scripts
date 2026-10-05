@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts",
-  "version": "0.31.0",
+  "version": "0.32.0",
   "description": "Reusable POSIX shell scripts shared across tomgrv devcontainer-features and vps",
   "license": "MIT",
   "scripts": {
@@ -40,6 +40,7 @@
     "zz_args",
     "zz_prompt",
     "zz_ask",
+    "zz_menu",
     "zz_input",
     "zz_bindir",
     "zz_dispatch",

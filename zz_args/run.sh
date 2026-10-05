@@ -5,6 +5,10 @@
 
 . zz_colors
 
+# Values are emitted with printf '%s', never echo: dash's echo expands \n,
+# \t and \\ in its argument, which would corrupt a value that legitimately
+# contains a backslash.
+
 # Escape a raw value so it can be safely re-embedded inside single quotes
 # in the `var='...'` assignments this script emits for the caller's `eval`.
 # Without this, a value containing a single quote (e.g. `'; rm -rf / #`)
@@ -92,7 +96,7 @@ while getopts :$argnames value "$@"; do
     naming=$(printf '%b' "$varnames" | grep -E "^$value" | cut -f2)
 
     if [ -n "$OPTARG" ]; then
-        echo "$naming='$(_escape "$OPTARG")'"
+        printf '%s\n' "$naming='$(_escape "$OPTARG")'"
     else
         echo "$naming=-$value"
     fi
@@ -118,7 +122,7 @@ else
 
     for arg in $(printf '%b' "$varnames" | grep -E "^-" | cut -f2); do
         if [ "$#" -gt "0" ]; then
-            echo "$arg='$(_escape "$1")'" && shift 1
+            printf '%s\n' "$arg='$(_escape "$1")'" && shift 1
         fi
     done
 
@@ -158,7 +162,7 @@ else
             line="$line '$(_escape "$1")'"
             shift 1
         done
-        echo "$line"
+        printf '%s\n' "$line"
     done
 
     for arg in $(printf '%b' "$varnames" | grep -E "^\+" | cut -f2); do
@@ -172,7 +176,7 @@ else
                     value="$value $piece"
                 fi
             done
-            echo "$arg='$value'"
+            printf '%s\n' "$arg='$value'"
             shift $#
         fi
     done

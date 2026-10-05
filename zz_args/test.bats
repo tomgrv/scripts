@@ -149,3 +149,25 @@ help
     [ "$status" -ne 0 ]
     [[ "$output" == *"Usage:"* ]]
 }
+
+@test "zz_args keeps backslash sequences in a flag value verbatim" {
+    run bash -c 'script=$(printf "%s\n" "eval \$(zz_args t \"\$0\" -f \"a\\\\nb\" <<-help" "f flag flag help text" "help" ")" "printf %s \"\$flag\"")
+    sh -c "$script"'
+    [ "$status" -eq 0 ]
+    [ "$output" = 'a\nb' ]
+}
+
+@test "zz_args keeps backslash sequences in positional and remaining args verbatim" {
+    cat >"$BATS_TEST_TMPDIR/caller.sh" <<'SCRIPT'
+#!/bin/sh
+eval $(zz_args "t" "$0" "$@" <<-help
+	- one  one  first positional
+	# rest rest remaining args
+help
+)
+printf '%s|%s' "$one" "$1"
+SCRIPT
+    run sh "$BATS_TEST_TMPDIR/caller.sh" 'p\tq' 'r\\s'
+    [ "$status" -eq 0 ]
+    [ "$output" = 'p\tq|r\\s' ]
+}

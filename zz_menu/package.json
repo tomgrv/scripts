@@ -1,0 +1,17 @@
+{
+  "name": "@tomgrv/scripts-zz_menu",
+  "version": "0.32.0",
+  "description": "Interactive numbered CLI menu returning the chosen key",
+  "bin": {
+    "zz_menu": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz_args": "*",
+    "@tomgrv/scripts-zz_colors": "*",
+    "@tomgrv/scripts-zz_log": "*"
+  },
+  "private": true
+}
