@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.33.0 (2026-10-05)
+
+*Commits from: v0.32.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v0.32.0' into develop
+### 📦 scripts-configure-feature changes
+
+#### Features
+
+- ✨ add .clean KEY for JSON/YAML, keep lockfiles out of lint-staged (#56)
+
+### 📦 scripts-git-release-prod changes
+
+#### Features
+
+- ✨ grant PR and issue write for release comments (#59)
+
 ## 0.32.0 (2026-10-05)
 
 *Commits from: v0.31.0..HEAD*
@@ -556,6 +577,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 
