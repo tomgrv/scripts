@@ -88,7 +88,7 @@ if [ -n "$cycle" ]; then
 fi
 
 render() {
-    [ -n "$title" ] && printf '%b\n' "${BBlue}==== ${title} ====${End}" >&2
+    [ -n "$title" ] && printf '%b%s%b\n' "${BBlue}==== " "$title" " ====${End}" >&2
     i=1
     while [ "$i" -le "$count" ]; do
         eval "key=\$_k$i label=\$_l$i state=\$_s$i"
@@ -97,7 +97,7 @@ render() {
         if [ -n "$cycle" ]; then
             label="[$(printf "%-${width}s" "$state")] ${label}"
         fi
-        printf '%b\n' "  ${BBlue}$(printf '%2d' "$i")${End})${mark}${label}" >&2
+        printf '%b%s\n' "  ${BBlue}$(printf '%2d' "$i")${End})${mark}" "$label" >&2
         i=$((i + 1))
     done
     if [ -n "$footer" ]; then

@@ -141,3 +141,9 @@ teardown() {
     run bash -c 'echo "1" | zz_menu "a=one   two    three" 2>&1 1>/dev/null'
     [[ "$output" == *"one   two    three"* ]]
 }
+
+@test "zz_menu prints titles and labels verbatim, without expanding backslash escapes" {
+    run bash -c 'echo "1" | zz_menu -t "C:\new\c" "a=dir\tx\c done" 2>&1 1>/dev/null'
+    [[ "$output" == *'C:\new\c'* ]]
+    [[ "$output" == *'dir\tx\c done'* ]]
+}
