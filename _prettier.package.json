@@ -1,0 +1,32 @@
+{
+    "peerDependencies": {
+        "prettier": "*",
+        "prettier-plugin-sh": "*"
+    },
+    "prettier": {
+        "insertPragma": true,
+        "overrides": [
+            {
+                "files": "*.yml",
+                "options": {
+                    "tabWidth": 2,
+                    "useTabs": false
+                }
+            },
+            {
+                "files": "*.json",
+                "options": {
+                    "tabWidth": 4,
+                    "useTabs": false
+                }
+            }
+        ],
+        "plugins": [
+            "prettier-plugin-sh"
+        ],
+        "semi": false,
+        "singleQuote": true,
+        "tabWidth": 4,
+        "trailingComma": "es5"
+    }
+}
