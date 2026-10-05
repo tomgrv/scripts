@@ -168,6 +168,256 @@ teardown() {
     ! git ls-files --error-unmatch obsolete.txt >/dev/null 2>&1
 }
 
+@test "configure-feature .clean KEY removes a key from a JSON file" {
+    cat >package.json <<'EOF'
+{
+    "name": "t",
+    "lint-staged": {
+        "old-glob.json": ["old"],
+        "keep.json": ["keep"]
+    }
+}
+EOF
+    mkdir -p src/stubs
+    echo 'KEY package.json ["lint-staged","old-glob.json"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(jq -r '."lint-staged" | has("old-glob.json")' package.json)" = "false" ]
+    [ "$(jq -r '."lint-staged" | has("keep.json")' package.json)" = "true" ]
+    [ "$(jq -r '.name' package.json)" = "t" ]
+}
+
+@test "configure-feature .clean KEY handles keys with glob characters and spaces in the path list" {
+    cat >package.json <<'EOF'
+{
+    "lint-staged": {
+        "!(*schema).json": ["normalize"],
+        "*.php": ["lint"]
+    }
+}
+EOF
+    mkdir -p src/stubs
+    printf '%s\n' 'KEY package.json ["lint-staged", "!(*schema).json"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(jq -r '."lint-staged" | keys | join(",")' package.json)" = "*.php" ]
+}
+
+@test "configure-feature .clean KEY is a no-op when the key or file is missing" {
+    echo '{"a": 1}' >data.json
+    cp data.json data.before
+    mkdir -p src/stubs
+    printf '%s\n' 'KEY data.json ["missing","key"]' 'KEY nofile.json ["a"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    cmp data.json data.before
+    [ ! -f nofile.json ]
+}
+
+@test "configure-feature .clean KEY rejects a path that is not a JSON array and leaves the file alone" {
+    echo '{"a": {"b": 1}}' >data.json
+    cp data.json data.before
+    mkdir -p src/stubs
+    printf '%s\n' 'KEY data.json .a.b' 'KEY data.json []' 'KEY data.json' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    cmp data.json data.before
+    [[ "$output" == *"Invalid"* ]]
+}
+
+@test "configure-feature .clean KEY skips a file that is not valid JSON" {
+    printf '%s\n' '{ not json' >broken.json
+    cp broken.json broken.before
+    mkdir -p src/stubs
+    printf '%s\n' 'KEY broken.json ["a"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    cmp broken.json broken.before
+}
+
+@test "configure-feature .clean KEY runs before the stub merge, so the stub's value replaces the old one" {
+    mkdir -p src/stubs
+    echo '{"keep": 1, "legacy": 2}' >src/stubs/data.json
+    echo '{"legacy": 0}' >data.json
+    echo 'KEY data.json ["legacy"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(jq -r '.keep' data.json)" = "1" ]
+    [ "$(jq -r '.legacy' data.json)" = "2" ]
+}
+
+@test "configure-feature .clean KEY leaves a key gone when the stub no longer has it" {
+    mkdir -p src/stubs
+    echo '{"keep": 1}' >src/stubs/data.json
+    echo '{"legacy": 0, "own": true}' >data.json
+    echo 'KEY data.json ["legacy"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(jq -r 'has("legacy")' data.json)" = "false" ]
+    [ "$(jq -r '.own' data.json)" = "true" ]
+}
+
+# --- YAML (needs mikefarah/yq, as merge-yaml does) -------------------------
+
+require_mikefarah_yq() {
+    yq --version 2>&1 | grep -q mikefarah || skip "needs mikefarah/yq"
+}
+
+@test "configure-feature .clean KEY replaces a scalar in a YAML file with the stub's value" {
+    require_mikefarah_yq
+    cat >wf.yml <<'EOF'
+# consumer workflow
+jobs:
+  review:
+    if: old-gate # keep this comment
+    runs-on: ubuntu-latest
+EOF
+    mkdir -p src/stubs
+    cat >src/stubs/wf.yml <<'EOF'
+jobs:
+  review:
+    if: new-gate
+    runs-on: ubuntu-latest
+EOF
+    echo 'KEY wf.yml ["jobs","review","if"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(yq '.jobs.review.if' wf.yml)" = "new-gate" ]
+    grep -q "# consumer workflow" wf.yml
+}
+
+@test "configure-feature .clean KEY fixes a broken scalar inside a list element selected by name" {
+    require_mikefarah_yq
+    cat >wf.yml <<'EOF'
+jobs:
+  sync:
+    steps:
+      - name: Other step
+        with:
+          repository: untouched
+      - name: Create pull request
+        with:
+          repository: org/{{ matrix.name }}
+          keep: me
+EOF
+    mkdir -p src/stubs
+    cat >src/stubs/wf.yml <<'EOF'
+jobs:
+  sync:
+    steps:
+      - name: Create pull request
+        with:
+          repository: org/${{ matrix.name }}
+EOF
+    cat >src/stubs/.clean <<'EOF'
+KEY wf.yml ["jobs","sync","steps",{"name":"Create pull request"},"with","repository"]
+EOF
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(yq '.jobs.sync.steps[1].with.repository' wf.yml)" = 'org/${{ matrix.name }}' ]
+    [ "$(yq '.jobs.sync.steps[1].with.keep' wf.yml)" = "me" ]
+    [ "$(yq '.jobs.sync.steps[0].with.repository' wf.yml)" = "untouched" ]
+}
+
+@test "configure-feature .clean KEY removes a YAML key so the merge cannot leave two exclusive triggers" {
+    require_mikefarah_yq
+    cat >wf.yml <<'EOF'
+on:
+  push:
+    paths:
+      - old/**
+EOF
+    mkdir -p src/stubs
+    cat >src/stubs/wf.yml <<'EOF'
+on:
+  push:
+    paths-ignore:
+      - '**/*.md'
+EOF
+    echo 'KEY wf.yml ["on","push","paths"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(yq '.on.push | has("paths")' wf.yml)" = "false" ]
+    [ "$(yq '.on.push | has("paths-ignore")' wf.yml)" = "true" ]
+}
+
+@test "configure-feature .clean KEY is a no-op when a name selector or index does not resolve" {
+    require_mikefarah_yq
+    cat >wf.yml <<'EOF'
+jobs:
+  sync:
+    steps:
+      - name: Only step
+        run: echo
+EOF
+    cp wf.yml wf.before
+    mkdir -p src/stubs
+    cat >src/stubs/.clean <<'EOF'
+KEY wf.yml ["jobs","sync","steps",{"name":"Missing"},"run"]
+KEY wf.yml ["jobs","sync","steps",5,"run"]
+KEY wf.yml ["jobs","other"]
+EOF
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    cmp wf.yml wf.before
+}
+
+@test "configure-feature .clean KEY handles YAML holding multi-line block scalars" {
+    # yq serialises a block scalar as a JSON string with an escaped \n, which
+    # a shell echo (dash) would expand into a raw newline and break the JSON.
+    require_mikefarah_yq
+    cat >wf.yml <<'EOF'
+jobs:
+  sync:
+    steps:
+      - name: Report
+        run: |
+          echo one
+          echo two
+        if: old
+EOF
+    mkdir -p src/stubs
+    cat >src/stubs/wf.yml <<'EOF'
+jobs:
+  sync:
+    steps:
+      - name: Report
+        if: new
+EOF
+    echo 'KEY wf.yml ["jobs","sync","steps",{"name":"Report"},"if"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(yq '.jobs.sync.steps[0].if' wf.yml)" = "new" ]
+    [ "$(yq '.jobs.sync.steps[0].run' wf.yml)" = "$(printf 'echo one\necho two')" ]
+}
+
+@test "configure-feature .clean KEY removes a key whose value is null, in JSON and in YAML" {
+    require_mikefarah_yq
+    printf '%s\n' '{"gone": null, "keep": 1, "list": [null, 2]}' >data.json
+    printf '%s\n' 'gone: null' 'keep: 1' >data.yml
+    mkdir -p src/stubs
+    cat >src/stubs/.clean <<'EOF'
+KEY data.json ["gone"]
+KEY data.json ["list",0]
+KEY data.yml ["gone"]
+EOF
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(jq -c . data.json)" = '{"keep":1,"list":[2]}' ]
+    [ "$(yq -o=json -I0 . data.yml)" = '{"keep":1}' ]
+}
+
+@test "configure-feature .clean KEY skips files that are neither JSON nor YAML" {
+    echo "line" >notes.txt
+    cp notes.txt notes.before
+    mkdir -p src/stubs
+    echo 'KEY notes.txt ["a"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    cmp notes.txt notes.before
+    [[ "$output" == *"only JSON and YAML"* ]]
+}
+
 @test "configure-feature does not deploy .clean itself as a stub" {
     mkdir -p src/stubs
     echo "RMV foo.txt" >src/stubs/.clean
