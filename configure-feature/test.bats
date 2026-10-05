@@ -362,6 +362,35 @@ EOF
     cmp wf.yml wf.before
 }
 
+@test "configure-feature .clean KEY handles YAML holding multi-line block scalars" {
+    # yq serialises a block scalar as a JSON string with an escaped \n, which
+    # a shell echo (dash) would expand into a raw newline and break the JSON.
+    require_mikefarah_yq
+    cat >wf.yml <<'EOF'
+jobs:
+  sync:
+    steps:
+      - name: Report
+        run: |
+          echo one
+          echo two
+        if: old
+EOF
+    mkdir -p src/stubs
+    cat >src/stubs/wf.yml <<'EOF'
+jobs:
+  sync:
+    steps:
+      - name: Report
+        if: new
+EOF
+    echo 'KEY wf.yml ["jobs","sync","steps",{"name":"Report"},"if"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(yq '.jobs.sync.steps[0].if' wf.yml)" = "new" ]
+    [ "$(yq '.jobs.sync.steps[0].run' wf.yml)" = "$(printf 'echo one\necho two')" ]
+}
+
 @test "configure-feature .clean KEY skips files that are neither JSON nor YAML" {
     echo "line" >notes.txt
     cp notes.txt notes.before

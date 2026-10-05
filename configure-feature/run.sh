@@ -52,7 +52,7 @@ clean_key() {
 
     [ -f "$ck_file" ] || return 0
 
-    if ! echo "$ck_path" | jq -e 'type == "array" and length > 0 and all(.[]; type == "string" or type == "number" or (type == "object" and length > 0))' >/dev/null 2>&1; then
+    if ! printf '%s\n' "$ck_path" | jq -e 'type == "array" and length > 0 and all(.[]; type == "string" or type == "number" or (type == "object" and length > 0))' >/dev/null 2>&1; then
         zz_log w "Invalid key path {U $ck_path} for {U $ck_file}, expected a non-empty JSON array of strings, numbers or {\"field\":\"value\"} selectors"
         return 0
     fi
@@ -73,7 +73,7 @@ clean_key() {
         }
     fi
 
-    ck_resolved=$(echo "$ck_doc" | jq -c --argjson p "$ck_path" '
+    ck_resolved=$(printf '%s\n' "$ck_doc" | jq -c --argjson p "$ck_path" '
         def pick($k):
             if ($k | type) == "object" then
                 (.node | if type == "array" then
@@ -114,9 +114,9 @@ if [ -d $source/stubs ]; then
 
     find "$source/stubs" -type f -name ".clean" | sort | while read cleanfile; do
         while IFS= read -r line || [ -n "$line" ]; do
-            line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-            [ "$(echo "$line" | awk '{print $1}')" = KEY ] || continue
-            keyargs=$(echo "$line" | cut -d' ' -f2-)
+            line=$(printf '%s\n' "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            [ "$(printf '%s\n' "$line" | awk '{print $1}')" = KEY ] || continue
+            keyargs=$(printf '%s\n' "$line" | cut -d' ' -f2-)
             keyfile=${keyargs%% *}
             keypath=${keyargs#"$keyfile"}
             keypath=${keypath# }
