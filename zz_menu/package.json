@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz_menu",
-  "version": "0.25.0",
+  "version": "0.32.0",
   "description": "Interactive numbered CLI menu returning the chosen key",
   "bin": {
     "zz_menu": "run.sh"
