@@ -31,7 +31,102 @@ if [ ! -d $source ]; then
     exit 1
 fi
 
+# clean_key <file> <path>: drop one key from a JSON or YAML file (.clean KEY).
+# <path> is a JSON array of steps, handed to jq/yq as data and never evaluated:
+# a string is an object key, a number an array index, and an object such as
+# {"name":"Deploy"} selects the first array element whose fields all match,
+# the way merge-yaml identifies list items. Anything that does not resolve
+# (missing file, key or element) leaves the file untouched.
+clean_key() {
+    ck_file=$1
+    ck_path=$2
+
+    case "${ck_file##*.}" in
+    json) ck_type=json ;;
+    yaml | yml) ck_type=yaml ;;
+    *)
+        zz_log w "Skipping KEY for {U $ck_file}: only JSON and YAML files are supported"
+        return 0
+        ;;
+    esac
+
+    [ -f "$ck_file" ] || return 0
+
+    if ! printf '%s\n' "$ck_path" | jq -e 'type == "array" and length > 0 and all(.[]; type == "string" or type == "number" or (type == "object" and length > 0))' >/dev/null 2>&1; then
+        zz_log w "Invalid key path {U $ck_path} for {U $ck_file}, expected a non-empty JSON array of strings, numbers or {\"field\":\"value\"} selectors"
+        return 0
+    fi
+
+    if [ "$ck_type" = yaml ]; then
+        if ! yq --version 2>&1 | grep -q mikefarah; then
+            zz_log w "Skipping KEY for {U $ck_file}: it needs mikefarah/yq"
+            return 0
+        fi
+        ck_doc=$(yq -o=json . "$ck_file" 2>/dev/null) || {
+            zz_log w "Skipping KEY for {U $ck_file}: not valid YAML"
+            return 0
+        }
+    else
+        ck_doc=$(jq -c . "$ck_file" 2>/dev/null) || {
+            zz_log w "Skipping KEY for {U $ck_file}: not valid JSON"
+            return 0
+        }
+    fi
+
+    ck_resolved=$(printf '%s\n' "$ck_doc" | jq -c --argjson p "$ck_path" '
+        def pick($k):
+            if ($k | type) == "object" then
+                (.node | if type == "array" then
+                    to_entries | map(select(.value as $e | ($e | type) == "object" and ($k | to_entries | all(. as $kv | $e[$kv.key] == $kv.value)))) | first
+                else null end) as $m
+                | if $m == null then null else {path: (.path + [$m.key]), node: $m.value} end
+            elif ($k | type) == "string" then
+                if (.node | type) == "object" and (.node | has($k)) then {path: (.path + [$k]), node: .node[$k]} else null end
+            else
+                if (.node | type) == "array" and $k >= 0 and $k < (.node | length) then {path: (.path + [$k]), node: .node[$k]} else null end
+            end;
+        reduce $p[] as $k ({path: [], node: .}; if . == null then null else pick($k) end)
+        | if . == null then null else .path end') || return 0
+    [ "$ck_resolved" != null ] || return 0
+
+    zz_log - "Removing key {U $ck_path} from {U $ck_file}..."
+    if [ "$ck_type" = yaml ]; then
+        CK_PATHS="[$ck_resolved]" yq -i -I "${tabSize:-2}" 'delpaths(env(CK_PATHS))' "$ck_file" ||
+            zz_log w "Could not remove key {U $ck_path} from {U $ck_file}"
+    else
+        ck_tmp=$(mktemp)
+        if jq --indent "${tabSize:-4}" --argjson r "$ck_resolved" 'delpaths([$r])' "$ck_file" >"$ck_tmp"; then
+            cat "$ck_tmp" >"$ck_file"
+        else
+            zz_log w "Could not remove key {U $ck_path} from {U $ck_file}"
+        fi
+        rm -f "$ck_tmp"
+    fi
+}
+
 if [ -d $source/stubs ]; then
+
+    # KEY directives run BEFORE the stubs are merged: merge-json and
+    # merge-yaml keep the value already in the target, so dropping a key first
+    # is what lets the merge write the stub's current value in its place (a
+    # fixed scalar), or leaves it gone when the stub no longer has the key.
+    zz_log i "Processing .clean KEY directives if existing..."
+
+    find "$source/stubs" -type f -name ".clean" | sort | while read cleanfile; do
+        while IFS= read -r line || [ -n "$line" ]; do
+            line=$(printf '%s\n' "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            [ "$(printf '%s\n' "$line" | awk '{print $1}')" = KEY ] || continue
+            keyargs=$(printf '%s\n' "$line" | cut -d' ' -f2-)
+            keyfile=${keyargs%% *}
+            keypath=${keyargs#"$keyfile"}
+            keypath=${keypath# }
+            if [ -z "$keyfile" ] || [ -z "$keypath" ] || [ "$keypath" = "$keyargs" ]; then
+                zz_log w "Invalid .clean directive {U $line}, expected: KEY <json-or-yaml-file> <json-array-path>"
+                continue
+            fi
+            clean_key "$keyfile" "$keypath"
+        done <"$cleanfile"
+    done
 
     zz_log i "Deploying stubs..."
 
@@ -174,6 +269,7 @@ if [ -d $source/stubs ]; then
                     rm -f -- "$path"
                 fi
                 ;;
+            KEY) ;; # already handled before the stubs were deployed
             *)
                 zz_log w "Unknown .clean directive {U $line}, skipping"
                 ;;
