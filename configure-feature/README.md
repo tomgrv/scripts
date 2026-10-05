@@ -26,15 +26,33 @@ KEY package.json ["lint-staged","legacy-glob"]
 - `RMV <path>` — untrack the file from git (`git rm --cached`), keeping it
   on disk (e.g. it moved from tracked to `.gitignore`d).
 - `DEL <path>` — delete the file from disk and untrack it from git.
-- `KEY <json-file> <path>` — remove one key from a JSON file. JSON stubs are
-  merged with `merge-json`, which only ever adds keys, so a key a stub
-  renamed or dropped would otherwise stay in every consumer's file forever.
-  `<path>` is a JSON array of keys (strings, or numbers for array indexes),
-  e.g. `["lint-staged","!(*schema).json"]`; it is handed to `jq` as data, not
-  evaluated, so keys full of glob characters are safe. The file path cannot
-  contain spaces. Nothing happens when the file or the key is missing, and a
-  file that is not valid JSON is left untouched with a warning. The file is
-  rewritten with the feature's 4-space indentation.
+- `KEY <file> <path>` — remove one key from a JSON or YAML file. The stub
+  merges (`merge-json`, `merge-yaml`) only ever add keys and keep the value
+  already in the target, so a key a stub renamed or dropped, or a scalar a stub
+  fixed, would otherwise stay as it was in every consumer's file forever.
+  `<path>` is a JSON array of steps, handed to `jq`/`yq` as data and never
+  evaluated, so keys full of glob characters are safe:
+    - a string is an object key;
+    - a number is an array index;
+    - an object such as `{"name":"Deploy"}` selects the first array element
+      whose fields all match, the way `merge-yaml` identifies list items.
+
+    ```
+    KEY package.json ["lint-staged","legacy-glob"]
+    KEY .github/workflows/review.yml ["jobs","review","if"]
+    KEY .github/workflows/sync.yml ["jobs","sync","steps",{"name":"Create PR"},"with","repository"]
+    ```
+
+    `KEY` runs **before** the stubs are merged. If the stub still has the key,
+    the merge then writes the stub's current value in place of the old one (a
+    fixed scalar is replaced); if the stub no longer has it, the key stays gone.
+    Nothing happens when the file or the key is missing, so it is idempotent. A
+    file that is not valid JSON or YAML, a malformed path, or a YAML file when
+    `mikefarah/yq` is not installed is left untouched with a warning. JSON files
+    are rewritten with 4-space indentation, YAML files keep their comments. The
+    file path cannot contain spaces. Prefer an object selector over an index for
+    array elements, since an index can point at a different element in a file the
+    consumer edited.
 
 Blank lines and lines starting with `#` are ignored. `.clean` itself is never
 deployed as a stub.
