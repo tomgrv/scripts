@@ -21,7 +21,9 @@
 
 . zz_colors
 
-eval $(
+# Quoted eval: unquoted, field splitting would squeeze runs of spaces inside
+# the values (item labels are often column-aligned).
+eval "$(
     zz_args "Interactive numbered menu" $0 "$@" <<- help
 		t title   title    Title line shown above the items
 		d default default  Key chosen when the user just presses Enter
@@ -29,7 +31,7 @@ eval $(
 		c cycle   cycle    Comma-separated states; choosing an item advances its state
 		# items   items    Items: <key>=<label> or <label>
 	help
-)
+)"
 
 count=$#
 if [ "$count" -lt 1 ]; then

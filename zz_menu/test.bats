@@ -136,3 +136,8 @@ teardown() {
     run bash -c 'echo "" | zz_menu -c "skip,up" "vps-k3s:up=k3s" 2>/dev/null'
     [ "$output" = "vps-k3s=up" ]
 }
+
+@test "zz_menu keeps runs of spaces in labels (column alignment)" {
+    run bash -c 'echo "1" | zz_menu "a=one   two    three" 2>&1 1>/dev/null'
+    [[ "$output" == *"one   two    three"* ]]
+}
