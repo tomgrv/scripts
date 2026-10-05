@@ -391,6 +391,22 @@ EOF
     [ "$(yq '.jobs.sync.steps[0].run' wf.yml)" = "$(printf 'echo one\necho two')" ]
 }
 
+@test "configure-feature .clean KEY removes a key whose value is null, in JSON and in YAML" {
+    require_mikefarah_yq
+    printf '%s\n' '{"gone": null, "keep": 1, "list": [null, 2]}' >data.json
+    printf '%s\n' 'gone: null' 'keep: 1' >data.yml
+    mkdir -p src/stubs
+    cat >src/stubs/.clean <<'EOF'
+KEY data.json ["gone"]
+KEY data.json ["list",0]
+KEY data.yml ["gone"]
+EOF
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(jq -c . data.json)" = '{"keep":1,"list":[2]}' ]
+    [ "$(yq -o=json -I0 . data.yml)" = '{"keep":1}' ]
+}
+
 @test "configure-feature .clean KEY skips files that are neither JSON nor YAML" {
     echo "line" >notes.txt
     cp notes.txt notes.before
