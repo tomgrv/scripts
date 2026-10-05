@@ -17,6 +17,7 @@
     "@tomgrv/scripts-zz_dispatch": "*",
     "@tomgrv/scripts-zz_input": "*",
     "@tomgrv/scripts-zz_log": "*",
+    "@tomgrv/scripts-zz_menu": "*",
     "@tomgrv/scripts-zz_npx": "*",
     "@tomgrv/scripts-zz_persist": "*",
     "@tomgrv/scripts-zz_prompt": "*",

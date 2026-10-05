@@ -70,7 +70,7 @@ teardown() {
     zz_use_bin=$(command -v zz_use)
     run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" "zz_*"
     [ "$status" -eq 0 ]
-    for tool in zz_use zz_colors zz_log zz_args zz_prompt zz_ask zz_input zz_bindir zz_dispatch zz_npx zz_persist zz_call zz_update; do
+    for tool in zz_use zz_colors zz_log zz_args zz_prompt zz_ask zz_menu zz_input zz_bindir zz_dispatch zz_npx zz_persist zz_call zz_update; do
         [ -x "$bindir/$tool" ]
     done
     rm -rf "$bindir"

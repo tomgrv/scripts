@@ -121,7 +121,7 @@ zz_use zz_log jq -x validate-json some-file.json
 
 - **Core** folders keep the `zz_` prefix — each atomic function is its own
   dedicated script: `zz_use`, `zz_update`, `zz_colors`, `zz_log`, `zz_args`,
-  `zz_prompt`, `zz_ask`, `zz_input`, `zz_bindir`, `zz_dispatch`, `zz_npx`,
+  `zz_prompt`, `zz_ask`, `zz_menu`, `zz_input`, `zz_bindir`, `zz_dispatch`, `zz_npx`,
   `zz_persist`, `zz_call`, `zz_install`.
 - **Functional** folders use `<verb>-<topic>` naming: `validate-json`,
   `normalize-json`, `merge-json`, `load-json`, `resolve-context`,
@@ -231,6 +231,7 @@ flowchart TD
 | `zz_args <title> <caller> <<-help ...`                                 | parse `$@` per a spec; `eval $(zz_args ...)` to bind the vars                                                                                         |
 | `zz_prompt <question> [default]`                                       | interactive free-form input                                                                                                                           |
 | `zz_ask <options> <question...>`                                       | interactive single-char confirm                                                                                                                       |
+| `zz_menu [-t title] [-d key] <key=label>...`                           | interactive numbered menu; prints the chosen key (exit 2 on bare Enter, 1 on quit)                                                                    |
 | `zz_input [file]`                                                      | read from arg (literal or file) or stdin                                                                                                              |
 | `zz_bindir [-t target]`                                                | resolve/create a writable bin dir; `eval $(zz_bindir ...)` to bind `$dir` and extend `PATH`                                                           |
 | `zz_dispatch <caller> <subcmd>`                                        | dispatch an underscore-prefixed caller to a sibling `<name>-<subcmd>` script                                                                          |
