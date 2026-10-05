@@ -40,6 +40,7 @@
     "zz_args",
     "zz_prompt",
     "zz_ask",
+    "zz_menu",
     "zz_input",
     "zz_bindir",
     "zz_dispatch",
