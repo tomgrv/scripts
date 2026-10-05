@@ -235,15 +235,142 @@ EOF
     cmp broken.json broken.before
 }
 
-@test "configure-feature .clean KEY runs after the stub merge, so it drops a key the merge kept" {
+@test "configure-feature .clean KEY runs before the stub merge, so the stub's value replaces the old one" {
     mkdir -p src/stubs
     echo '{"keep": 1, "legacy": 2}' >src/stubs/data.json
     echo '{"legacy": 0}' >data.json
     echo 'KEY data.json ["legacy"]' >src/stubs/.clean
     run configure-feature -s "$WORK_DIR/src" myfeature
     [ "$status" -eq 0 ]
-    [ "$(jq -r 'has("keep")' data.json)" = "true" ]
+    [ "$(jq -r '.keep' data.json)" = "1" ]
+    [ "$(jq -r '.legacy' data.json)" = "2" ]
+}
+
+@test "configure-feature .clean KEY leaves a key gone when the stub no longer has it" {
+    mkdir -p src/stubs
+    echo '{"keep": 1}' >src/stubs/data.json
+    echo '{"legacy": 0, "own": true}' >data.json
+    echo 'KEY data.json ["legacy"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
     [ "$(jq -r 'has("legacy")' data.json)" = "false" ]
+    [ "$(jq -r '.own' data.json)" = "true" ]
+}
+
+# --- YAML (needs mikefarah/yq, as merge-yaml does) -------------------------
+
+require_mikefarah_yq() {
+    yq --version 2>&1 | grep -q mikefarah || skip "needs mikefarah/yq"
+}
+
+@test "configure-feature .clean KEY replaces a scalar in a YAML file with the stub's value" {
+    require_mikefarah_yq
+    cat >wf.yml <<'EOF'
+# consumer workflow
+jobs:
+  review:
+    if: old-gate # keep this comment
+    runs-on: ubuntu-latest
+EOF
+    mkdir -p src/stubs
+    cat >src/stubs/wf.yml <<'EOF'
+jobs:
+  review:
+    if: new-gate
+    runs-on: ubuntu-latest
+EOF
+    echo 'KEY wf.yml ["jobs","review","if"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(yq '.jobs.review.if' wf.yml)" = "new-gate" ]
+    grep -q "# consumer workflow" wf.yml
+}
+
+@test "configure-feature .clean KEY fixes a broken scalar inside a list element selected by name" {
+    require_mikefarah_yq
+    cat >wf.yml <<'EOF'
+jobs:
+  sync:
+    steps:
+      - name: Other step
+        with:
+          repository: untouched
+      - name: Create pull request
+        with:
+          repository: org/{{ matrix.name }}
+          keep: me
+EOF
+    mkdir -p src/stubs
+    cat >src/stubs/wf.yml <<'EOF'
+jobs:
+  sync:
+    steps:
+      - name: Create pull request
+        with:
+          repository: org/${{ matrix.name }}
+EOF
+    cat >src/stubs/.clean <<'EOF'
+KEY wf.yml ["jobs","sync","steps",{"name":"Create pull request"},"with","repository"]
+EOF
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(yq '.jobs.sync.steps[1].with.repository' wf.yml)" = 'org/${{ matrix.name }}' ]
+    [ "$(yq '.jobs.sync.steps[1].with.keep' wf.yml)" = "me" ]
+    [ "$(yq '.jobs.sync.steps[0].with.repository' wf.yml)" = "untouched" ]
+}
+
+@test "configure-feature .clean KEY removes a YAML key so the merge cannot leave two exclusive triggers" {
+    require_mikefarah_yq
+    cat >wf.yml <<'EOF'
+on:
+  push:
+    paths:
+      - old/**
+EOF
+    mkdir -p src/stubs
+    cat >src/stubs/wf.yml <<'EOF'
+on:
+  push:
+    paths-ignore:
+      - '**/*.md'
+EOF
+    echo 'KEY wf.yml ["on","push","paths"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ "$(yq '.on.push | has("paths")' wf.yml)" = "false" ]
+    [ "$(yq '.on.push | has("paths-ignore")' wf.yml)" = "true" ]
+}
+
+@test "configure-feature .clean KEY is a no-op when a name selector or index does not resolve" {
+    require_mikefarah_yq
+    cat >wf.yml <<'EOF'
+jobs:
+  sync:
+    steps:
+      - name: Only step
+        run: echo
+EOF
+    cp wf.yml wf.before
+    mkdir -p src/stubs
+    cat >src/stubs/.clean <<'EOF'
+KEY wf.yml ["jobs","sync","steps",{"name":"Missing"},"run"]
+KEY wf.yml ["jobs","sync","steps",5,"run"]
+KEY wf.yml ["jobs","other"]
+EOF
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    cmp wf.yml wf.before
+}
+
+@test "configure-feature .clean KEY skips files that are neither JSON nor YAML" {
+    echo "line" >notes.txt
+    cp notes.txt notes.before
+    mkdir -p src/stubs
+    echo 'KEY notes.txt ["a"]' >src/stubs/.clean
+    run configure-feature -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    cmp notes.txt notes.before
+    [[ "$output" == *"only JSON and YAML"* ]]
 }
 
 @test "configure-feature does not deploy .clean itself as a stub" {
