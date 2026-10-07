@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-mode",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Fix file mode changes from diff",
   "bin": {
     "git-fix-mode": "run.sh"

@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-rights",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Set appropriate permissions for files and directories",
   "bin": {
     "git-fix-rights": "run.sh"

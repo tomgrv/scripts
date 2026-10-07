@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-forall",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Execute a command for all files in the repository",
   "bin": {
     "git-forall": "run.sh"

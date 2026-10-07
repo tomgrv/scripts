@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-author",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Set user.name and user.email to a specified commit's author",
   "bin": {
     "git-fix-author": "run.sh"

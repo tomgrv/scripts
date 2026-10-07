@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-prune",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Prune remote-tracking references that no longer exist on the remote",
   "bin": {
     "git-fix-prune": "run.sh"

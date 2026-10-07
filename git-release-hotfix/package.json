@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-release-hotfix",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Create a hotfix branch using Git Flow",
   "bin": {
     "git-release-hotfix": "run.sh"

@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-del",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Delete a specified commit and rebase subsequent history",
   "bin": {
     "git-fix-del": "run.sh"

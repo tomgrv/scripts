@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-distribute-utils",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Copy zz-*/utility scripts into a project's local scripts directory",
   "bin": {
     "distribute-utils": "run.sh"

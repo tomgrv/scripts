@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-up",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Amend the specified commit with current changes and rebase",
   "bin": {
     "git-fix-up": "run.sh"

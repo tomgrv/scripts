@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-install-feature",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Copy a feature's stubs/config/bin into a target, run install-*.sh",
   "bin": {
     "install-feature": "run.sh"

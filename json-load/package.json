@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-json-load",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Load JSON from a file or URL, tagging it with $id",
   "bin": {
     "json-load": "run.sh"

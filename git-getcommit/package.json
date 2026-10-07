@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-getcommit",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "List git history and ask for a commit to fix up",
   "bin": {
     "git-getcommit": "run.sh"

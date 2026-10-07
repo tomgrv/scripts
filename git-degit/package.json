@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-degit",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Clone and degit a repository",
   "bin": {
     "git-degit": "run.sh"
