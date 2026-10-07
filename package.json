@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts",
-  "version": "0.33.0",
+  "version": "0.34.0",
   "description": "Reusable POSIX shell scripts shared across tomgrv devcontainer-features and vps",
   "license": "MIT",
   "scripts": {
@@ -83,6 +83,7 @@
     "git-fix-lock",
     "git-fix-message",
     "git-fix-mode",
+    "git-fix-orphans",
     "git-fix-privacy",
     "git-fix-prune",
     "git-fix-rights",
