@@ -656,7 +656,7 @@ _use() {
         # skipped only when the stamp left by its last install names the
         # same origin@ref (local and git-root origins always reinstall, so
         # edits to a sibling checkout are picked up).
-        if [ "$FORCE" -eq 0 ] || [ "${tool#zz-}" = "$tool" ]; then
+        if [ "$FORCE" -eq 0 ] || { [ "${tool#zz-}" = "$tool" ] && [ "$tool" != "zz" ]; }; then
             if [ -z "$ref" ] && [ "$origin" = "$ZZ_ORIGIN" ]; then
                 if _have "$tool"; then
                     zz-log d "{Purple $tool} already available"

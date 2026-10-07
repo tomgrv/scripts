@@ -10,4 +10,4 @@
 set -e
 
 exec zz-use --force \
-    zz-use zz-colors zz-log zz-args zz-prompt zz-ask zz-menu zz-input zz-bindir zz-dispatch zz-npx zz-persist zz-call zz-update
+    zz-use zz-colors zz-log zz-args zz-prompt zz-ask zz-menu zz-input zz-bindir zz-dispatch zz-npx zz-persist zz-call zz-update zz

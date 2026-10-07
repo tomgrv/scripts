@@ -1,9 +1,9 @@
 {
-  "name": "@tomgrv/scripts-configure-feature",
+  "name": "@tomgrv/scripts-feature-configure",
   "version": "1.0.0",
   "description": "Deploy a feature's stubs into the cwd (merging), run configure-*.sh",
   "bin": {
-    "configure-feature": "run.sh"
+    "feature-configure": "run.sh"
   },
   "scripts": {
     "test": "bats test.bats"
