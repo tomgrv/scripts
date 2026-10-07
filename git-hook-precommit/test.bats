@@ -22,8 +22,8 @@ setup() {
 	#!/bin/sh
 	exit 0
 	EOF
-    # zz_npx looks in ./node_modules/.bin before falling back to npx, so a
-    # PATH-level stub alone (needed for zz_use's own `command -v` check)
+    # zz-npx looks in ./node_modules/.bin before falling back to npx, so a
+    # PATH-level stub alone (needed for zz-use's own `command -v` check)
     # isn't enough to keep this hermetic — mirror it there too.
     mkdir -p node_modules/.bin
     cp "$TEST_BIN/lint-staged" node_modules/.bin/lint-staged

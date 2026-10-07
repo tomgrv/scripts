@@ -14,7 +14,7 @@ INSTALL_BIN_DIR="${INSTALL_BIN_DIR:-/usr/local/bin}"
 
 command -v docker > /dev/null 2>&1 && docker info > /dev/null 2>&1 || exit 1
 
-zz_log i "Installing docker-gitversion wrapper (gittools/gitversion:${GITVERSION_VERSION})..."
+zz-log i "Installing docker-gitversion wrapper (gittools/gitversion:${GITVERSION_VERSION})..."
 cat > "${INSTALL_BIN_DIR}/docker-gitversion" << DOCKERWRAP
 #!/bin/sh
 cd "\$(git rev-parse --show-toplevel)" && \\

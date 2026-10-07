@@ -1,7 +1,7 @@
 #!/bin/sh
 
 eval $(
-	zz_args "Fix git access rights - set appropriate permissions for files and directories" $0 "$@" <<-help
+	zz-args "Fix git access rights - set appropriate permissions for files and directories" $0 "$@" <<-help
 
 	help
 )
@@ -12,7 +12,7 @@ cd "$(git rev-parse --show-toplevel)" >/dev/null
 set_permissions() {
     perm="$1"
     shift
-    zz_log i "Setting permissions $perm for: ${*:-<all tracked files>}"
+    zz-log i "Setting permissions $perm for: ${*:-<all tracked files>}"
     git ls-files -z "$@" | xargs -0 -r chmod "$perm"
 }
 
@@ -25,4 +25,4 @@ find "." -type d -not -path '*/.git' -not -path '*/.git/*' -exec chmod 755 {} +
 
 find "." -type d \( -name logs -o -name cache \) -not -path '*/.git/*' -exec chmod 700 {} +
 
-zz_log s "Access rights have been set according to best practices."
+zz-log s "Access rights have been set according to best practices."

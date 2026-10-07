@@ -1,7 +1,7 @@
 #!/bin/sh
 
 eval $(
-    zz_args "Set user.name and user.email to specified commit's author" $0 "$@" <<-help
+    zz-args "Set user.name and user.email to specified commit's author" $0 "$@" <<-help
         -   sha     sha         SHA of the commit to copy author from
 help
 )

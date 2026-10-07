@@ -46,10 +46,10 @@ teardown() {
 @test "distribute-utils reads target from .zz_dist when -t is not given" {
     mkdir -p target src
     echo "$WORK_DIR/target" >.zz_dist
-    touch src/zz_foo.sh && chmod +x src/zz_foo.sh
+    touch src/zz-foo.sh && chmod +x src/zz-foo.sh
     run distribute-utils -s "$WORK_DIR/src"
     [ "$status" -eq 0 ]
-    [ -f "$WORK_DIR/target/zz_foo.sh" ]
+    [ -f "$WORK_DIR/target/zz-foo.sh" ]
 }
 
 @test "distribute-utils reads target from package.json config.zz_dist" {
@@ -57,10 +57,10 @@ teardown() {
     cat >package.json <<EOF
 {"config": {"zz_dist": "$WORK_DIR/target"}}
 EOF
-    touch src/zz_foo.sh && chmod +x src/zz_foo.sh
+    touch src/zz-foo.sh && chmod +x src/zz-foo.sh
     run distribute-utils -s "$WORK_DIR/src"
     [ "$status" -eq 0 ]
-    [ -f "$WORK_DIR/target/zz_foo.sh" ]
+    [ -f "$WORK_DIR/target/zz-foo.sh" ]
 }
 
 @test "distribute-utils succeeds as a no-op when the given source directory does not exist" {
@@ -70,33 +70,33 @@ EOF
     [ -z "$(ls -A "$WORK_DIR/target")" ]
 }
 
-@test "distribute-utils copies executable zz_* files, stripping the leading underscore and .sh suffix from _zz_*.sh files" {
+@test "distribute-utils copies executable zz-* files, stripping the leading underscore and .sh suffix from _zz-*.sh files" {
     mkdir -p target src
-    echo '#!/bin/sh' >src/zz_plain.sh
-    chmod +x src/zz_plain.sh
-    echo '#!/bin/sh' >src/_zz_hidden.sh
-    chmod +x src/_zz_hidden.sh
+    echo '#!/bin/sh' >src/zz-plain.sh
+    chmod +x src/zz-plain.sh
+    echo '#!/bin/sh' >src/_zz-hidden.sh
+    chmod +x src/_zz-hidden.sh
     run distribute-utils -t "$WORK_DIR/target" -s "$WORK_DIR/src"
     [ "$status" -eq 0 ]
-    [ -f "$WORK_DIR/target/zz_plain.sh" ]
-    [ -f "$WORK_DIR/target/zz_hidden" ]
-    [ ! -f "$WORK_DIR/target/_zz_hidden.sh" ]
+    [ -f "$WORK_DIR/target/zz-plain.sh" ]
+    [ -f "$WORK_DIR/target/zz-hidden" ]
+    [ ! -f "$WORK_DIR/target/_zz-hidden.sh" ]
 }
 
-@test "distribute-utils skips non-executable zz_* files" {
+@test "distribute-utils skips non-executable zz-* files" {
     mkdir -p target src
-    echo '#!/bin/sh' >src/zz_noexec.sh
-    chmod -x src/zz_noexec.sh
+    echo '#!/bin/sh' >src/zz-noexec.sh
+    chmod -x src/zz-noexec.sh
     run distribute-utils -t "$WORK_DIR/target" -s "$WORK_DIR/src"
     [ "$status" -eq 0 ]
-    [ ! -f "$WORK_DIR/target/zz_noexec.sh" ]
+    [ ! -f "$WORK_DIR/target/zz-noexec.sh" ]
 }
 
 @test "distribute-utils makes copied files executable in the target" {
     mkdir -p target src
-    echo '#!/bin/sh' >src/zz_exec.sh
-    chmod +x src/zz_exec.sh
+    echo '#!/bin/sh' >src/zz-exec.sh
+    chmod +x src/zz-exec.sh
     run distribute-utils -t "$WORK_DIR/target" -s "$WORK_DIR/src"
     [ "$status" -eq 0 ]
-    [ -x "$WORK_DIR/target/zz_exec.sh" ]
+    [ -x "$WORK_DIR/target/zz-exec.sh" ]
 }

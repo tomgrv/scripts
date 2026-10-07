@@ -1,7 +1,7 @@
 #!/bin/sh
 
 eval $(
-	zz_args "Redact a secret from files, commit messages and/or tag annotations across all git history" $0 "$@" <<-help
+	zz-args "Redact a secret from files, commit messages and/or tag annotations across all git history" $0 "$@" <<-help
 		f -      force      allow overwriting pushed history
 		p -      push       push to remote
 		d -      dryrun     list matching commits/files without rewriting history
@@ -19,38 +19,38 @@ cd "$(git rev-parse --show-toplevel)" >/dev/null
 git fetch --progress --prune --recurse-submodules=no origin >/dev/null
 
 if [ -z "$glob" ]; then
-	glob=$(zz_prompt "Glob pattern of files to search (e.g. **/*.env):")
+	glob=$(zz-prompt "Glob pattern of files to search (e.g. **/*.env):")
 fi
 
 if [ -z "$glob" ]; then
-	zz_log e "A glob pattern is required."
+	zz-log e "A glob pattern is required."
 	exit 1
 fi
 
 if [ -z "$secret" ]; then
-	secret=$(zz_prompt "Secret value to redact:")
+	secret=$(zz-prompt "Secret value to redact:")
 fi
 
 if [ -z "$secret" ]; then
-	zz_log e "A secret value is required."
+	zz-log e "A secret value is required."
 	exit 1
 fi
 
 replace="${replace:-****}"
 
 if ! git diff-index --quiet HEAD --; then
-	zz_log e "You have uncommitted changes. Please commit or stash them before running this script."
+	zz-log e "You have uncommitted changes. Please commit or stash them before running this script."
 	exit 1
 fi
 
 if git isRebase >/dev/null 2>&1; then
-	zz_log e "A rebase is in progress. Please finish or abort it before running this script."
+	zz-log e "A rebase is in progress. Please finish or abort it before running this script."
 	exit 1
 fi
 
 sha=$(git getcommit $force $sha)
 
-zz_log i "Searching for secret in files matching '$glob'"
+zz-log i "Searching for secret in files matching '$glob'"
 
 file_matches=$(git grep -I -l -F "$secret" $(git rev-list --branches --tags ${sha:---all}${sha:+..HEAD}) -- "$glob" 2>/dev/null)
 
@@ -71,22 +71,22 @@ if [ -n "$fixtags" ]; then
 fi
 
 if [ -z "$file_matches" ] && [ -z "$msg_matches" ] && [ -z "$tag_matches" ]; then
-	zz_log s "No occurrences of the secret found."
+	zz-log s "No occurrences of the secret found."
 	exit 0
 fi
 
-[ -n "$file_matches" ] && zz_log - "Files:" && zz_log - "$file_matches"
-[ -n "$msg_matches" ] && zz_log - "Commit messages:" && zz_log - "$msg_matches"
-[ -n "$tag_matches" ] && zz_log - "Tag annotations:" && zz_log - "$tag_matches"
+[ -n "$file_matches" ] && zz-log - "Files:" && zz-log - "$file_matches"
+[ -n "$msg_matches" ] && zz-log - "Commit messages:" && zz-log - "$msg_matches"
+[ -n "$tag_matches" ] && zz-log - "Tag annotations:" && zz-log - "$tag_matches"
 
 if [ -n "$dryrun" ]; then
-	zz_log i "Dry run complete. No changes were made."
+	zz-log i "Dry run complete. No changes were made."
 	exit 0
 fi
 
-zz_log w "This will rewrite git history. Make sure you understand the consequences."
-if [ "$(zz_ask "Yn" "Do you want to proceed?")" != "y" ]; then
-	zz_log i "Operation cancelled by user."
+zz-log w "This will rewrite git history. Make sure you understand the consequences."
+if [ "$(zz-ask "Yn" "Do you want to proceed?")" != "y" ]; then
+	zz-log i "Operation cancelled by user."
 	exit 1
 fi
 
@@ -139,7 +139,7 @@ git gc --prune=now
 # filter-branch does not rewrite tag content, so redact annotated tag messages separately
 
 if [ -n "$fixtags" ]; then
-	zz_log i "Redacting secret from tag annotations"
+	zz-log i "Redacting secret from tag annotations"
 	for t in $(git tag -l); do
 		obj_type=$(git cat-file -t "refs/tags/$t" 2>/dev/null)
 		if [ "$obj_type" = "tag" ]; then
@@ -158,11 +158,11 @@ if [ -n "$fixtags" ]; then
 fi
 
 if [ -n "$push" ]; then
-	zz_log i "Pushing changes to remote"
+	zz-log i "Pushing changes to remote"
 	git push --force --progress --recurse-submodules=no origin --all
 	git push --force --progress --recurse-submodules=no origin --tags
 else
-	zz_log w "Changes are not pushed to remote, use -p option to push"
+	zz-log w "Changes are not pushed to remote, use -p option to push"
 fi
 
-zz_log s "Secret replaced with '$replace' in history."
+zz-log s "Secret replaced with '$replace' in history."

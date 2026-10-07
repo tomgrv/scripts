@@ -5,15 +5,15 @@
 # Install as .git/hooks/commit-msg (or via husky) invoking
 # `git hook-commitmsg "$@"` — git passes the commit message file as $1.
 
-. zz_colors
+. zz-colors
 
 eval $(
-	zz_args "Git commit-msg hook" $0 "$@" <<-help
+	zz-args "Git commit-msg hook" $0 "$@" <<-help
 		- msgfile   msgfile   Path to the commit message file (as passed by git)
 	help
 )
 
-toplevel=$(git rev-parse --show-toplevel) || { zz_log e "Not inside a git repository."; exit 1; }
+toplevel=$(git rev-parse --show-toplevel) || { zz-log e "Not inside a git repository."; exit 1; }
 cd "$toplevel"
 
 if [ -t 1 ]; then
@@ -21,11 +21,11 @@ if [ -t 1 ]; then
 fi
 
 if [ -z "$msgfile" ]; then
-	zz_log e "No commit message file provided."
+	zz-log e "No commit message file provided."
 	exit 1
 fi
 
 git-hook-installplugins -g '[.config.commitizen.path // "", .commitlint.extends // ""]'
 
-zz_log i "Applying commitlint rules to the latest commit..."
-zz_npx commitlint --edit "$msgfile" && zz_npx devmoji -e
+zz-log i "Applying commitlint rules to the latest commit..."
+zz-npx commitlint --edit "$msgfile" && zz-npx devmoji -e

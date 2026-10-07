@@ -3,10 +3,10 @@
 # install-*.sh lifecycle scripts, and symlinks bin/ scripts onto a writable
 # PATH directory. Counterpart to configure-feature.sh.
 
-. zz_colors
+. zz-colors
 
 eval $(
-    zz_args "Install a feature" $0 "$@" <<-help
+    zz-args "Install a feature" $0 "$@" <<-help
     s source    source      Force source directory
     t target    target      Force target directory
     - arg       arg         Caller script path
@@ -27,22 +27,22 @@ if [ -z "$feature" ]; then
     exit 1
 fi
 
-zz_log i "Installing feature {Purple $feature}..."
+zz-log i "Installing feature {Purple $feature}..."
 
 if [ -d $source/stubs ]; then
-    zz_log i "Copying stubs to {U $target}..."
+    zz-log i "Copying stubs to {U $target}..."
     cp -a $source/stubs $target
 else
-    zz_log w "No stubs found in {U $source}"
+    zz-log w "No stubs found in {U $source}"
 fi
 
 if [ -d $source/config ]; then
-    zz_log i "Copying config to {U $target}..."
+    zz-log i "Copying config to {U $target}..."
     cp -a $source/config $target
 fi
 
 if [ -d $source/bin ]; then
-    zz_log i "Copying bin scripts to {U $target}..."
+    zz-log i "Copying bin scripts to {U $target}..."
     cp -a $source/bin $target
 fi
 
@@ -50,19 +50,19 @@ find $source -maxdepth 1 -name "configure-*.sh" -type f -exec cp {} $target \;
 find $target -type f -name "*.sh" -exec chmod +x {} \;
 
 find $source -maxdepth 1 -type f -name "install-*.sh" | while read script; do
-    zz_log i "Calling {U $script}..."
+    zz-log i "Calling {U $script}..."
     # Invoke via `sh "$script" "$@"` (not `sh -c "$script $@"`) so a
     # multi-element "$@" forwards correctly regardless of element count.
-    sh "$script" "$@" && zz_log s "Done!" || zz_log e "Failed!"
+    sh "$script" "$@" && zz-log s "Done!" || zz-log e "Failed!"
 done
 
-zz_log i "Installing bin scripts for {Purple $feature}..."
-zz_log i "Finding writable bin directory..."
+zz-log i "Installing bin scripts for {Purple $feature}..."
+zz-log i "Finding writable bin directory..."
 
-eval "$(zz_bindir -t "$target")"
+eval "$(zz-bindir -t "$target")"
 link_dir="$dir"
 
 find "$target/bin" -type f -name "*.sh" 2>/dev/null | while IFS= read -r file; do
     link="$link_dir/$(basename "$file" | sed 's/.sh$//')"
-    ln -sf "$file" "$link" && zz_log s "Linked {U $file} to {U $link}"
+    ln -sf "$file" "$link" && zz-log s "Linked {U $file} to {U $link}"
 done

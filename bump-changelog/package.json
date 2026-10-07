@@ -11,8 +11,8 @@
   "peerDependencies": {
     "@tomgrv/scripts-bump-tag": "*",
     "@tomgrv/scripts-bump-version": "*",
-    "@tomgrv/scripts-zz_args": "*",
-    "@tomgrv/scripts-zz_log": "*"
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-log": "*"
   },
   "private": true
 }

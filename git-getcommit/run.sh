@@ -1,7 +1,7 @@
 #!/bin/sh
 
 eval $(
-    zz_args "List git history and asks for commit" $0 "$@" <<-help
+    zz-args "List git history and asks for commit" $0 "$@" <<-help
 		    f -        force     allow overwritting pushed history
             p -        previous  show commit previous to the one specified
 			- sha      sha       sha commit to fix from after
@@ -14,12 +14,12 @@ git fetch --progress --prune --recurse-submodules=no origin >/dev/null
 
 if [ -z "$sha" ]; then
     if [ -n "$force" ]; then
-        zz_log w "Force mode enabled, overwriting pushed history"
+        zz-log w "Force mode enabled, overwriting pushed history"
         git forceable >&2
     else
         git fixable >&2
     fi
-    sha=$(zz_prompt "Which commit?")
+    sha=$(zz-prompt "Which commit?")
 fi
 
 

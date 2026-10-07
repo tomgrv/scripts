@@ -1,0 +1,15 @@
+{
+  "name": "@tomgrv/scripts-yaml",
+  "version": "0.25.0",
+  "description": "Dispatch to yaml-<subcommand> utilities",
+  "bin": {
+    "yaml": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-dispatch": "*"
+  },
+  "private": true
+}

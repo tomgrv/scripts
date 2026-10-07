@@ -9,7 +9,7 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "@tomgrv/scripts-zz_dispatch": "*"
+    "@tomgrv/scripts-zz-dispatch": "*"
   },
   "private": true
 }

@@ -9,10 +9,10 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "@tomgrv/scripts-zz_args": "*",
-    "@tomgrv/scripts-zz_colors": "*",
-    "@tomgrv/scripts-zz_log": "*",
-    "@tomgrv/scripts-zz_npx": "*"
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*",
+    "@tomgrv/scripts-zz-npx": "*"
   },
   "private": true
 }

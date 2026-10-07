@@ -3,10 +3,10 @@
 # (merging into files that already exist there) and run its
 # configure-*.sh lifecycle scripts. Counterpart to install-feature.sh.
 
-. zz_colors
+. zz-colors
 
 eval $(
-    zz_args "Configure a feature" $0 "$@" <<-help
+    zz-args "Configure a feature" $0 "$@" <<-help
     s source    source      Force source directory
     - arg       arg         Feature name
 help
@@ -22,12 +22,12 @@ fi
 export source=${source:-/usr/local/share/$feature}
 export tabSize=4
 
-zz_log i "Configure feature <{Purple $feature}>"
-zz_log - "In {U $(pwd)}"
-zz_log - "From {U $source}"
+zz-log i "Configure feature <{Purple $feature}>"
+zz-log - "In {U $(pwd)}"
+zz-log - "From {U $source}"
 
 if [ ! -d $source ]; then
-    zz_log e "Source directory <$source> does not exist"
+    zz-log e "Source directory <$source> does not exist"
     exit 1
 fi
 
@@ -35,7 +35,7 @@ fi
 # <path> is a JSON array of steps, handed to jq/yq as data and never evaluated:
 # a string is an object key, a number an array index, and an object such as
 # {"name":"Deploy"} selects the first array element whose fields all match,
-# the way merge-yaml identifies list items. Anything that does not resolve
+# the way yaml-merge identifies list items. Anything that does not resolve
 # (missing file, key or element) leaves the file untouched.
 clean_key() {
     ck_file=$1
@@ -45,7 +45,7 @@ clean_key() {
     json) ck_type=json ;;
     yaml | yml) ck_type=yaml ;;
     *)
-        zz_log w "Skipping KEY for {U $ck_file}: only JSON and YAML files are supported"
+        zz-log w "Skipping KEY for {U $ck_file}: only JSON and YAML files are supported"
         return 0
         ;;
     esac
@@ -53,22 +53,22 @@ clean_key() {
     [ -f "$ck_file" ] || return 0
 
     if ! printf '%s\n' "$ck_path" | jq -e 'type == "array" and length > 0 and all(.[]; type == "string" or type == "number" or (type == "object" and length > 0))' >/dev/null 2>&1; then
-        zz_log w "Invalid key path {U $ck_path} for {U $ck_file}, expected a non-empty JSON array of strings, numbers or {\"field\":\"value\"} selectors"
+        zz-log w "Invalid key path {U $ck_path} for {U $ck_file}, expected a non-empty JSON array of strings, numbers or {\"field\":\"value\"} selectors"
         return 0
     fi
 
     if [ "$ck_type" = yaml ]; then
         if ! yq --version 2>&1 | grep -q mikefarah; then
-            zz_log w "Skipping KEY for {U $ck_file}: it needs mikefarah/yq"
+            zz-log w "Skipping KEY for {U $ck_file}: it needs mikefarah/yq"
             return 0
         fi
         ck_doc=$(yq -o=json . "$ck_file" 2>/dev/null) || {
-            zz_log w "Skipping KEY for {U $ck_file}: not valid YAML"
+            zz-log w "Skipping KEY for {U $ck_file}: not valid YAML"
             return 0
         }
     else
         ck_doc=$(jq -c . "$ck_file" 2>/dev/null) || {
-            zz_log w "Skipping KEY for {U $ck_file}: not valid JSON"
+            zz-log w "Skipping KEY for {U $ck_file}: not valid JSON"
             return 0
         }
     fi
@@ -89,16 +89,16 @@ clean_key() {
         | if . == null then null else .path end') || return 0
     [ "$ck_resolved" != null ] || return 0
 
-    zz_log - "Removing key {U $ck_path} from {U $ck_file}..."
+    zz-log - "Removing key {U $ck_path} from {U $ck_file}..."
     if [ "$ck_type" = yaml ]; then
         CK_PATHS="[$ck_resolved]" yq -i -I "${tabSize:-2}" 'delpaths(env(CK_PATHS))' "$ck_file" ||
-            zz_log w "Could not remove key {U $ck_path} from {U $ck_file}"
+            zz-log w "Could not remove key {U $ck_path} from {U $ck_file}"
     else
         ck_tmp=$(mktemp)
         if jq --indent "${tabSize:-4}" --argjson r "$ck_resolved" 'delpaths([$r])' "$ck_file" >"$ck_tmp"; then
             cat "$ck_tmp" >"$ck_file"
         else
-            zz_log w "Could not remove key {U $ck_path} from {U $ck_file}"
+            zz-log w "Could not remove key {U $ck_path} from {U $ck_file}"
         fi
         rm -f "$ck_tmp"
     fi
@@ -106,11 +106,11 @@ clean_key() {
 
 if [ -d $source/stubs ]; then
 
-    # KEY directives run BEFORE the stubs are merged: merge-json and
-    # merge-yaml keep the value already in the target, so dropping a key first
+    # KEY directives run BEFORE the stubs are merged: json-merge and
+    # yaml-merge keep the value already in the target, so dropping a key first
     # is what lets the merge write the stub's current value in its place (a
     # fixed scalar), or leaves it gone when the stub no longer has the key.
-    zz_log i "Processing .clean KEY directives if existing..."
+    zz-log i "Processing .clean KEY directives if existing..."
 
     find "$source/stubs" -type f -name ".clean" | sort | while read cleanfile; do
         while IFS= read -r line || [ -n "$line" ]; do
@@ -121,14 +121,14 @@ if [ -d $source/stubs ]; then
             keypath=${keyargs#"$keyfile"}
             keypath=${keypath# }
             if [ -z "$keyfile" ] || [ -z "$keypath" ] || [ "$keypath" = "$keyargs" ]; then
-                zz_log w "Invalid .clean directive {U $line}, expected: KEY <json-or-yaml-file> <json-array-path>"
+                zz-log w "Invalid .clean directive {U $line}, expected: KEY <json-or-yaml-file> <json-array-path>"
                 continue
             fi
             clean_key "$keyfile" "$keypath"
         done <"$cleanfile"
     done
 
-    zz_log i "Deploying stubs..."
+    zz-log i "Deploying stubs..."
 
     find $source/stubs -type f -name ".*" -not -name ".clean" -o -type f -not -name ".clean" | sort | while read file; do
 
@@ -149,33 +149,33 @@ if [ -d $source/stubs ]; then
         # A dangling symlink fails every "-f $dest" test below, yet cp and
         # chmod refuse to write through it: replace it with the stub.
         if [ -L "$dest" ] && [ ! -e "$dest" ]; then
-            zz_log w "Destination {U $dest} is a dangling symlink to {U $(readlink "$dest")}, replacing it..."
+            zz-log w "Destination {U $dest} is a dangling symlink to {U $(readlink "$dest")}, replacing it..."
             rm -f "$dest"
         fi
 
         if [ "$(basename $file | cut -c1)" = "#" ]; then
             dest=$(echo $dest | sed 's/\/\#/\//g')
-            zz_log - "Add {U $dest} to .gitignore"
+            zz-log - "Add {U $dest} to .gitignore"
             grep -qxF $dest .gitignore || echo "$dest" >>.gitignore
         fi
 
         if [ "${dest##*.}" = "json" ]; then
 
             if [ -f $dest ]; then
-                zz_log - "Merging {U $file} into {U $dest}..."
-                merge-json -t ${tabSize:-4} $dest $file
+                zz-log - "Merging {U $file} into {U $dest}..."
+                json-merge -t ${tabSize:-4} $dest $file
             else
-                zz_log w "Destination file {U $dest} does not exist. Copying {U $file} to {U $dest}..."
+                zz-log w "Destination file {U $dest} does not exist. Copying {U $file} to {U $dest}..."
                 cp $file $dest
             fi
 
         elif [ "${dest##*.}" = "yaml" ] || [ "${dest##*.}" = "yml" ]; then
 
             if [ -f $dest ]; then
-                zz_log - "Merging {U $file} into {U $dest}..."
-                merge-yaml -i ${tabSize:-2} $dest $file
+                zz-log - "Merging {U $file} into {U $dest}..."
+                yaml-merge -i ${tabSize:-2} $dest $file
             else
-                zz_log w "Destination file {U $dest} does not exist. Copying {U $file} to {U $dest}..."
+                zz-log w "Destination file {U $dest} does not exist. Copying {U $file} to {U $dest}..."
                 cp $file $dest
             fi
 
@@ -195,19 +195,19 @@ if [ -d $source/stubs ]; then
             [ -f $base ] || base=/dev/null
 
             if [ ! -f $dest ]; then
-                zz_log w "Destination file {U $dest} does not exist. Copying {U $file} to {U $dest}..."
+                zz-log w "Destination file {U $dest} does not exist. Copying {U $file} to {U $dest}..."
                 cp $file $dest
             elif [ $base != /dev/null ] && [ ! $file -nt $base ]; then
-                zz_log - "No change in {U $file} since last deploy, skipping merge into {U $dest}"
+                zz-log - "No change in {U $file} since last deploy, skipping merge into {U $dest}"
             elif [ "$(head -n1 $file)" = "---" ]; then
                 # A file opening with a `---` frontmatter block (SKILL.md,
                 # *.instructions.md) is a single-owner document, not a
                 # fragment: its frontmatter must stay on line 1, and the
                 # reconciliation below appends new lines at the end.
-                zz_log - "Replacing {U $dest} with {U $file} (frontmatter document)..."
+                zz-log - "Replacing {U $dest} with {U $file} (frontmatter document)..."
                 cp $file $dest
             else
-                zz_log - "Reconciling {U $file} into {U $dest}..."
+                zz-log - "Reconciling {U $file} into {U $dest}..."
 
                 removed=$(mktemp)
                 grep -vFxf $file $base >$removed
@@ -240,7 +240,7 @@ if [ -d $source/stubs ]; then
 
     done
 
-    zz_log i "Processing .clean files if existing..."
+    zz-log i "Processing .clean files if existing..."
 
     find "$source/stubs" -type f -name ".clean" | sort | while read cleanfile; do
         while IFS= read -r line || [ -n "$line" ]; do
@@ -256,28 +256,28 @@ if [ -d $source/stubs ]; then
             case "$op" in
             RMV)
                 if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
-                    zz_log - "Untracking {U $path} (kept on disk)..."
+                    zz-log - "Untracking {U $path} (kept on disk)..."
                     git rm --cached -q -- "$path"
                 fi
                 ;;
             DEL)
                 if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
-                    zz_log - "Deleting {U $path} and untracking..."
+                    zz-log - "Deleting {U $path} and untracking..."
                     git rm -f -q -- "$path"
                 elif [ -e "$path" ]; then
-                    zz_log - "Deleting {U $path}..."
+                    zz-log - "Deleting {U $path}..."
                     rm -f -- "$path"
                 fi
                 ;;
             KEY) ;; # already handled before the stubs were deployed
             *)
-                zz_log w "Unknown .clean directive {U $line}, skipping"
+                zz-log w "Unknown .clean directive {U $line}, skipping"
                 ;;
             esac
         done <"$cleanfile"
     done
 
-    zz_log i "Deploying stubs symlinks if existing..."
+    zz-log i "Deploying stubs symlinks if existing..."
 
     find "$source/stubs" -type l | while IFS= read -r link; do
         rel=${link#"$source/stubs/"}
@@ -285,22 +285,22 @@ if [ -d $source/stubs ]; then
         mkdir -p "$(dirname "$dest")"
         if [ ! -e "$dest" ] && [ ! -L "$dest" ]; then
             target=$(readlink "$link")
-            zz_log - "Creating symlink {U $dest} -> {U $target}..."
+            zz-log - "Creating symlink {U $dest} -> {U $target}..."
             ln -s "$target" "$dest"
         fi
     done
 
-    zz_log s "Done deploying stubs."
+    zz-log s "Done deploying stubs."
 fi
 
 if [ "$(pwd)" = "$(git rev-parse --show-toplevel)" ]; then
 
-    zz_log i "Checking for configure scripts in the source directory..."
+    zz-log i "Checking for configure scripts in the source directory..."
 
     find $source -maxdepth 1 -name configure-*.sh | sort | while read file; do
-        zz_log - "Calling {U $file}..."
-        sh -c "$file" && zz_log s "Done!" || zz_log e "Failed!"
+        zz-log - "Calling {U $file}..."
+        sh -c "$file" && zz-log s "Done!" || zz-log e "Failed!"
     done
 else
-    zz_log w "Not in top level directory, skipping configure scripts"
+    zz-log w "Not in top level directory, skipping configure scripts"
 fi

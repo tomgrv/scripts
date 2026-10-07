@@ -1,10 +1,10 @@
 #!/bin/sh
 set -e
 
-. zz_colors
+. zz-colors
 
 eval $(
-	zz_args "Allow script editing" $0 "$@" <<-help
+	zz-args "Allow script editing" $0 "$@" <<-help
 		- script    script       script to edit
 	help
 )
@@ -19,4 +19,4 @@ chmod +x ./$script
 
 code ./$script
 
-zz_log i "Script {Purple $script} copied to current directory and opened in code editor."
+zz-log i "Script {Purple $script} copied to current directory and opened in code editor."

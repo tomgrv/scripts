@@ -257,7 +257,7 @@ EOF
     [ "$(jq -r '.own' data.json)" = "true" ]
 }
 
-# --- YAML (needs mikefarah/yq, as merge-yaml does) -------------------------
+# --- YAML (needs mikefarah/yq, as yaml-merge does) -------------------------
 
 require_mikefarah_yq() {
     yq --version 2>&1 | grep -q mikefarah || skip "needs mikefarah/yq"

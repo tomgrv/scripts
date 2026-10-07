@@ -1,7 +1,7 @@
 {
   "name": "@tomgrv/scripts-distribute-utils",
   "version": "0.25.0",
-  "description": "Copy zz_*/utility scripts into a project's local scripts directory",
+  "description": "Copy zz-*/utility scripts into a project's local scripts directory",
   "bin": {
     "distribute-utils": "run.sh"
   },
@@ -9,10 +9,10 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "@tomgrv/scripts-load-json": "*",
-    "@tomgrv/scripts-zz_args": "*",
-    "@tomgrv/scripts-zz_colors": "*",
-    "@tomgrv/scripts-zz_log": "*"
+    "@tomgrv/scripts-json-load": "*",
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*"
   },
   "private": true
 }

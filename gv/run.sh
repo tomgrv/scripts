@@ -45,10 +45,10 @@ for step in $steps; do
     fi
 
     if command -v "$check" > /dev/null 2>&1; then
-        zz_log s "Using $name ($check)"
+        zz-log s "Using $name ($check)"
         run_"$name" "$@"
     fi
 done
 
-zz_log e "Could not run GitVersion -- none of these backends resolved: $steps"
+zz-log e "Could not run GitVersion -- none of these backends resolved: $steps"
 exit 1
