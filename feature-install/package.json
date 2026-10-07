@@ -1,15 +1,15 @@
 {
-  "name": "@tomgrv/scripts-install-feature",
+  "name": "@tomgrv/scripts-feature-install",
   "version": "1.0.0",
   "description": "Copy a feature's stubs/config/bin into a target, run install-*.sh",
   "bin": {
-    "install-feature": "run.sh"
+    "feature-install": "run.sh"
   },
   "scripts": {
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "@tomgrv/scripts-resolve-context": "*",
+    "@tomgrv/scripts-feature-context": "*",
     "@tomgrv/scripts-zz-args": "*",
     "@tomgrv/scripts-zz-bindir": "*",
     "@tomgrv/scripts-zz-colors": "*",

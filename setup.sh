@@ -65,7 +65,7 @@ curl -fsSL "$REPO_URL" | tar -xz -C "$TMP_DIR" --strip-components=1
 [ -f "$TMP_DIR/zz-use/run.sh" ] || die "Downloaded archive has no zz-use/run.sh (unexpected repo layout)"
 
 log "Installing core zz-* scripts via the downloaded zz-use..."
-sh "$TMP_DIR/zz-use/run.sh" "zz-*"
+sh "$TMP_DIR/zz-use/run.sh" "zz-*" zz
 
 # Optional handoff: a package.json "main" field, or a root main.sh, gets
 # run with the downloaded checkout as cwd-equivalent; anything else, this

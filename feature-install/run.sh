@@ -1,7 +1,7 @@
 #!/bin/sh
 # Copies a feature's stubs/config/bin into a target directory, runs its
 # install-*.sh lifecycle scripts, and symlinks bin/ scripts onto a writable
-# PATH directory. Counterpart to configure-feature.sh.
+# PATH directory. Counterpart to feature-configure.sh.
 
 . zz-colors
 
@@ -13,17 +13,17 @@ eval $(
 help
 )
 
-# Rebuild a clean argument list before delegating to resolve-context: several
-# install-*.sh scripts re-parse "$@" themselves via resolve-context, whose
+# Rebuild a clean argument list before delegating to feature-context: several
+# install-*.sh scripts re-parse "$@" themselves via feature-context, whose
 # spec has no -i flag of its own here.
 set -- ${source:+-s "$source"} ${target:+-t "$target"} ${arg:+"$arg"}
 
 eval $(
-    resolve-context "$@"
+    feature-context "$@"
 )
 
 if [ -z "$feature" ]; then
-    echo "Usage: install-feature <caller>${End}"
+    echo "Usage: feature-install <caller>${End}"
     exit 1
 fi
 
