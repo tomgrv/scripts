@@ -124,9 +124,9 @@ zz-use zz-log jq -x json-validate some-file.json
   `zz-prompt`, `zz-ask`, `zz-menu`, `zz-input`, `zz-bindir`, `zz-dispatch`, `zz-npx`,
   `zz-persist`, `zz-call`, `zz-install`.
 - **Functional** folders use `<verb>-<topic>` naming: `json-validate`,
-  `json-normalize`, `json-merge`, `json-load`, `resolve-context`,
-  `edit-script`, `distribute-utils`, `install-feature`,
-  `configure-feature`.
+  `json-normalize`, `json-merge`, `json-load`, `feature-context`,
+  `edit-script`, `distribute-utils`, `feature-install`,
+  `feature-configure`.
 
 ## `zz-use` — the activator
 
@@ -224,6 +224,7 @@ flowchart TD
 
 | Script                                                                 | Purpose                                                                                                                                               |
 | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `zz <name> [args...]`                                                  | front door: runs `zz-<name>` if installed, else `zz-use -x <name>` (install on demand, then run) |
 | `zz-use <tool>[@ref]`                                                  | the activator: resolve/install a dependency, if and only if missing (see below)                                                                       |
 | `zz-update`                                                            | force a fresh download of the zz-* bundle, bypassing the local cache                                                                                  |
 | `zz-colors`                                                            | ANSI color vars (`$Red` `$Green` ... `$End`); source it: `. zz-colors`                                                                                |
@@ -249,11 +250,12 @@ flowchart TD
 | `json-validate`     | validate JSON against a (local/inferred/remote) JSON Schema            |
 | `json-normalize`    | sort JSON keys per schema + alphabetically, optional in-place write    |
 | `json-merge`        | recursively merge one JSON file into another (arrays deduped, unioned) |
-| `resolve-context`   | resolve a feature's source/target dirs from the calling script         |
+| `feature`           | dispatch to `feature-<subcommand>` (`install`, `configure`, `context`)     |
+| `feature-context`   | resolve a feature's source/target dirs from the calling script         |
 | `edit-script`       | copy an installed script locally and open it for editing               |
 | `distribute-utils`  | copy `zz-*`/utility scripts into a project's local scripts directory   |
-| `install-feature`   | copy a feature's stubs/config/bin into a target, run `install-*.sh`    |
-| `configure-feature` | deploy a feature's stubs into the cwd (merging), run `configure-*.sh`  |
+| `feature-install`   | copy a feature's stubs/config/bin into a target, run `install-*.sh`    |
+| `feature-configure` | deploy a feature's stubs into the cwd (merging), run `configure-*.sh`  |
 
 See each folder's own `README.md` for its usage line.
 

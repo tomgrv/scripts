@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "Reusable POSIX shell scripts shared across tomgrv devcontainer-features and vps",
   "license": "MIT",
   "scripts": {
@@ -33,6 +33,7 @@
   },
   "private": true,
   "workspaces": [
+    "zz",
     "zz-use",
     "zz-update",
     "zz-colors",
@@ -55,11 +56,12 @@
     "json-merge",
     "yaml",
     "yaml-merge",
-    "resolve-context",
+    "feature",
+    "feature-context",
     "edit-script",
     "distribute-utils",
-    "install-feature",
-    "configure-feature",
+    "feature-install",
+    "feature-configure",
     "git-align",
     "git-autorebase",
     "git-co",

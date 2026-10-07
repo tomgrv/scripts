@@ -1,0 +1,15 @@
+{
+  "name": "@tomgrv/scripts-feature",
+  "version": "2.0.0",
+  "description": "Dispatch to feature-<subcommand> utilities",
+  "bin": {
+    "feature": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-dispatch": "*"
+  },
+  "private": true
+}

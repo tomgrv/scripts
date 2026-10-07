@@ -1,14 +1,14 @@
-# resolve-context
+# feature-context
 
 Resolve a feature's source/target directories from the calling script.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
-and linked onto `PATH` as `resolve-context`.
+and linked onto `PATH` as `feature-context`.
 
 ## Usage
 
 ```sh
-resolve-context [-s source] [-t target] [caller]
+feature-context [-s source] [-t target] [caller]
 ```
 
 ## Dependencies

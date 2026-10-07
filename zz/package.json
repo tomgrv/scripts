@@ -1,0 +1,15 @@
+{
+  "name": "@tomgrv/scripts-zz",
+  "version": "2.0.0",
+  "description": "Run zz-<name> when installed, otherwise install <name> on demand and run it (zz-use -x)",
+  "bin": {
+    "zz": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-use": "*"
+  },
+  "private": true
+}

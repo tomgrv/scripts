@@ -1,7 +1,7 @@
 #!/bin/sh
 # Configure mode: deploy a feature's stubs into the current directory
 # (merging into files that already exist there) and run its
-# configure-*.sh lifecycle scripts. Counterpart to install-feature.sh.
+# configure-*.sh lifecycle scripts. Counterpart to feature-install.sh.
 
 . zz-colors
 
@@ -15,7 +15,7 @@ help
 feature=$arg
 
 if [ -z "$feature" ]; then
-    echo "Usage: configure-feature <feature>${End}"
+    echo "Usage: feature-configure <feature>${End}"
     exit 1
 fi
 

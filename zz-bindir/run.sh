@@ -3,7 +3,7 @@
 # directory on PATH. Usage: eval "$(zz-bindir)" — prints `export PATH=...`
 # (only when the dir wasn't already on PATH) followed by `dir=<chosen dir>`,
 # so the caller both gets PATH extended and can read $dir. Extracted out of
-# the historical zz_feature -i bin-linking flow; shared by install-feature
+# the historical zz_feature -i bin-linking flow; shared by feature-install
 # and zz-use.
 
 . zz-colors
