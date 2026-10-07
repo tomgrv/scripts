@@ -1,2 +1,2 @@
 #!/bin/sh
-zz_use -x git-hook-prepush "$@"
+zz-use -x git-hook-prepush "$@"

@@ -5,10 +5,10 @@
 # Called by the other git-hook-* scripts before they run tools that expect
 # those plugins to already be installed.
 
-. zz_colors
+. zz-colors
 
 eval $(
-	zz_args "Install npm plugins from package.json configuration" $0 "$@" <<-help
+	zz-args "Install npm plugins from package.json configuration" $0 "$@" <<-help
 		f file      json_file   Package.json file path (default: ./package.json)
 		g -         global      Install plugins globally (npm -g)
 		- key       json_key    JSON key path to extract plugins from
@@ -18,30 +18,30 @@ eval $(
 json_file=${json_file:-./package.json}
 
 if [ -z "$json_key" ]; then
-	zz_log e "JSON key is required."
+	zz-log e "JSON key is required."
 	exit 1
 fi
 
-zz_log i "Using file {B $json_file}..."
+zz-log i "Using file {B $json_file}..."
 plugins=$(jq -r "$json_key" "$json_file" | tr -d "'[]:,\"" | sort -u | tr '\n' ' ' | sed 's/  */ /g;s/^ *//;s/ *$//')
 
 if [ -z "$plugins" ]; then
-	zz_log w "No plugins found at key {B $json_key} in {U $json_file}"
+	zz-log w "No plugins found at key {B $json_key} in {U $json_file}"
 	exit 0
 fi
 
 # Config lives in the repo's git hook folder (not next to this script) so it
 # travels with the repo checkout instead of a shared global install location
-hookdir=$(git rev-parse --git-path hooks) || { zz_log e "Not inside a git repository."; exit 1; }
+hookdir=$(git rev-parse --git-path hooks) || { zz-log e "Not inside a git repository."; exit 1; }
 config=$hookdir/PLUGINS
 
 if [ -f "$config" ] && [ -z "$(grep -v -e '^#' -e '^$' $config)" ]; then
-	zz_log w "Config file {B $config} is empty or contains only comments, reset it."
+	zz-log w "Config file {B $config} is empty or contains only comments, reset it."
 	cat /dev/null >$config
 fi
 
 if [ ! -f "$config" ]; then
-	zz_log w "Config file {B $config} does not exist, create it."
+	zz-log w "Config file {B $config} does not exist, create it."
 	touch $config
 fi
 
@@ -51,7 +51,7 @@ done
 
 plugins=$(cat $config | grep -v '^$' | tr '\n' ' ')
 
-zz_log i "Plugins to install: {B $plugins}"
+zz-log i "Plugins to install: {B $plugins}"
 
 installed=$(npm list $global --depth=0)
 for plugin in $plugins; do
@@ -61,12 +61,12 @@ for plugin in $plugins; do
 done
 
 if [ -n "$plugins" ]; then
-	zz_log i "Installing plugins {B $plugins} ..."
+	zz-log i "Installing plugins {B $plugins} ..."
 	if ! npm install $global --no-save $plugins 2>/dev/null 1>&2; then
-		zz_log e "Failed to install one of plugins {B $plugins}!"
+		zz-log e "Failed to install one of plugins {B $plugins}!"
 		exit 1
 	fi
-	zz_log s "Plugins {B $plugins} installed successfully!"
+	zz-log s "Plugins {B $plugins} installed successfully!"
 else
-	zz_log s "All plugins are already installed."
+	zz-log s "All plugins are already installed."
 fi

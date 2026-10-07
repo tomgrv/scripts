@@ -5,9 +5,9 @@
 Reusable shell scripts shared across
 [`tomgrv/devcontainer-features`](https://github.com/tomgrv/devcontainer-features)
 (`common-utils` feature) and [`tomgrv/vps`](https://github.com/tomgrv/vps).
-Every core `zz_*` script and most functional scripts are POSIX `sh`; a
+Every core `zz-*` script and most functional scripts are POSIX `sh`; a
 few functional scripts ported from the original bash implementation
-(`validate-json`, `normalize-json`) keep `#!/bin/bash` for now, since
+(`json-validate`, `json-normalize`) keep `#!/bin/bash` for now, since
 they rely on bash-only features (arrays, `<<<`, `${var//pat/rep}`).
 
 ## Layout
@@ -21,10 +21,10 @@ One folder per script (an npm workspace), each self-contained:
   README.md       # usage + dependencies for this one script
   test.bats       # bats tests for this script
   config/         # optional: resources owned by this script only
-                  #   (validate-json/config/, zz_use/config/zz_use.json)
+                  #   (json-validate/config/, zz-use/config/zz-use.json)
 tests/helpers.bash # shared bats setup: links every <name>/run.sh onto PATH
 package.json       # npm workspaces root, listing every folder above
-setup.sh            # root bootstrapper: temp-downloads the core zz_* scripts
+setup.sh            # root bootstrapper: temp-downloads the core zz-* scripts
 ```
 
 Modeled on `tomgrv/actions`' one-folder-per-unit convention (`<action>/`
@@ -36,8 +36,8 @@ shell scripts instead of composite GitHub Actions.
 A machine with nothing installed yet needs _something_ fetchable with zero
 prerequisites. That's `setup.sh`, kept deliberately dumb and DRY: it
 downloads a tarball of this repo to a temp dir, then hands off to the
-`zz_use` it just downloaded to install the core `zz_*` bundle from
-there — the same bin-dir resolution and linking logic `zz_use` always
+`zz-use` it just downloaded to install the core `zz-*` bundle from
+there — the same bin-dir resolution and linking logic `zz-use` always
 uses, not a second copy of it — and discards the temp dir.
 
 ```sh
@@ -52,31 +52,31 @@ or `ZZ_ORIGIN_REF`, or bootstrap from a different org/repo entirely with
 curl -fsSL .../setup.sh | sh -s -- v2
 ```
 
-Both are exported for the `zz_use` this hands off to (and anything it
-execs), so every `zz_use` call afterwards defaults to this same origin —
+Both are exported for the `zz-use` this hands off to (and anything it
+execs), so every `zz-use` call afterwards defaults to this same origin —
 wherever this install actually came from — rather than a hardcoded
 `tomgrv/scripts`.
 
-That's the only thing that needs fetching up front. Once `zz_use` is on
+That's the only thing that needs fetching up front. Once `zz-use` is on
 `PATH`, every other script — core or functional — resolves and installs
-its own further dependencies on demand the same way (see `zz_use` below).
-Functional scripts themselves aren't installed by `setup.sh` or `zz_use`;
+its own further dependencies on demand the same way (see `zz-use` below).
+Functional scripts themselves aren't installed by `setup.sh` or `zz-use`;
 install those directly (`npm install <folder>`, or check out the repo).
 
-## Caching, `zz_update`, and pinning an origin/ref
+## Caching, `zz-update`, and pinning an origin/ref
 
-Both `setup.sh` and `zz_use`'s script installs resolve the same way:
+Both `setup.sh` and `zz-use`'s script installs resolve the same way:
 straight from disk when running inside a checkout of this repo, otherwise
 from a local cache directory (`ZZ_CACHE_DIR/<org>/<repo>/<ref>`, default
 `~/.cache/zz_scripts/tomgrv/scripts/main`) that's populated on first use
 and then just linked from on every call after that — no repeat network
 round-trip.
 
-`zz_update` forces a fresh download, bypassing the cache, and re-links the
-core `zz_*` scripts from it:
+`zz-update` forces a fresh download, bypassing the cache, and re-links the
+core `zz-*` scripts from it:
 
 ```sh
-zz_update # or: zz_use --force <tool...>
+zz-update # or: zz-use --force <tool...>
 ```
 
 Any tool name accepts an optional `[org/repo/]` prefix and/or `@<ref>`
@@ -85,8 +85,8 @@ specific tag, branch, or commit instead of this repo's own default
 (`ZZ_ORIGIN`, default `tomgrv/scripts`; `ZZ_ORIGIN_REF`, default `main`):
 
 ```sh
-zz_use validate-json@v2
-zz_use someorg/otherscripts/some-tool@v1
+zz-use json-validate@v2
+zz-use someorg/otherscripts/some-tool@v1
 ```
 
 Each origin+ref gets its own cache slot, so pinning one script doesn't
@@ -96,13 +96,13 @@ request, it's never skipped just because a same-named command is already
 on `PATH`, since there's no way to tell from an installed script alone
 which repo/ref produced it.
 
-A tool name may also be a glob (e.g. `zz_*`, `git-fix-*`): it expands to
+A tool name may also be a glob (e.g. `zz-*`, `git-fix-*`): it expands to
 every matching script folder in the resolved source tree, each installed
 through the normal per-tool path above. A glob that matches nothing logs a
 warning rather than failing:
 
 ```sh
-zz_use "zz_*" # every core zz_* script, without naming them one by one
+zz-use "zz-*" # every core zz-* script, without naming them one by one
 ```
 
 `-x`/`--exec <tool> [arg...]` installs `<tool>` and execs straight into it
@@ -112,66 +112,66 @@ dependencies — useful for a thin wrapper script that just wants to
 activate its real implementation and hand off to it:
 
 ```sh
-zz_use zz_log jq -x validate-json some-file.json
-# installs zz_log and jq as usual, then installs and execs
-# `validate-json some-file.json`
+zz-use zz-log jq -x json-validate some-file.json
+# installs zz-log and jq as usual, then installs and execs
+# `json-validate some-file.json`
 ```
 
 ## Naming
 
-- **Core** folders keep the `zz_` prefix — each atomic function is its own
-  dedicated script: `zz_use`, `zz_update`, `zz_colors`, `zz_log`, `zz_args`,
-  `zz_prompt`, `zz_ask`, `zz_menu`, `zz_input`, `zz_bindir`, `zz_dispatch`, `zz_npx`,
-  `zz_persist`, `zz_call`, `zz_install`.
-- **Functional** folders use `<verb>-<topic>` naming: `validate-json`,
-  `normalize-json`, `merge-json`, `load-json`, `resolve-context`,
+- **Core** folders keep the `zz-` prefix — each atomic function is its own
+  dedicated script: `zz-use`, `zz-update`, `zz-colors`, `zz-log`, `zz-args`,
+  `zz-prompt`, `zz-ask`, `zz-menu`, `zz-input`, `zz-bindir`, `zz-dispatch`, `zz-npx`,
+  `zz-persist`, `zz-call`, `zz-install`.
+- **Functional** folders use `<verb>-<topic>` naming: `json-validate`,
+  `json-normalize`, `json-merge`, `json-load`, `resolve-context`,
   `edit-script`, `distribute-utils`, `install-feature`,
   `configure-feature`.
 
-## `zz_use` — the activator
+## `zz-use` — the activator
 
-`zz_use` is what every other script calls, once, up front, to declare and
+`zz-use` is what every other script calls, once, up front, to declare and
 resolve its dependencies — including any other script in this repo, core
 or functional:
 
 ```sh
-zz_use zz_colors zz_args load-json jq git
+zz-use zz-colors zz-args json-load jq git
 ```
 
 Internally, `run.sh` is a thin wrapper around a `_use()` function that does
 the actual resolving, calling `_bindir`, `_install_repo_script`, etc. None
-of them need `zz_bindir`, `zz_log`, or any other core script to already be
+of them need `zz-bindir`, `zz-log`, or any other core script to already be
 on `PATH` — but that's not because they each carry a fallback
 reimplementation. It's `_resolve_src` doing the one thing that actually
 has to happen first: figure out the "tarball context" (a checkout, a warm
 cache, or a freshly downloaded tarball — all three are just a directory of
-`zz_*/run.sh` siblings) and symlink every script in it onto `PATH` under
+`zz-*/run.sh` siblings) and symlink every script in it onto `PATH` under
 its real name, in a throwaway scratch dir. From that point on,
-`command -v zz_bindir`, `zz_log ...`, even the `. zz_colors` _inside_
-zz_bindir's and zz_log's own source, all just resolve normally — zero
+`command -v zz-bindir`, `zz-log ...`, even the `. zz-colors` _inside_
+zz-bindir's and zz-log's own source, all just resolve normally — zero
 reimplementation of what those scripts do.
 
-`zz_use` itself relies on `zz_log` (and its other core siblings) already
+`zz-use` itself relies on `zz-log` (and its other core siblings) already
 being on `PATH` — that's `setup.sh`'s job (see above): its
-`zz_use "zz_*"` call puts the whole core set in place, one script at a
-time, before anything else runs. `zz_use` doesn't re-derive that
+`zz-use "zz-*"` call puts the whole core set in place, one script at a
+time, before anything else runs. `zz-use` doesn't re-derive that
 bootstrapping.
 
 For each `<tool>` requested, in order:
 
 1. `command -v <tool>` — already there, no-op.
-2. **Any tool with a `zz_use/config/zz_use.json` entry** (override with
+2. **Any tool with a `zz-use/config/zz-use.json` entry** (override with
    `ZZ_USE_CONFIG`) — an explicit mapping always wins if a name happens to
    collide with a repo script:
     - `{"apt": "<pkg>"}` → `apt-get install -y <pkg>` (via `sudo` if not root).
     - `{"url": ..., "archive": "tar.gz"|"tar.xz"|"zip"|"raw", "binpath": ...}`
       → download, extract if needed, resolve a writable bin dir via
-      `zz_bindir`, and install the binary as `<tool>`. Templates support
+      `zz-bindir`, and install the binary as `<tool>`. Templates support
       `{VERSION}`, `{OS}` (`uname -s`, lowercased), `{ARCH}` (`amd64`/`arm64`).
-3. **Any script from this repo** (a functional script like `load-json`,
-   or a core `zz_*` one) — installed individually, the same way whether
+3. **Any script from this repo** (a functional script like `json-load`,
+   or a core `zz-*` one) — installed individually, the same way whether
    it's core or functional: nothing in this repo needs installing as a
-   group. Source is, in order: a sibling `zz_*/run.sh` folder in this
+   group. Source is, in order: a sibling `zz-*/run.sh` folder in this
    repo when running from a checkout/npm install; otherwise a local
    cache (see caching below); otherwise a fresh download into that
    cache.
@@ -186,11 +186,11 @@ the tool isn't already available.
 Below is that same per-tool decision path. `-x`/`--exec <tool> [arg...]`
 just wraps it: any tools before `-x` go through it as ordinary
 dependencies, then `<tool>` itself goes through it too, and once it's on
-`PATH`, `zz_use` execs into it instead of returning.
+`PATH`, `zz-use` execs into it instead of returning.
 
 ```mermaid
 flowchart TD
-    Start(["zz_use tool[@ref] ..."]) --> Glob{"name is a\nglob, e.g. zz_*?"}
+    Start(["zz-use tool[@ref] ..."]) --> Glob{"name is a\nglob, e.g. zz-*?"}
 
     Glob -- yes --> ResolveG["resolve source\n(checkout / cache / download)"]
     ResolveG --> ForEachMatch["for each matching\nscript folder"]
@@ -200,10 +200,10 @@ flowchart TD
 
     Glob -- no --> Skip{"already on PATH?\n(skipped if pinned/\nother origin/--force)"}
     Skip -- yes --> Done(["done — 0ms"])
-    Skip -- no --> Config{"zz_use.json has\nan entry for it?"}
+    Skip -- no --> Config{"zz-use.json has\nan entry for it?"}
 
     Config -- apt --> Apt["apt-get install"]
-    Config -- url --> Download["download + extract,\ninstall via zz_bindir"]
+    Config -- url --> Download["download + extract,\ninstall via zz-bindir"]
     Config -- no entry --> Repo{"a script in\nthis repo?"}
 
     Repo -- yes --> ResolveOne["resolve source\n(checkout / cache / download)"]
@@ -220,37 +220,38 @@ flowchart TD
     Check -- no --> Fail(["error, exit 1"])
 ```
 
-## Core `zz_*` scripts
+## Core `zz-*` scripts
 
 | Script                                                                 | Purpose                                                                                                                                               |
 | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `zz_use <tool>[@ref]`                                                  | the activator: resolve/install a dependency, if and only if missing (see below)                                                                       |
-| `zz_update`                                                            | force a fresh download of the zz_* bundle, bypassing the local cache                                                                                  |
-| `zz_colors`                                                            | ANSI color vars (`$Red` `$Green` ... `$End`); source it: `. zz_colors`                                                                                |
-| `zz_log <lvl> <msg...>`                                                | colored, leveled log line on stderr (`i`/`w`/`e`/`s`/`-`)                                                                                             |
-| `zz_args <title> <caller> <<-help ...`                                 | parse `$@` per a spec; `eval $(zz_args ...)` to bind the vars                                                                                         |
-| `zz_prompt <question> [default]`                                       | interactive free-form input                                                                                                                           |
-| `zz_ask <options> <question...>`                                       | interactive single-char confirm                                                                                                                       |
-| `zz_menu [-t title] [-d key] [-f footer] [-c states] <key=label>...`   | interactive numbered menu; prints the chosen key (or, with `-c`, each item's cycled `key=state`)                                                      |
-| `zz_input [file]`                                                      | read from arg (literal or file) or stdin                                                                                                              |
-| `zz_bindir [-t target]`                                                | resolve/create a writable bin dir; `eval $(zz_bindir ...)` to bind `$dir` and extend `PATH`                                                           |
-| `zz_dispatch <caller> <subcmd>`                                        | dispatch an underscore-prefixed caller to a sibling `<name>-<subcmd>` script                                                                          |
-| `zz_npx [-s] <tool>`                                                   | run a local `node_modules/.bin` binary, falling back to `npx`                                                                                         |
-| `zz_persist [-f\|-p] [-i <question> [-v\|-s <default>]] <key> [value]` | upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`; with `-i`, ask interactively instead (`-s` for a secret, masked when already set) |
-| `zz_call [-p package.json] [command...]`                               | resolve a caller's declared env vars (`config.input`/`config.output` in `package.json`; ask + persist if missing), then run a command                 |
-| `zz_install <pkg> [<manager>=<name>...]`                               | install a system package via apt/apk/dnf/yum/brew/pacman/zypper/winget, with per-manager name overrides                                               |
+| `zz-use <tool>[@ref]`                                                  | the activator: resolve/install a dependency, if and only if missing (see below)                                                                       |
+| `zz-update`                                                            | force a fresh download of the zz-* bundle, bypassing the local cache                                                                                  |
+| `zz-colors`                                                            | ANSI color vars (`$Red` `$Green` ... `$End`); source it: `. zz-colors`                                                                                |
+| `zz-log <lvl> <msg...>`                                                | colored, leveled log line on stderr (`i`/`w`/`e`/`s`/`-`)                                                                                             |
+| `zz-args <title> <caller> <<-help ...`                                 | parse `$@` per a spec; `eval $(zz-args ...)` to bind the vars                                                                                         |
+| `zz-prompt <question> [default]`                                       | interactive free-form input                                                                                                                           |
+| `zz-ask <options> <question...>`                                       | interactive single-char confirm                                                                                                                       |
+| `zz-menu [-t title] [-d key] [-f footer] [-c states] <key=label>...`   | interactive numbered menu; prints the chosen key (or, with `-c`, each item's cycled `key=state`)                                                      |
+| `zz-input [file]`                                                      | read from arg (literal or file) or stdin                                                                                                              |
+| `zz-bindir [-t target]`                                                | resolve/create a writable bin dir; `eval $(zz-bindir ...)` to bind `$dir` and extend `PATH`                                                           |
+| `zz-dispatch <caller> <subcmd>`                                        | dispatch an underscore-prefixed caller to a sibling `<name>-<subcmd>` script                                                                          |
+| `zz-npx [-s] <tool>`                                                   | run a local `node_modules/.bin` binary, falling back to `npx`                                                                                         |
+| `zz-persist [-f\|-p] [-i <question> [-v\|-s <default>]] <key> [value]` | upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`; with `-i`, ask interactively instead (`-s` for a secret, masked when already set) |
+| `zz-call [-p package.json] [command...]`                               | resolve a caller's declared env vars (`config.input`/`config.output` in `package.json`; ask + persist if missing), then run a command                 |
+| `zz-install <pkg> [<manager>=<name>...]`                               | install a system package via apt/apk/dnf/yum/brew/pacman/zypper/winget, with per-manager name overrides                                               |
 
 ## Functional scripts
 
 | Script              | Purpose                                                                |
 | ------------------- | ---------------------------------------------------------------------- |
-| `load-json`         | load JSON from a file/URL, tag it with `$id`                           |
-| `validate-json`     | validate JSON against a (local/inferred/remote) JSON Schema            |
-| `normalize-json`    | sort JSON keys per schema + alphabetically, optional in-place write    |
-| `merge-json`        | recursively merge one JSON file into another (arrays deduped, unioned) |
+| `json`              | dispatch to `json-<subcommand>` (`load`, `validate`, `normalize`, `merge`) |
+| `json-load`         | load JSON from a file/URL, tag it with `$id`                           |
+| `json-validate`     | validate JSON against a (local/inferred/remote) JSON Schema            |
+| `json-normalize`    | sort JSON keys per schema + alphabetically, optional in-place write    |
+| `json-merge`        | recursively merge one JSON file into another (arrays deduped, unioned) |
 | `resolve-context`   | resolve a feature's source/target dirs from the calling script         |
 | `edit-script`       | copy an installed script locally and open it for editing               |
-| `distribute-utils`  | copy `zz_*`/utility scripts into a project's local scripts directory   |
+| `distribute-utils`  | copy `zz-*`/utility scripts into a project's local scripts directory   |
 | `install-feature`   | copy a feature's stubs/config/bin into a target, run `install-*.sh`    |
 | `configure-feature` | deploy a feature's stubs into the cwd (merging), run `configure-*.sh`  |
 
@@ -261,7 +262,7 @@ See each folder's own `README.md` for its usage line.
 Migrated from `tomgrv/devcontainer-features`'s `gitutils` feature (which
 used to ship them directly under `src/gitutils/bin/`), mirroring the same
 move `common-utils`'s functional scripts made earlier — one source of
-truth here, fetched on demand via `zz_use` instead of duplicated per
+truth here, fetched on demand via `zz-use` instead of duplicated per
 consumer. Installed as `git-<name>` on `PATH`, so git resolves them as
 `git <name>` subcommands (e.g. `git-release-beta` → `git release-beta`).
 The `gitutils` feature still owns the config (which aliases like `git
@@ -319,19 +320,19 @@ Install the whole workspace, or a single script's own package:
 ```sh
 npm install --save-dev @tomgrv/scripts # everything
 # or, e.g.:
-npm install --save-dev ./validate-json # just this one, standalone
+npm install --save-dev ./json-validate # just this one, standalone
 ```
 
-Every functional script is self-contained: `zz_use zz_colors zz_args ...`
-resolves its own dependencies (installing any missing `zz_*` or external
-tool on first use), then `. zz_colors` picks up the color vars.
+Every functional script is self-contained: `zz-use zz-colors zz-args ...`
+resolves its own dependencies (installing any missing `zz-*` or external
+tool on first use), then `. zz-colors` picks up the color vars.
 Any single folder can be copied out and still work standalone.
 
 ## Tests
 
 ```sh
 npm test                     # bats --recursive . (every */test.bats)
-bats validate-json/test.bats # a single script's tests
+bats json-validate/test.bats # a single script's tests
 ```
 
 Each `test.bats` is a behavioral suite, not just a syntax check: it exercises
@@ -340,7 +341,7 @@ the script's documented options and arguments, `-h`/help output, error paths
 success paths against a throwaway git repo or temp directory created in
 `setup()`/`teardown()` (via `tests/helpers.bash`). Suites are hermetic — no
 network access and no writes outside a temp dir — except where a script's own
-purpose requires reaching a real tool (e.g. `zz_npx`/`zz_update` fall back to
+purpose requires reaching a real tool (e.g. `zz-npx`/`zz-update` fall back to
 a local fixture and assert no network call is made). 417 tests currently pass
 across all 53 script folders.
 

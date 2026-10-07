@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-secrets",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Redact a secret from files, commit messages and/or tag annotations across all git history",
   "bin": {
     "git-fix-secrets": "run.sh"
@@ -9,10 +9,10 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "@tomgrv/scripts-zz_args": "*",
-    "@tomgrv/scripts-zz_ask": "*",
-    "@tomgrv/scripts-zz_log": "*",
-    "@tomgrv/scripts-zz_prompt": "*"
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-ask": "*",
+    "@tomgrv/scripts-zz-log": "*",
+    "@tomgrv/scripts-zz-prompt": "*"
   },
   "private": true
 }

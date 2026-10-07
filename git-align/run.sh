@@ -15,9 +15,9 @@ git branch -m $branch $branch-to-delete
 if git checkout -b $branch $origin/$branch; then
     git branch -D $branch-to-delete
 else
-    zz_log e "Failed to checkout branch $branch from $origin/$branch"
+    zz-log e "Failed to checkout branch $branch from $origin/$branch"
     git branch -m $branch-to-delete $branch
 fi
 [ "$before" != "$after" ] && git stash pop
 
-zz_log i "Current branch: $(git rev-parse --abbrev-ref HEAD)"
+zz-log i "Current branch: $(git rev-parse --abbrev-ref HEAD)"

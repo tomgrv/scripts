@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-last",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Edit the last commit message and content",
   "bin": {
     "git-fix-last": "run.sh"
@@ -9,7 +9,7 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "@tomgrv/scripts-zz_args": "*"
+    "@tomgrv/scripts-zz-args": "*"
   },
   "private": true
 }

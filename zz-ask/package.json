@@ -1,0 +1,16 @@
+{
+  "name": "@tomgrv/scripts-zz-ask",
+  "version": "1.0.0",
+  "description": "Interactive single-character confirm/choice prompt",
+  "bin": {
+    "zz-ask": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*"
+  },
+  "private": true
+}

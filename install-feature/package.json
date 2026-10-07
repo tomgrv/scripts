@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-install-feature",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Copy a feature's stubs/config/bin into a target, run install-*.sh",
   "bin": {
     "install-feature": "run.sh"
@@ -10,10 +10,10 @@
   },
   "peerDependencies": {
     "@tomgrv/scripts-resolve-context": "*",
-    "@tomgrv/scripts-zz_args": "*",
-    "@tomgrv/scripts-zz_bindir": "*",
-    "@tomgrv/scripts-zz_colors": "*",
-    "@tomgrv/scripts-zz_log": "*"
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-bindir": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*"
   },
   "private": true
 }

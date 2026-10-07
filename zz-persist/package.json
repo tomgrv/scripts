@@ -1,0 +1,17 @@
+{
+  "name": "@tomgrv/scripts-zz-persist",
+  "version": "1.0.0",
+  "description": "Upsert a KEY=VALUE pair into an env file and/or /etc/profile.d",
+  "bin": {
+    "zz-persist": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*"
+  },
+  "private": true
+}

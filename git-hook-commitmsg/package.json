@@ -1,23 +1,23 @@
 {
-    "name": "@tomgrv/scripts-git-hook-commitmsg",
-    "version": "0.27.0",
-    "description": "Git commit-msg hook: apply commitlint rules and devmoji to the commit message",
-    "bin": {
-        "git-hook-commitmsg": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "dependencies": {
-        "commitlint": "*",
-        "devmoji": "*"
-    },
-    "peerDependencies": {
-        "@tomgrv/scripts-git-hook-installplugins": "*",
-        "@tomgrv/scripts-zz_args": "*",
-        "@tomgrv/scripts-zz_colors": "*",
-        "@tomgrv/scripts-zz_log": "*",
-        "@tomgrv/scripts-zz_npx": "*"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-git-hook-commitmsg",
+  "version": "1.0.0",
+  "description": "Git commit-msg hook: apply commitlint rules and devmoji to the commit message",
+  "bin": {
+    "git-hook-commitmsg": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "dependencies": {
+    "commitlint": "*",
+    "devmoji": "*"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-git-hook-installplugins": "*",
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*",
+    "@tomgrv/scripts-zz-npx": "*"
+  },
+  "private": true
 }

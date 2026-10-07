@@ -7,7 +7,7 @@ description: >
   or "promote to production".
 ---
 
-`git release beta` / `git release prod` are external commands (from `tomgrv/scripts`, fetched via `zz_use`) — assume they're already on `PATH`, don't reimplement them.
+`git release beta` / `git release prod` are external commands (from `tomgrv/scripts`, fetched via `zz-use`) — assume they're already on `PATH`, don't reimplement them.
 
 ## Steps
 

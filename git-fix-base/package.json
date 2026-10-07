@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-base",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Rebase commits from one branch onto another",
   "bin": {
     "git-fix-base": "run.sh"
@@ -9,9 +9,9 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "@tomgrv/scripts-zz_args": "*",
-    "@tomgrv/scripts-zz_ask": "*",
-    "@tomgrv/scripts-zz_log": "*"
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-ask": "*",
+    "@tomgrv/scripts-zz-log": "*"
   },
   "private": true
 }

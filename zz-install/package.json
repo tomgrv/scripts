@@ -1,0 +1,16 @@
+{
+  "name": "@tomgrv/scripts-zz-install",
+  "version": "1.0.0",
+  "description": "Install a system package with whichever package manager is available",
+  "bin": {
+    "zz-install": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*"
+  },
+  "private": true
+}

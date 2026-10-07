@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-configure-feature",
-  "version": "0.33.0",
+  "version": "1.0.0",
   "description": "Deploy a feature's stubs into the cwd (merging), run configure-*.sh",
   "bin": {
     "configure-feature": "run.sh"
@@ -9,11 +9,11 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "@tomgrv/scripts-merge-json": "*",
-    "@tomgrv/scripts-merge-yaml": "*",
-    "@tomgrv/scripts-zz_args": "*",
-    "@tomgrv/scripts-zz_colors": "*",
-    "@tomgrv/scripts-zz_log": "*",
+    "@tomgrv/scripts-json-merge": "*",
+    "@tomgrv/scripts-yaml-merge": "*",
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*",
     "git": "*",
     "sha1sum": "*"
   },

@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-release-hotfix",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Create a hotfix branch using Git Flow",
   "bin": {
     "git-release-hotfix": "run.sh"
@@ -9,8 +9,8 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "@tomgrv/scripts-zz_args": "*",
-    "@tomgrv/scripts-zz_log": "*"
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-log": "*"
   },
   "private": true
 }

@@ -1,0 +1,61 @@
+#!/bin/sh
+# zz-dispatch — dispatcher utility used by scripts named with a leading
+# underscore. Example caller: src/gitutils/_git-fix.sh invokes:
+# zz-dispatch $0 "$@"
+# This script finds a counterpart script without the leading underscore
+# in the same directory (or with .sh extension) and executes it.
+
+set -e
+
+. zz-colors
+
+eval $(
+     zz-args "Dispatch Utility" $0 "$@" <<- help
+		-   caller caller     Caller script path
+        -   subcmd subcmd     Target script to execute
+        d   debug  debug      Enable debug mode
+        #   params params     Remaining arguments passed to the target script
+	help
+)
+
+usage() {
+    zz-log i "Usage: ${name} <subcommand> [args...]" >&2
+    if [ -d "${caller_dir}" ]; then
+        zz-log - "Available utilities in ${caller_dir}:" >&2
+        for entry in "${caller_dir}"/*; do
+            [ -x "${entry}" ] || continue
+            basename "${entry}" | grep -E "${name}(-.*)(\.sh)?$" | sed -e 's/^_//' -e 's/^/    /' >&2 || true
+        done
+    fi
+}
+
+caller_basename=$(basename "${caller}")
+caller_dir=$(dirname "${caller}")
+
+name=${caller_basename#_}
+name=${name%.*}
+
+if [ -z "${subcmd}" ]; then
+    zz-log e "No subcommand provided." && usage $caller
+    exit 1
+fi
+
+if [ "${caller_dir}" = "${caller_basename}" ] || [ -z "${caller_dir}" ]; then
+    caller_dir="."
+fi
+
+if [ -n "${subcmd}" ]; then
+    target="${caller_dir}/${name}-${subcmd}"
+else
+    target="${caller_dir}/${name}"
+fi
+
+if [ -x "${target}" ]; then
+    zz-log i "Dispatching to executable target: ${target}"
+    exec "${target}" "$@"
+elif [ -f "${target}" ]; then
+    zz-log i "Dispatching to subshell target: ${target}"
+    exec sh "${target}" "$@"
+else
+    zz-log w "No dispatch target found" && usage
+fi

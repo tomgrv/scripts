@@ -1,0 +1,15 @@
+{
+  "name": "@tomgrv/scripts-zz-input",
+  "version": "1.0.0",
+  "description": "Read from a literal argument, a file argument, or stdin",
+  "bin": {
+    "zz-input": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-log": "*"
+  },
+  "private": true
+}

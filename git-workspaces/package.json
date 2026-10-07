@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-workspaces",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "List workspace directories and affected workspaces",
   "bin": {
     "git-workspaces": "run.sh"
@@ -9,7 +9,7 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "@tomgrv/scripts-zz_args": "*"
+    "@tomgrv/scripts-zz-args": "*"
   },
   "private": true
 }

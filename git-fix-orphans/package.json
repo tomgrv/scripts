@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-orphans",
-  "version": "0.34.0",
+  "version": "1.0.0",
   "description": "Prefix remote branches that do not follow the gitflow config and have no pull request",
   "bin": {
     "git-fix-orphans": "run.sh"
@@ -9,8 +9,8 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "@tomgrv/scripts-zz_args": "*",
-    "@tomgrv/scripts-zz_log": "*"
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-log": "*"
   },
   "private": true
 }

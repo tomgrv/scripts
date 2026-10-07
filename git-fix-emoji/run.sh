@@ -1,7 +1,7 @@
 #!/bin/sh
 
 eval $(
-	zz_args "Fix git emoji" $0 "$@" <<-help
+	zz-args "Fix git emoji" $0 "$@" <<-help
 		f -     force	allow overwritting pushed history
 		p -		push	push changes after rewriting history
 		- sha   sha 	sha commit to fix from after
@@ -13,7 +13,7 @@ cd "$(git rev-parse --show-toplevel)" >/dev/null
 git fetch --progress --prune --recurse-submodules=no origin >/dev/null
 
 if ! git diff-index --quiet HEAD --; then
-	zz_log e "You have uncommitted changes. Please commit or stash them before running this script."
+	zz-log e "You have uncommitted changes. Please commit or stash them before running this script."
 	exit 1
 fi
 
@@ -34,4 +34,4 @@ if [ "$push" = true ]; then
 	fi
 fi
 
-zz_log s "Git emoji fixup completed successfully."
+zz-log s "Git emoji fixup completed successfully."

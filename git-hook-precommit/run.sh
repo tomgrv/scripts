@@ -5,15 +5,15 @@
 # Install as the repo's .git/hooks/pre-commit (or via husky) invoking
 # `git hook-precommit "$@"`.
 
-. zz_colors
+. zz-colors
 
 eval $(
-	zz_args "Git pre-commit hook" $0 "$@" <<-help
+	zz-args "Git pre-commit hook" $0 "$@" <<-help
 		# refs refs  Optional refs/paths passed through to 'git diff --name-only'
 	help
 )
 
-toplevel=$(git rev-parse --show-toplevel) || { zz_log e "Not inside a git repository."; exit 1; }
+toplevel=$(git rev-parse --show-toplevel) || { zz-log e "Not inside a git repository."; exit 1; }
 cd "$toplevel"
 
 if [ -t 1 ]; then
@@ -21,11 +21,11 @@ if [ -t 1 ]; then
 fi
 
 if test "$GIT_COMMAND" = "rebase"; then
-	zz_log s "Skip pre-commit hook during rebase"
+	zz-log s "Skip pre-commit hook during rebase"
 	exit 0
 fi
 
-zz_log i "Git command: {Cyan $GIT_COMMAND}"
+zz-log i "Git command: {Cyan $GIT_COMMAND}"
 
 if [ "$#" -eq 0 ]; then
 	changed_files=$(git diff --name-only --cached)
@@ -35,7 +35,7 @@ fi
 
 if echo "$changed_files" | grep -q "package.json"; then
 
-	zz_log i "Ensure that the package.json is valid and package-lock.json is up-to-date..."
+	zz-log i "Ensure that the package.json is valid and package-lock.json is up-to-date..."
 
 	# --package-lock-only --ignore-scripts: recompute the lockfile without
 	# installing anything or running install/postinstall lifecycle scripts.
@@ -53,15 +53,15 @@ if echo "$changed_files" | grep -q "package.json"; then
 	fi
 
 	if git diff --quiet package-lock.json; then
-		zz_log s "package-lock.json update not required"
+		zz-log s "package-lock.json update not required"
 	else
-		git add package-lock.json && zz_log w "Updated package-lock.json"
+		git add package-lock.json && zz-log w "Updated package-lock.json"
 	fi
 fi
 
 if echo "$changed_files" | grep -q "composer.json"; then
 
-	zz_log i "Ensure that the composer.json is valid and composer.lock is up-to-date..."
+	zz-log i "Ensure that the composer.json is valid and composer.lock is up-to-date..."
 	composer_validate=$(composer validate --no-check-all --strict 2>&1)
 	composer_valid=$?
 	missing_packages=$(echo "$composer_validate" | grep -oP 'Required package "\K[^"]+')
@@ -76,13 +76,13 @@ if echo "$changed_files" | grep -q "composer.json"; then
 	fi
 
 	if git diff --quiet composer.lock; then
-		zz_log s "composer.lock update not required"
+		zz-log s "composer.lock update not required"
 	else
-		git add composer.lock && zz_log w "Updated composer.lock"
+		git add composer.lock && zz-log w "Updated composer.lock"
 	fi
 fi
 
 git-hook-installplugins '.prettier.plugins//""'
 
-zz_npx git-precommit-checks
-zz_npx lint-staged --cwd ${INIT_CWD:-$PWD} --allow-empty
+zz-npx git-precommit-checks
+zz-npx lint-staged --cwd ${INIT_CWD:-$PWD} --allow-empty

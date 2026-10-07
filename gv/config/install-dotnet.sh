@@ -11,5 +11,5 @@ INSTALL_BIN_DIR="${INSTALL_BIN_DIR:-/usr/local/bin}"
 
 command -v dotnet > /dev/null 2>&1 || exit 1
 
-zz_log i "Installing GitVersion.Tool ${GITVERSION_VERSION} via dotnet..."
+zz-log i "Installing GitVersion.Tool ${GITVERSION_VERSION} via dotnet..."
 dotnet tool install GitVersion.Tool --version "${GITVERSION_VERSION}" --tool-path "${INSTALL_BIN_DIR}"

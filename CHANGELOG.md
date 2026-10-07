@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.0 (2026-10-07)
+
+*Commits from: v0.34.0..HEAD*
+
+### 💥 BREAKING CHANGES
+
+- every zz_* command is now zz-* (zz-use, zz-log, zz-colors, ...), and the json/yaml tools are now json-<verb>/yaml-<verb>. Old names no longer exist; update callers.
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v0.34.0' into develop
+
 ## 0.34.0 (2026-10-07)
 
 *Commits from: v0.33.0..HEAD*
@@ -592,6 +605,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 

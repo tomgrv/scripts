@@ -1,2 +1,2 @@
 #!/bin/sh
-zz_use -x git-hook-postmerge "$@"
+zz-use -x git-hook-postmerge "$@"
