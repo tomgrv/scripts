@@ -81,6 +81,7 @@
     "git-fix-lock",
     "git-fix-message",
     "git-fix-mode",
+    "git-fix-orphans",
     "git-fix-privacy",
     "git-fix-prune",
     "git-fix-rights",
