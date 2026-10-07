@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-feature",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Dispatch to feature-<subcommand> utilities",
   "bin": {
     "feature": "run.sh"

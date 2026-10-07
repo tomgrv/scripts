@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz-bindir",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Resolve (and create if needed) a writable bin directory on PATH",
   "bin": {
     "zz-bindir": "run.sh"
