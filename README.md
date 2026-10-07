@@ -354,3 +354,7 @@ and runs each one's `package.json` `scripts.test` entry
 [`tomgrv/actions/run-workspace-tests`](https://github.com/tomgrv/actions/tree/main/run-workspace-tests),
 in a matrix — one job per workspace instead of one `bats --recursive .`
 job for the whole repo.
+
+## Upgrading
+
+Breaking renames and major bumps: see [`UPGRADING.md`](UPGRADING.md) (order of operations across repos, pins, pitfalls, rollback).
