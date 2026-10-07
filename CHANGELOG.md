@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.1.0 (2026-10-07)
+
+*Commits from: v1.0.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v1.0.0' into develop
+### 📦 scripts-zz-use changes
+
+#### Bug Fixes
+
+- 🐛 pin tomgrv/actions to v3, release-promote to scripts v1 (#62)
+
 ## 1.0.0 (2026-10-07)
 
 *Commits from: v0.34.0..HEAD*
@@ -605,6 +620,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 
