@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0
 
       - name: Validate lock coherence
-        uses: tomgrv/actions/check-lock@v2
+        uses: tomgrv/actions/check-lock@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # paths: '.' checks the repo root; pass a comma-separated list
