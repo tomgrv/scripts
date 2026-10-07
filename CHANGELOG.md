@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.34.0 (2026-10-07)
+
+*Commits from: v0.33.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v0.33.0' into develop
+### 📦 scripts-git-fix-orphans changes
+
+#### Features
+
+- ✨ prefix non-gitflow branches without a PR as orphan/ (#60)
+
 ## 0.33.0 (2026-10-05)
 
 *Commits from: v0.32.0..HEAD*
@@ -584,5 +599,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-10-05 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-10-07 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*

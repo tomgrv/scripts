@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-orphans",
-  "version": "0.25.0",
+  "version": "0.34.0",
   "description": "Prefix remote branches that do not follow the gitflow config and have no pull request",
   "bin": {
     "git-fix-orphans": "run.sh"
