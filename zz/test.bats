@@ -68,3 +68,31 @@ EOF
     [ "$status" -eq 0 ]
     [ "$output" = "zz-use called: -x nosuchthing one two" ]
 }
+
+@test "zz resolves dashed names to zz-<dashed-name>" {
+    stub_script zz-dist-sync <<'EOF2'
+#!/bin/sh
+echo "dist-sync:$*"
+EOF2
+    run zz dist-sync x
+    [ "$status" -eq 0 ]
+    [ "$output" = "dist-sync:x" ]
+}
+
+@test "zz hands an already-prefixed name to zz-use -x unchanged" {
+    stub_script zz-use <<'EOF2'
+#!/bin/sh
+echo "zz-use called: $*"
+EOF2
+    run zz zz-log i
+    [ "$output" = "zz-use called: -x zz-log i" ]
+}
+
+@test "zz propagates the exit status of zz-use -x" {
+    stub_script zz-use <<'EOF2'
+#!/bin/sh
+exit 9
+EOF2
+    run zz nosuchthing
+    [ "$status" -eq 9 ]
+}
