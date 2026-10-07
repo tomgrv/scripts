@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.2.0 (2026-10-07)
+
+*Commits from: v1.1.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v1.1.0' into develop
+### 📦 scripts-zz-use changes
+
+#### Other changes
+
+- 📝 add UPGRADING guide for breaking changes (#63)
+
 ## 1.1.0 (2026-10-07)
 
 *Commits from: v1.0.0..HEAD*
@@ -620,6 +635,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 
