@@ -10,7 +10,7 @@
   },
   "peerDependencies": {
     "@tomgrv/scripts-gv": "*",
-    "@tomgrv/scripts-zz_log": "*"
+    "@tomgrv/scripts-zz-log": "*"
   },
   "private": true
 }

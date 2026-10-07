@@ -27,7 +27,7 @@ KEY package.json ["lint-staged","legacy-glob"]
   on disk (e.g. it moved from tracked to `.gitignore`d).
 - `DEL <path>` — delete the file from disk and untrack it from git.
 - `KEY <file> <path>` — remove one key from a JSON or YAML file. The stub
-  merges (`merge-json`, `merge-yaml`) only ever add keys and keep the value
+  merges (`json-merge`, `yaml-merge`) only ever add keys and keep the value
   already in the target, so a key a stub renamed or dropped, or a scalar a stub
   fixed, would otherwise stay as it was in every consumer's file forever.
   `<path>` is a JSON array of steps, handed to `jq`/`yq` as data and never
@@ -35,7 +35,7 @@ KEY package.json ["lint-staged","legacy-glob"]
     - a string is an object key;
     - a number is an array index;
     - an object such as `{"name":"Deploy"}` selects the first array element
-      whose fields all match, the way `merge-yaml` identifies list items.
+      whose fields all match, the way `yaml-merge` identifies list items.
 
     ```
     KEY package.json ["lint-staged","legacy-glob"]
@@ -59,7 +59,7 @@ deployed as a stub.
 
 ## Dependencies
 
-Declared via `zz_use` at the top of `run.sh` and resolved on demand
+Declared via `zz-use` at the top of `run.sh` and resolved on demand
 (installed if and only if missing) — see `run.sh` for the exact list.
 
 ## Tests

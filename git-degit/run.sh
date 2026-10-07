@@ -6,7 +6,7 @@ if [ "$#" -lt 1 ]; then
 fi
 
 eval $(
-    zz_args "Clone and degit a repository" $0 "$@" <<-help
+    zz-args "Clone and degit a repository" $0 "$@" <<-help
 		    - repo      repo        repository to clone
 			- directory directory   directory to degit into
 	help
@@ -21,8 +21,8 @@ if [ -z "${directory}" ]; then
     directory=.
 fi
 
-zz_log i "Repository: ${repo}"
-zz_log i "Directory: ${directory}"
+zz-log i "Repository: ${repo}"
+zz-log i "Directory: ${directory}"
 
 mkdir -p "${directory}"
 
@@ -40,7 +40,7 @@ case $host in
         tar --extract --ungzip --strip-components=1 --directory "${directory}"
     ;;
 *)
-    zz_log e "Unsupported host: {U ${host}}"
+    zz-log e "Unsupported host: {U ${host}}"
     exit 1
     ;;
 esac

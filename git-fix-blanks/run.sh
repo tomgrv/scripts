@@ -1,7 +1,7 @@
 #!/bin/sh
 
 eval $(
-	zz_args "Discard changes made only of whitespace, blanks, quote/slash swaps" $0 "$@" <<-help
+	zz-args "Discard changes made only of whitespace, blanks, quote/slash swaps" $0 "$@" <<-help
 		d -         dryrun      show files that would be discarded without changing them
 	help
 )
@@ -15,7 +15,7 @@ trap 'rm -rf "$temp_dir"' EXIT
 git diff --name-only --diff-filter=M HEAD -- >"$changed_list"
 
 if [ ! -s "$changed_list" ]; then
-	zz_log i "No modified tracked files found."
+	zz-log i "No modified tracked files found."
 	exit 0
 fi
 
@@ -33,7 +33,7 @@ normalize_file() {
 		*.html|*.htm) sed -e '/^[[:space:]]*<!--.*-->/d' "$1" ;;
 		*.css) sed -e '/^[[:space:]]*\/\*/d' -e '/^[[:space:]]*\*/d' "$1" ;;
 		*.js) sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*\/\*/d' -e '/^[[:space:]]*\*/d' "$1" ;;
-		*.json) normalize-json -c -a -i -t 4 -f local -l true "$1" 2>/dev/null || cat "$1" ;; # fall back to raw content if normalization fails (never emit empty, which would be a false match)
+		*.json) json-normalize -c -a -i -t 4 -f local -l true "$1" 2>/dev/null || cat "$1" ;; # fall back to raw content if normalization fails (never emit empty, which would be a false match)
 		*) cat "$1" ;;
 	esac | sed -e 's/[[:space:]]//g' -e "s/[\"']/\"/g" -e 's#[\\/]#/#g' -e '/^$/d' | awk '{ print }'
 }
@@ -72,7 +72,7 @@ while IFS= read -r file; do
 
 	if cmp -s "$norm_old" "$norm_new"; then
 		discarded=$((discarded + 1))
-		zz_log i "Discarding ignorable-only changes in $file"
+		zz-log i "Discarding ignorable-only changes in $file"
 		if [ -z "$dryrun" ]; then
 			git checkout HEAD -- "$file"
 		fi
@@ -82,7 +82,7 @@ while IFS= read -r file; do
 done <"$changed_list"
 
 if [ -n "$dryrun" ]; then
-	zz_log s "Dry run complete. Discardable files: $discarded, kept: $kept, skipped: $skipped"
+	zz-log s "Dry run complete. Discardable files: $discarded, kept: $kept, skipped: $skipped"
 else
-	zz_log s "Done. Discarded: $discarded, kept: $kept, skipped: $skipped"
+	zz-log s "Done. Discarded: $discarded, kept: $kept, skipped: $skipped"
 fi

@@ -5,15 +5,15 @@
 # Install as .git/hooks/post-merge (or via husky) invoking
 # `git hook-postmerge "$@"` — git passes a squash flag (1 if `--squash`).
 
-. zz_colors
+. zz-colors
 
 eval $(
-	zz_args "Git post-merge hook" $0 "$@" <<-help
+	zz-args "Git post-merge hook" $0 "$@" <<-help
 		- squash    squash    1 if the merge was a squash merge, 0 otherwise
 	help
 )
 
-toplevel=$(git rev-parse --show-toplevel) || { zz_log e "Not inside a git repository."; exit 1; }
+toplevel=$(git rev-parse --show-toplevel) || { zz-log e "Not inside a git repository."; exit 1; }
 cd "$toplevel"
 
 if [ -t 1 ]; then
@@ -26,6 +26,6 @@ isChanged() {
 
 if isChanged 'composer.lock' || isChanged 'package-lock.json'; then
 	git checkout --theirs composer.lock package-lock.json && git add composer.lock package-lock.json
-	zz_log s "Files <package-lock.json> or <composer.lock> changed."
-	zz_log s "Run composer/npm install to bring your dependencies up to date."
+	zz-log s "Files <package-lock.json> or <composer.lock> changed."
+	zz-log s "Run composer/npm install to bring your dependencies up to date."
 fi

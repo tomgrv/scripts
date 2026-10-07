@@ -6,17 +6,17 @@
 # Install as .git/hooks/prepare-commit-msg (or via husky) invoking
 # `git hook-preparecommitmsg "$@"`.
 
-. zz_colors
+. zz-colors
 
 eval $(
-	zz_args "Git prepare-commit-msg hook" $0 "$@" <<-help
+	zz-args "Git prepare-commit-msg hook" $0 "$@" <<-help
 		- msgfile   msgfile   Path to the commit message file (as passed by git)
 		- source    source    Commit message source (message/template/merge/squash/commit)
 		- commit    commit    Commit SHA-1, present when source is 'commit'
 	help
 )
 
-toplevel=$(git rev-parse --show-toplevel) || { zz_log e "Not inside a git repository."; exit 1; }
+toplevel=$(git rev-parse --show-toplevel) || { zz-log e "Not inside a git repository."; exit 1; }
 cd "$toplevel"
 
 if [ -t 1 ]; then
@@ -26,7 +26,7 @@ fi
 git-hook-installplugins -g '[.config.commitizen.path // "", .commitlint.extends // ""]'
 
 if [ $(grep -cv -e '^#' -e '^$' .git/COMMIT_EDITMSG) -eq 0 ]; then
-	(exec </dev/tty && zz_npx git-cz --hook || zz_log e "Unable to start commitizen.") || zz_log e "Commitizen failed."
+	(exec </dev/tty && zz-npx git-cz --hook || zz-log e "Unable to start commitizen.") || zz-log e "Commitizen failed."
 else
-	zz_log i "Commitizen not relevant. Skipping..."
+	zz-log i "Commitizen not relevant. Skipping..."
 fi

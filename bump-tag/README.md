@@ -11,7 +11,7 @@ and linked onto `PATH` as `bump-tag`.
 
 ## Dependencies
 
-Declared via `zz_use` at the top of `run.sh` and resolved on demand
+Declared via `zz-use` at the top of `run.sh` and resolved on demand
 (installed if and only if missing) — see `run.sh` for the exact list. Also
 assumes a `gitversion` CLI on `PATH` when no explicit tag is given — see
 [`gv`](../gv).

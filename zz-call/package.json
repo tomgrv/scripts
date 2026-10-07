@@ -1,0 +1,19 @@
+{
+  "name": "@tomgrv/scripts-zz-call",
+  "version": "0.25.0",
+  "description": "Resolve a caller's declared env vars (ask + persist if missing), then run a command",
+  "bin": {
+    "zz-call": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*",
+    "@tomgrv/scripts-zz-persist": "*",
+    "@tomgrv/scripts-zz-prompt": "*"
+  },
+  "private": true
+}

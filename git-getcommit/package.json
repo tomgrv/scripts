@@ -9,9 +9,9 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "@tomgrv/scripts-zz_args": "*",
-    "@tomgrv/scripts-zz_log": "*",
-    "@tomgrv/scripts-zz_prompt": "*"
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-log": "*",
+    "@tomgrv/scripts-zz-prompt": "*"
   },
   "private": true
 }

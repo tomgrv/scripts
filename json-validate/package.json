@@ -1,0 +1,18 @@
+{
+  "name": "@tomgrv/scripts-json-validate",
+  "version": "0.25.0",
+  "description": "Validate JSON against a local/inferred/remote JSON Schema",
+  "bin": {
+    "json-validate": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-json-load": "*",
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*"
+  },
+  "private": true
+}

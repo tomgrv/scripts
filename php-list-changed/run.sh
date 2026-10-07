@@ -1,7 +1,7 @@
 #!/bin/sh
 
 eval $(
-    zz_args "List PHP test parts (core, modules, packages) affected by a change" $0 "$@" <<-help
+    zz-args "List PHP test parts (core, modules, packages) affected by a change" $0 "$@" <<-help
         b   base    base    Base ref to diff against (default: origin/\$GITHUB_BASE_REF, origin/develop, origin/main)
         f   format  format  Output format: names (default), paths, suites or json
         a   -       all     Ignore the diff and select every part
@@ -50,7 +50,7 @@ if [ "$all" = "-a" ]; then
 $parts"
 else
     ref=$(resolve_base) || {
-        zz_log e "No base ref found" 2>/dev/null || echo "No base ref found" >&2
+        zz-log e "No base ref found" 2>/dev/null || echo "No base ref found" >&2
         exit 1
     }
     changed=$(git diff --name-only "$(git merge-base "$ref" HEAD)" 2>/dev/null)

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Shared bats setup: symlinks every <folder>/run.sh onto PATH under its
 # folder name, the same way an install would. Config/resource files that
-# live alongside a script's run.sh (e.g. validate-json/config/) stay
+# live alongside a script's run.sh (e.g. json-validate/config/) stay
 # resolvable because dirname(readlink -f "$0")) still finds the real folder.
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

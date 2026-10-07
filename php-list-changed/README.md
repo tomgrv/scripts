@@ -32,7 +32,7 @@ assuming they match directory names, `core` is `Unit,Feature`), `json` (`[{name,
 
 ## Dependencies
 
-`jq`, `zz_args`.
+`jq`, `zz-args`.
 
 ## Tests
 

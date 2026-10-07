@@ -1,2 +1,2 @@
 #!/bin/sh
-zz_use -x git-hook-commitmsg "$@"
+zz-use -x git-hook-commitmsg "$@"

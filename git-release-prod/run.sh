@@ -1,7 +1,7 @@
 #!/bin/sh
 
 eval $(
-    zz_args "Release production branch" $0 "$@" <<-help
+    zz-args "Release production branch" $0 "$@" <<-help
 help
 )
 
@@ -22,12 +22,12 @@ case "$current" in
 hotfix/*)
     flow=hotfix
     name=${current#hotfix/}
-    zz_log i "On hotfix branch: {Yellow $name}"
+    zz-log i "On hotfix branch: {Yellow $name}"
     ;;
 release/*)
     flow=release
     name=${current#release/}
-    zz_log i "On release branch: {Blue $name}"
+    zz-log i "On release branch: {Blue $name}"
     ;;
 esac
 
@@ -39,12 +39,12 @@ if [ -z "$flow" ]; then
     hotfix_count=$(printf '%s\n' "$hotfixes" | grep -c .)
 
     if [ "$hotfix_count" -gt 1 ]; then
-        zz_log e "Multiple hotfix branches found, checkout the one to finish first: $(printf '%s' "$hotfixes" | tr '\n' ' ')"
+        zz-log e "Multiple hotfix branches found, checkout the one to finish first: $(printf '%s' "$hotfixes" | tr '\n' ' ')"
         exit 1
     elif [ "$hotfix_count" -eq 1 ]; then
         flow=hotfix
         name=$hotfixes
-        zz_log i "Hotfix branch found: {Yellow $name}"
+        zz-log i "Hotfix branch found: {Yellow $name}"
     elif [ -f .git/RELEASE ]; then
         name=$(cat .git/RELEASE)
         # Cleanup-only case: `git flow finish` already ran to completion on a
@@ -53,51 +53,51 @@ if [ -z "$flow" ]; then
         # left to check out, so finish the leftover cleanup here and stop.
         if ! git show-ref --verify --quiet "refs/heads/release/$name" \
             && git rev-parse -q --verify "refs/tags/${versiontag_prefix}${name}" >/dev/null; then
-            zz_log i "Release $name already finished (branch gone, tag exists) -- cleaning up only"
+            zz-log i "Release $name already finished (branch gone, tag exists) -- cleaning up only"
             bump-tag "$name"
             rm -f .git/RELEASE
             exit 0
         fi
         flow=release
-        zz_log i "Release branch found: {Blue $name}"
+        zz-log i "Release branch found: {Blue $name}"
     else
         releases=$(git branch --list 'release/*' | sed 's/^[* ]*release\///')
         release_count=$(printf '%s\n' "$releases" | grep -c .)
 
         if [ "$release_count" -gt 1 ]; then
-            zz_log e "Multiple release branches found, checkout the one to finish first: $(printf '%s' "$releases" | tr '\n' ' ')"
+            zz-log e "Multiple release branches found, checkout the one to finish first: $(printf '%s' "$releases" | tr '\n' ' ')"
             exit 1
         elif [ "$release_count" -eq 1 ]; then
             flow=release
             name=$releases
-            zz_log i "Release branch found: {Blue $name}"
+            zz-log i "Release branch found: {Blue $name}"
         fi
     fi
 fi
 
 if [ -z "$flow" ] || [ -z "$name" ]; then
-    zz_log e "No flow branch found"
+    zz-log e "No flow branch found"
     exit 1
 fi
 
 if ! git checkout "$flow/$name" >/dev/null 2>&1; then
-    zz_log e "Cannot switch to $flow/$name branch"
+    zz-log e "Cannot switch to $flow/$name branch"
     exit 1
 fi
-zz_log s "On branch: {Blue $flow/$name}"
+zz-log s "On branch: {Blue $flow/$name}"
 
 GBV=$(gv -showvariable MajorMinorPatch)
 if [ -z "$GBV" ]; then
-    zz_log e "Cannot get version from .gitversion"
+    zz-log e "Cannot get version from .gitversion"
     exit 1
 fi
-zz_log i "Bump version: {Blue $GBV}"
+zz-log i "Bump version: {Blue $GBV}"
 
 # If the finish tag already exists, finish already ran to completion on a
 # prior run -- resume at cleanup only instead of redoing the merge/tag/push.
 finished=""
 if git rev-parse -q --verify "refs/tags/${versiontag_prefix}${GBV}" >/dev/null; then
-    zz_log i "Tag ${versiontag_prefix}${GBV} already exists, release already finished -- resuming cleanup only"
+    zz-log i "Tag ${versiontag_prefix}${GBV} already exists, release already finished -- resuming cleanup only"
     finished=true
 fi
 
@@ -106,12 +106,12 @@ export GIT_EDITOR=:
 if [ -z "$finished" ]; then
 
     if [ -n "$(git status --porcelain)" ]; then
-        zz_log e "Working directory is not clean. Please commit or stash changes."
+        zz-log e "Working directory is not clean. Please commit or stash changes."
         exit 1
     fi
 
     if ! git fetch origin >/dev/null 2>&1; then
-        zz_log e "Cannot fetch from remote"
+        zz-log e "Cannot fetch from remote"
         exit 1
     fi
 
@@ -119,49 +119,49 @@ if [ -z "$finished" ]; then
     # contained in local -- i.e. local is not behind. Passed the other way
     # round it would succeed while local is behind (needs a pull).
     if ! git merge-base --is-ancestor "$(git rev-parse "refs/remotes/origin/$flow/$name")" "$(git rev-parse "$flow/$name")" ; then
-        zz_log e "$flow/$name branch is not up-to-date with remote. Please pull the latest changes."
+        zz-log e "$flow/$name branch is not up-to-date with remote. Please pull the latest changes."
         exit 1
     fi
 
     # Idempotent: skip if a previous run already made this exact commit.
     if [ "$(git log -1 --pretty=%s)" = "chore(release): $GBV" ]; then
-        zz_log i "Version & CHANGELOG already committed for $GBV, skipping bump"
+        zz-log i "Version & CHANGELOG already committed for $GBV, skipping bump"
     else
         if ! bump-changelog -f "$GBV" -b -m; then
-            zz_log e "Cannot update version & CHANGELOG"
+            zz-log e "Cannot update version & CHANGELOG"
             exit 1
         fi
-        zz_log s "Version & CHANGELOG updated to: {B $GBV}"
+        zz-log s "Version & CHANGELOG updated to: {B $GBV}"
         if ! git commit -am "chore(release): $GBV"; then
-            zz_log e "Cannot commit version & CHANGELOG"
+            zz-log e "Cannot commit version & CHANGELOG"
             exit 1
         fi
     fi
 
     # Safe to repeat -- no-op once the remote already has it.
     if ! git push --set-upstream origin "$flow/$name"; then
-        zz_log e "Cannot push $flow/$name, re-run this command to retry"
+        zz-log e "Cannot push $flow/$name, re-run this command to retry"
         exit 1
     fi
-    zz_log s "Version & CHANGELOG committed and pushed"
+    zz-log s "Version & CHANGELOG committed and pushed"
 
     if ! git fetch origin develop:develop; then
-        zz_log e "Cannot fetch develop branch from remote"
+        zz-log e "Cannot fetch develop branch from remote"
         exit 1
     fi
 
     if ! git merge-base --is-ancestor "$(git rev-parse origin/develop)" "$(git rev-parse develop)" ; then
-        zz_log e "Develop branch is not up-to-date with remote. Please pull the latest changes."
+        zz-log e "Develop branch is not up-to-date with remote. Please pull the latest changes."
         exit 1
     fi
 
     # git flow finish prepends gitflow.prefix.versiontag to --tagname itself,
     # so pass the bare version here -- prefixing it ourselves would tag "vv$GBV".
     if git flow "$flow" finish "$name" --push --tagname "$GBV" --message "$GBV" ; then
-        zz_log n "Release finished: {B $GBV}"
+        zz-log n "Release finished: {B $GBV}"
     else
-        zz_log e "Cannot finish release. Please fix the issues, commit any pending changes, then re-run this command to retry -- or finish manually with:"
-        zz_log - "   git flow $flow finish $name --push --tagname $GBV --message $GBV"
+        zz-log e "Cannot finish release. Please fix the issues, commit any pending changes, then re-run this command to retry -- or finish manually with:"
+        zz-log - "   git flow $flow finish $name --push --tagname $GBV --message $GBV"
         exit 1
     fi
 fi

@@ -1,0 +1,17 @@
+{
+  "name": "@tomgrv/scripts-json-load",
+  "version": "0.25.0",
+  "description": "Load JSON from a file or URL, tagging it with $id",
+  "bin": {
+    "json-load": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*"
+  },
+  "private": true
+}

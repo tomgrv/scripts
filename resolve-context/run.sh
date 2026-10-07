@@ -2,10 +2,10 @@
 # Export source/target folders depending on feature context (which feature's
 # install/configure flow is calling this, and where its files live/deploy to).
 
-. zz_colors
+. zz-colors
 
 eval $(
-    zz_args "Export Source/Targets folders depending on feature context" $0 "$@" <<-help
+    zz-args "Export Source/Targets folders depending on feature context" $0 "$@" <<-help
         s source 	source		Force source directory
         t target	target		Force target directory
         - caller	caller		Force caller script
@@ -17,10 +17,10 @@ if [ -n "$source" ]; then
 else
     if [ -z "$caller" ]; then
         caller=$(readlink -f $PWD/$(tr '\0' '\n' </proc/$PPID/cmdline | sed 's/^\/bin\/.*$//' | grep -v '^$' | head -n 1))
-        zz_log - "Caller script is {U $caller}"
+        zz-log - "Caller script is {U $caller}"
 
         if [ -z "$caller" ]; then
-            zz_log e "Not in script context" && exit 1
+            zz-log e "Not in script context" && exit 1
         fi
     fi
 
@@ -35,13 +35,13 @@ if [ -z "$target" ]; then
     elif [ -w /tmp ]; then
         target=/tmp/$feature
     else
-        zz_log e "No writeable directory found" && exit 1
+        zz-log e "No writeable directory found" && exit 1
     fi
 fi
 
 mkdir -p $target
 
-zz_log s "Selected context for {Purple $feature} is {U $source} => {U $target}"
+zz-log s "Selected context for {Purple $feature} is {U $source} => {U $target}"
 
 echo source=$source
 echo feature=$feature

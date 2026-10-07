@@ -23,7 +23,7 @@ Arguments match what git passes to a `prepare-commit-msg` hook.
 
 ## Dependencies
 
-Declared via `zz_use` at the top of `run.sh` and resolved on demand
+Declared via `zz-use` at the top of `run.sh` and resolved on demand
 (installed if and only if missing) — see `run.sh` for the exact list.
 
 ## Tests

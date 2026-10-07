@@ -1,0 +1,17 @@
+{
+  "name": "@tomgrv/scripts-zz-use",
+  "version": "0.32.0",
+  "description": "Activator: on-demand dependency management (apt/download, and single-shot zz-* bundle install)",
+  "bin": {
+    "zz-use": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-bindir": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*"
+  },
+  "private": true
+}

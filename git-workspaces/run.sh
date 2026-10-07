@@ -1,7 +1,7 @@
 #!/bin/sh
 
 eval $(
-    zz_args "List workspace directories and affected workspaces" $0 "$@" <<-help
+    zz-args "List workspace directories and affected workspaces" $0 "$@" <<-help
         r   range     range       Git range to check for affected workspaces (prints only affected workspaces)
 help
 )

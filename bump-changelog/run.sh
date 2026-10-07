@@ -5,7 +5,7 @@
 # and full rebuilds, with buffered writing for safety.
 
 eval $(
-    zz_args "Bump changelog utility" $0 "$@" <<- help
+    zz-args "Bump changelog utility" $0 "$@" <<- help
         f   version version     Force version for changelog entry
         b   -       bump        Bump version files as per commit-and-tag-version.bumpFiles in package.json
         m   -       minimal     Only bump workspace files if commit scope relates to workspace name
@@ -96,7 +96,7 @@ list_changelog_between() {
         local current_hash=$(git rev-parse "$current_ref" 2>/dev/null)
         local previous_hash=$(git rev-parse "$previous_ref" 2>/dev/null)
         if [ -n "$current_hash" ] && [ -n "$previous_hash" ] && [ "$current_hash" = "$previous_hash" ]; then
-            zz_log w "Skipping changelog generation: current ref ($current_ref) and previous ref ($previous_ref) resolve to same commit ($current_hash)"
+            zz-log w "Skipping changelog generation: current ref ($current_ref) and previous ref ($previous_ref) resolve to same commit ($current_hash)"
             return 0
         fi
     fi
@@ -104,10 +104,10 @@ list_changelog_between() {
     # Output range information for build_changelog to handle version headers
     printf "1_RANGE|%s|%s|%s|%s\n" "$current_ref" "$previous_ref" "$range" "$range"
 
-    zz_log i "Processing commits in range: $range"
+    zz-log i "Processing commits in range: $range"
 
     if [ -n "$scope" ]; then
-        zz_log w "Filtering commits to scope: $scope"
+        zz-log w "Filtering commits to scope: $scope"
     fi
 
     git log --oneline --format="%H|%s" "$range" 2> /dev/null \
@@ -156,7 +156,7 @@ list_changelog_between() {
 
 # Takes structured data from list_changelog_between and formats it into markdown
 build_changelog() {
-    zz_log i "Building markdown changelog..."
+    zz-log i "Building markdown changelog..."
 
     awk -F'|' -v version="$1" '
     BEGIN { 
@@ -244,7 +244,7 @@ build_changelog() {
         print ""
     }'
 
-    zz_log s "Changelog built."
+    zz-log s "Changelog built."
 }
 
 # Rebuild complete changelog by iterating through all git tags,
@@ -259,7 +259,7 @@ list_changelog() {
         tag_commit=$(git rev-list -n 1 "$tag" 2>/dev/null)
         head_commit=$(git rev-parse "$prev_tag" 2>/dev/null)
         if [ "$tag_commit" = "$head_commit" ]; then
-            zz_log w "Skipping tag $tag as it points to the same commit as $prev_tag"
+            zz-log w "Skipping tag $tag as it points to the same commit as $prev_tag"
             continue
         fi
 
@@ -278,10 +278,10 @@ determined_version=$(bump-version $minimal ${bump_version_dry_run} $version)
 version=$(echo "$determined_version" | awk '{print $2}')
 range=$(echo "$determined_version" | awk '{print $1}')
 if [ -n "$version" ] && [ -n "$range" ]; then
-    zz_log - "Using git range: $range"
-    zz_log - "Using version: $version"
+    zz-log - "Using git range: $range"
+    zz-log - "Using version: $version"
 else
-    zz_log e "Failed to determine version and range"
+    zz-log e "Failed to determine version and range"
     exit 1
 fi
 
@@ -289,23 +289,23 @@ fi
 echo "$version"
 
 if [ -n "$tag" ]; then
-    zz_log i "Creating git tag for version $version using bump-tag"
+    zz-log i "Creating git tag for version $version using bump-tag"
     if bump-tag "$version"; then
-        zz_log s "Git tag created successfully"
+        zz-log s "Git tag created successfully"
     else
-        zz_log e "Failed to create git tag"
+        zz-log e "Failed to create git tag"
         exit 1
     fi
 fi
 
 if [ -n "$rebuild" ]; then
-    zz_log i "Rebuilding complete $file from all git history..."
+    zz-log i "Rebuilding complete $file from all git history..."
     get_all_tags | list_changelog
 else
-    zz_log i "Generating $file entry for version $version since last tag..."
+    zz-log i "Generating $file entry for version $version since last tag..."
     echo "$range" | list_changelog_between
 fi | if [ -n "$dry_run" ]; then
-    zz_log w "Dry run mode - no changes will be made."
+    zz-log w "Dry run mode - no changes will be made."
     cat
 else
     # Create temporary file for atomic operations - prevents corruption
@@ -334,20 +334,20 @@ else
 
         # Atomic replacement - either succeeds completely or fails completely
         mv "$temp_changelog" "$file"
-        zz_log s "$file updated."
+        zz-log s "$file updated."
 
         git add "$file"
 
         if [ -n "$tag" ] && [ -z "$bump" ]; then
-            zz_log i "Creating git tag for version $version using bump-tag"
+            zz-log i "Creating git tag for version $version using bump-tag"
             if bump-tag "$version"; then
-                zz_log s "Git tag created successfully"
+                zz-log s "Git tag created successfully"
             else
-                zz_log w "Failed to create git tag (continuing anyway)"
+                zz-log w "Failed to create git tag (continuing anyway)"
             fi
         fi
     else
-        zz_log e "Failed to generate changelog - temporary file is empty or missing"
+        zz-log e "Failed to generate changelog - temporary file is empty or missing"
         exit 1
     fi
 fi
