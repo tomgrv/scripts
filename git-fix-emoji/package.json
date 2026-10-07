@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-emoji",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Fix git emoji",
   "bin": {
     "git-fix-emoji": "run.sh"

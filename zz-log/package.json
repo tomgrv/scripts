@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz-log",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Colored, leveled log line on stderr (i/w/e/s/-)",
   "bin": {
     "zz-log": "run.sh"

@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-release-alpha",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Squash-merge the current feature branch into develop",
   "bin": {
     "git-release-alpha": "run.sh"

@@ -1,22 +1,22 @@
 {
-    "name": "@tomgrv/scripts-git-hook-preparecommitmsg",
-    "version": "0.27.0",
-    "description": "Git prepare-commit-msg hook: install commitizen plugins and launch the commitizen prompt",
-    "bin": {
-        "git-hook-preparecommitmsg": "run.sh"
-    },
-    "scripts": {
-        "test": "bats test.bats"
-    },
-    "dependencies": {
-        "git-cz": "*"
-    },
-    "peerDependencies": {
-        "@tomgrv/scripts-git-hook-installplugins": "*",
-        "@tomgrv/scripts-zz-args": "*",
-        "@tomgrv/scripts-zz-colors": "*",
-        "@tomgrv/scripts-zz-log": "*",
-        "@tomgrv/scripts-zz-npx": "*"
-    },
-    "private": true
+  "name": "@tomgrv/scripts-git-hook-preparecommitmsg",
+  "version": "1.0.0",
+  "description": "Git prepare-commit-msg hook: install commitizen plugins and launch the commitizen prompt",
+  "bin": {
+    "git-hook-preparecommitmsg": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "dependencies": {
+    "git-cz": "*"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-git-hook-installplugins": "*",
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*",
+    "@tomgrv/scripts-zz-npx": "*"
+  },
+  "private": true
 }

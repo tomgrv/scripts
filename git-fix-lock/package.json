@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-lock",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Fix git lock files - resolve conflicts and regenerate lock files",
   "bin": {
     "git-fix-lock": "run.sh"

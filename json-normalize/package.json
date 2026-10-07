@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-json-normalize",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Sort JSON object keys per schema and alphabetically, optional in-place write",
   "bin": {
     "json-normalize": "run.sh"

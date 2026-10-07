@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-php-list-changed",
-  "version": "0.31.0",
+  "version": "1.0.0",
   "description": "List PHP test parts (core, modules, packages) affected by a change",
   "bin": {
     "php-list-changed": "run.sh"

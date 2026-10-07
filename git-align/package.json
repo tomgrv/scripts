@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-align",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Align the current branch with its remote counterpart",
   "bin": {
     "git-align": "run.sh"

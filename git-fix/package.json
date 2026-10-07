@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Dispatch to git-fix-<subcommand> utilities",
   "bin": {
     "git-fix": "run.sh"

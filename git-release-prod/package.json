@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-release-prod",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Finish a release or hotfix branch using Git Flow",
   "bin": {
     "git-release-prod": "run.sh"

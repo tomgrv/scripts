@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-base",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Rebase commits from one branch onto another",
   "bin": {
     "git-fix-base": "run.sh"

@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-children",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Delete all descendant tags and branches of a commit",
   "bin": {
     "git-fix-children": "run.sh"

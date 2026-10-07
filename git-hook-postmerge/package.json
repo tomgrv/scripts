@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-hook-postmerge",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Git post-merge hook: keep merged lockfiles and prompt to reinstall dependencies",
   "bin": {
     "git-hook-postmerge": "run.sh"

@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-unset",
-  "version": "0.25.0",
+  "version": "1.0.0",
   "description": "Unset all Git config keys starting with the given prefix",
   "bin": {
     "git-unset": "run.sh"
