@@ -286,6 +286,7 @@ lifecycle — only the script implementations moved.
 | `git-fix-lock`              | resolve conflicts and regenerate lock files                              |
 | `git-fix-message`           | rewrite an arbitrary commit message                                      |
 | `git-fix-mode`              | fix file mode changes from diff                                          |
+| `git-fix-orphans`           | prefix non-gitflow remote branches without a PR as `orphan/`             |
 | `git-fix-privacy`           | fix privacy in history                                                   |
 | `git-fix-prune`             | prune stale remote-tracking references                                   |
 | `git-fix-rights`            | set appropriate file/directory permissions                               |
