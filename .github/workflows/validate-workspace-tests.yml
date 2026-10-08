@@ -26,7 +26,7 @@ jobs:
 
       - name: List packages
         id: list
-        uses: tomgrv/actions/list-packages@v3
+        uses: tomgrv/actions/list-packages@v4
         with:
           require-repository: 'false'
 
@@ -47,6 +47,6 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run workspace tests
-        uses: tomgrv/actions/run-workspace-tests@v3
+        uses: tomgrv/actions/run-workspace-tests@v4
         with:
           workspace: ${{ matrix.package.path }}
