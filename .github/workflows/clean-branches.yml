@@ -19,6 +19,6 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Clean branches
-        uses: tomgrv/actions/clean-branches@v3
+        uses: tomgrv/actions/clean-branches@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

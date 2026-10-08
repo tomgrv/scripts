@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.1.0 (2026-10-08)
+
+*Commits from: v2.0.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v2.0.0' into develop
+### 📦 scripts-zz-use changes
+
+#### Other changes
+
+- 👷 pin tomgrv/actions to v4, scripts-ref to v2 and features to v10 (#66)
+- 👷 run update-features every night instead of every week (#65)
+
 ## 2.0.0 (2026-10-07)
 
 *Commits from: v1.2.0..HEAD*
@@ -660,5 +676,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-10-07 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-10-08 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
