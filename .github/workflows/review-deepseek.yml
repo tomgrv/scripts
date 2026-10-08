@@ -15,7 +15,7 @@ jobs:
     name: DeepSeek Code Review
     steps:
       - name: Acknowledge comment
-        uses: tomgrv/actions/confirm-pr-comment@v3
+        uses: tomgrv/actions/confirm-pr-comment@v4
         with:
           reaction: eyes
 
