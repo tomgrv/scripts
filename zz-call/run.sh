@@ -28,8 +28,18 @@
 # - "output": which resolved vars to print as `export <as>='value'`.
 #   Defaults to "input" when omitted.
 #
+# Also accepted: "vps.inputs" (object keyed by var: description, default,
+# secret) next to "config.input", several package.json files at once
+# (-p a.json:b.json), and a persisted-value lookup in the env file (read
+# literally, never sourced): environment first, then the file, then a prompt.
+#
 # Usage:
-#   zz-call [-p package.json] [command [args...]]
+#   zz-call [-p package.json[:more.json]] [-f envfile] [-P profile] [-n] [-e]
+#           [command [args...]]
+#   -f  env file to read/persist (default: config.file of the first package.json, else .env)
+#   -P  also export persisted values from /etc/profile.d/<profile>.sh
+#   -n  never prompt: a missing var falls back to its default, not persisted
+#   -e  also persist values already set in the environment
 
 set -e
 
@@ -37,38 +47,78 @@ set -e
 
 eval $(
     zz-args "Resolve a caller's declared env vars (ask+persist if missing), then run a command" $0 "$@" <<-help
-        p package   package     package.json to read config.input/config.output from (default: ./package.json)
+        p package   package     package.json file(s) to read, ':'-separated (default: ./package.json)
+        f file      envfile     Env file to read and persist to (default: config.file, else .env)
+        P profile   profile     Also export persisted values from /etc/profile.d/<profile>.sh
+        n -         noprompt    Never prompt: missing vars fall back to their default (not persisted)
+        e -         persistenv  Also persist values already set in the environment
         # cmd        cmd         Command (and args) to run once every input var is resolved
 help
 )
 
-pkg="${package:-./package.json}"
-[ -f "$pkg" ] || { zz-log e "No package.json found at {U $pkg}"; exit 1; }
+pkgs="${package:-./package.json}"
+first=${pkgs%%:*}
+for _p in $(printf '%s' "$pkgs" | tr ':' ' '); do
+    [ -f "$_p" ] || { zz-log e "No package.json found at {U $_p}"; exit 1; }
+done
+pkg=$first
 
-file=$(jq -r '.config.file // ".env"' "$pkg")
+file="${envfile:-$(jq -r '.config.file // ".env"' "$first")}"
 
-# Sets var/as/question/default from one config.input/config.output entry.
+# Collect input entries from every package: config.input plus vps.inputs
+# (normalised to the same shape), first definition of a var wins.
+_collect() {
+    for _p in $(printf '%s' "$pkgs" | tr ':' ' '); do
+        jq -c "$1" "$_p"
+    done | jq -c -s 'reduce .[] as $e ([]; if any(.[]; .var == $e.var) then . else . + [$e] end) | .[]'
+}
+_inputs='(.config.input // [])[], ((.vps.inputs // {}) | to_entries[] | {var: .key, question: .value.description, default: .value.default, secret: .value.secret})'
+_input_entries=$(_collect "$_inputs")
+_output_entries=$(_collect '(.config.output // [])[]')
+[ -n "$_output_entries" ] || _output_entries=$_input_entries
+
+# Sets var/as/question/default/secret from one input/output entry.
 # "as" defaults to "var" so every caller can rely on it being set.
 _parse_entry() {
     var=$(printf '%s' "$1" | jq -r '.var')
     as=$(printf '%s' "$1" | jq -r '.as // .var')
     question=$(printf '%s' "$1" | jq -r '.question // empty')
     default=$(printf '%s' "$1" | jq -r '.default // empty')
+    secret=$(printf '%s' "$1" | jq -r '.secret // false')
 
     case "$var" in
     [A-Za-z_][A-Za-z0-9_]*) ;;
     *)
-        zz-log e "Invalid variable name in {U $pkg}: {Purple $var}"
+        zz-log e "Invalid variable name in {U $pkgs}: {Purple $var}"
         exit 1
         ;;
     esac
+}
+
+# Value of $1 in the env file, read literally (the file is never sourced).
+_file_get() { [ ! -f "$file" ] || sed -n "s/^$1=//p" "$file" | tail -n1; }
+
+# Create the env file owner-only if it does not exist yet; a secret also
+# tightens an existing one, as zz-persist only stores secrets in such files.
+_secure() {
+    [ -e "$file" ] || (umask 077 && touch "$file")
+    [ "$1" != true ] || chmod 600 "$file" 2>/dev/null || true
+}
+
+# Persist $1=$2 to the env file (and the profile snippet, quoted).
+_persist() {
+    _secure "$3"
+    zz-persist -f "$file" "$1" "$2"
+    if [ -n "$profile" ]; then
+        _q=$(printf '%s' "$2" | sed "s/'/'\\\\''/g")
+        zz-persist -p "$profile" "$1" "'$_q'"
+    fi
 }
 
 # jq's own output is looped over via a captured command substitution, not
 # a pipe: `jq ... | while read ...` would run the loop in a subshell, and
 # the `export`s inside it would be lost the moment that subshell exits.
 _old_ifs=$IFS
-_input_entries=$(jq -c '.config.input // [] | .[]' "$pkg")
 IFS='
 '
 for _entry in $_input_entries; do
@@ -76,9 +126,32 @@ for _entry in $_input_entries; do
     _parse_entry "$_entry"
 
     eval "_current=\${$var:-}"
-    if [ -z "$_current" ]; then
-        _current=$(zz-prompt "${question:-Value for $var?}" "$default")
-        zz-persist -f "$file" "$var" "$_current"
+    if [ -n "$_current" ]; then
+        # Set by the caller: used as-is, persisted only on request.
+        [ -z "$persistenv" ] || _persist "$var" "$_current" "$secret"
+    else
+        _current=$(_file_get "$var")
+        if [ -n "$_current" ]; then
+            :
+        elif [ -n "$noprompt" ]; then
+            _current=$default
+        elif [ "$secret" = true ]; then
+            # zz-persist masks the prompt and writes the answer itself.
+            _secure true
+            if [ -n "$default" ]; then
+                zz-persist -f "$file" -i "${question:-$var}" -s "$default" "$var"
+            else
+                zz-persist -f "$file" -i "${question:-$var}" -S "$var"
+            fi
+            _current=$(_file_get "$var")
+            if [ -n "$profile" ] && [ -n "$_current" ]; then
+                _q=$(printf '%s' "$_current" | sed "s/'/'\\\\''/g")
+                zz-persist -p "$profile" "$var" "'$_q'"
+            fi
+        else
+            _current=$(zz-prompt "${question:-Value for $var?}" "$default")
+            _persist "$var" "$_current" false
+        fi
     fi
     export "$var=$_current"
     [ "$as" != "$var" ] && export "$as=$_current"
@@ -91,7 +164,6 @@ if [ "$#" -gt 0 ]; then
     exec "$@"
 fi
 
-_output_entries=$(jq -c '(.config.output // .config.input // []) | .[]' "$pkg")
 IFS='
 '
 for _entry in $_output_entries; do

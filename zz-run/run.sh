@@ -309,23 +309,14 @@ profile_persist() {
     zz-persist -p "$ZZ_RUN_PROFILE" "$1" "'$_q'"
 }
 
-persist_input() {
-    env_secure
-    zz-persist -f "$envfile" "$1" "$2"
-    profile_persist "$1" "$2"
-}
-
-# Value order: the caller's environment, then the env file. Caller values
-# are persisted so later runs keep them without being given again.
+# Status view only (menu): the caller's environment, then the env file.
+# The final resolution, defaults and persistence are zz-call's, below.
 while IFS="$us" read -r var _rest; do
     [ -n "$var" ] || continue
-    if [ -n "$(eval "printf '%s' \"\${$var:-}\"")" ]; then
-        [ "$status_only" -eq 1 ] || persist_input "$var" "$(eval "printf '%s' \"\$$var\"")"
-    else
+    if [ -z "$(eval "printf '%s' \"\${$var:-}\"")" ]; then
         _v=$(env_get "$var")
-        [ -n "$_v" ] && eval "$var=\$_v"
+        [ -n "$_v" ] && eval "export $var=\$_v"
     fi
-    eval "export $var"
 done <<EXPLICIT
 $all_inputs
 EXPLICIT
@@ -405,13 +396,16 @@ EOF
     done
 fi
 
-# Defaults for the rest; required-but-empty is a warning, like vps-setup.
+# Resolve every declared input with zz-call: the caller's environment (also
+# persisted), then the env file, then the default; nothing is prompted here.
+# Required-but-empty is a warning, like vps-setup.
+pkgs=
+for n in $up_names; do pkgs="$pkgs${pkgs:+:}$(dir_of "$n")/package.json"; done
+if [ -n "$pkgs" ]; then
+    eval "$(zz-call -n -e -f "$envfile" ${ZZ_RUN_PROFILE:+-P "$ZZ_RUN_PROFILE"} -p "$pkgs")"
+fi
 while IFS="$us" read -r var desc req def owner secret; do
     [ -n "$var" ] || continue
-    if [ -z "$(eval "printf '%s' \"\${$var:-}\"")" ] && [ -n "$def" ]; then
-        eval "$var=\$def"
-    fi
-    eval "export $var"
     [ "$(input_status "$var" "$req")" = required ] &&
         zz-log w "[zz-run] $var is required by '$owner' but is empty; that step will likely fail without it."
 done <<EOF

@@ -13,8 +13,22 @@ and linked onto `PATH` as `zz-call`.
 ## Usage
 
 ```sh
-zz-call [-p package.json] [command [args...]]
+zz-call [-p package.json[:more.json]] [-f envfile] [-P profile] [-n] [-e] [command [args...]]
 ```
+
+| Flag | Effect |
+| ---- | ------ |
+| `-p a:b` | read several `package.json` files; the first definition of a var wins |
+| `-f file` | env file to read and persist (default `config.file`, else `.env`) |
+| `-P name` | also export persisted values from `/etc/profile.d/<name>.sh` |
+| `-n` | never prompt: a missing var falls back to its `default`, not persisted |
+| `-e` | also persist values already set in the environment |
+
+Besides `config.input`, `vps.inputs` (an object keyed by var, with
+`description`, `default`, `secret`) is read. Resolution order: environment,
+then the env file (read literally, never sourced), then a prompt. A `secret`
+input is asked with `zz-persist -i` (masked) and the env file is kept
+`chmod 600`.
 
 What to check/ask/set, and what to print back, is declared in a
 `package.json` (default: `./package.json` — the caller's own, since every
@@ -89,3 +103,7 @@ bats test.bats
 - a missing var's default is offered, and persisted when accepted
 - `-p` points at a non-default `package.json` path
 - `config.file` redirects persistence to a non-`.env` target
+- `vps.inputs` from several package.json files, first definition wins
+- `-n` never prompts or persists defaults; the env file is read literally
+- `-f`/`-e`/`-P` choose the file, persist environment values, export via profile.d
+- a `secret` input is persisted by `zz-persist` into an owner-only file

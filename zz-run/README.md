@@ -30,12 +30,12 @@ Same flow as `vps-setup`:
    `peerDependencies` are enabled automatically; `--down-<n>` is refused while
    a dependent is up (`--force-down` overrides).
 3. Lists the inputs the selected workspaces declare (`vps.inputs`, or
-   `config.input` as in `zz-call`), shows which are set, and offers to set
-   them with `zz-persist -i` (masked for `"secret": true`, current value shown
-   and kept on enter). The env file is plain `KEY=VALUE`, kept `chmod 600` and
-   read literally, never sourced. Values passed in the environment win over
-   the file and are persisted too. Remaining defaults are applied; a required
-   input left empty only warns.
+   `config.input`), shows which are set, and offers to set them with
+   `zz-persist -i` (masked for `"secret": true`, current value shown and kept
+   on enter). Then `zz-call -n -e` resolves them all: the caller's
+   environment first (also persisted), then the env file, then the default.
+   The env file is plain `KEY=VALUE`, kept `chmod 600` and read literally,
+   never sourced. A required input left empty only warns.
 4. Runs `down` steps in reverse order, then `up` steps in order, each
    `run.sh` getting `up`/`down` (workspaces with a `vps` key only).
 
