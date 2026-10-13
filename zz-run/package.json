@@ -1,0 +1,17 @@
+{
+  "name": "@tomgrv/scripts-zz-run",
+  "version": "1.0.0",
+  "description": "Fetch a GitHub org/repo and run its setup entrypoint, like vps-setup",
+  "bin": {
+    "zz-run": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-install": "*",
+    "@tomgrv/scripts-zz-log": "*"
+  },
+  "private": true
+}

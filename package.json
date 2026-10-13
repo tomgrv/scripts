@@ -170,6 +170,7 @@
         "zz-persist",
         "zz-call",
         "zz-install",
+        "zz-run",
         "json",
         "json-load",
         "json-validate",
