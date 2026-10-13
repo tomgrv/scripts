@@ -16,7 +16,7 @@ setup() {
     git -C "$WORK/src" add -A
     git -C "$WORK/src" commit -q -m init
     git clone -q --bare "$WORK/src" "$WORK/remote/acme/tool.git"
-    export ZZ_RUN_URL_BASE="file://$WORK/remote" ZZ_RUN_DIR="$WORK/dir"
+    export ZZ_RUN_URL_BASE="file://$WORK/remote" ZZ_RUN_DIR="$WORK/dir" ZZ_RUN_ENV_FILE="$WORK/default.env"
 }
 
 teardown() {
@@ -158,4 +158,25 @@ make_workspace_remote() {
     run zz-run acme/ws --status
     [ "$status" -eq 0 ]
     [[ "$output" == *"input BAR"*" a"* ]]
+}
+
+@test "zz-run persists caller-provided inputs via zz-persist (owner-only, quoted) and reuses them" {
+    make_workspace_remote
+    export ZZ_RUN_ENV_FILE="$WORK/run.env"
+    run env FOO="it's a value" zz-run acme/ws --with-a
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"a:up:it's a value"* ]]
+    [ "$(stat -c %a "$WORK/run.env")" = 600 ]
+    grep -q "^FOO='it'\\\\''s a value'$" "$WORK/run.env"
+    run zz-run acme/ws --with-a
+    [[ "$output" == *"a:up:it's a value"* ]]
+}
+
+@test "zz-run lets the caller's environment win over the persisted env file" {
+    make_workspace_remote
+    export ZZ_RUN_ENV_FILE="$WORK/run.env"
+    echo "FOO='old'" >"$WORK/run.env"
+    run env FOO=new zz-run acme/ws --with-a
+    [[ "$output" == *"a:up:new"* ]]
+    grep -q "^FOO='new'$" "$WORK/run.env"
 }

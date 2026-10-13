@@ -283,12 +283,6 @@ envfile="${ZZ_RUN_ENV_FILE:-}"
 if [ -z "$envfile" ]; then
     if [ "$(id -u)" -eq 0 ]; then envfile="/etc/$repo.env"; else envfile="$dir/.env"; fi
 fi
-if [ -f "$envfile" ]; then
-    set -a
-    # shellcheck disable=SC1090
-    . "$envfile"
-    set +a
-fi
 
 us=$(printf '\037')
 all_inputs=
@@ -297,6 +291,40 @@ for n in $([ "$status_only" -eq 1 ] && echo "$names" || echo "$up_names"); do
 "
 done
 all_inputs=$(printf '%s' "$all_inputs" | awk -F"$us" 'NF && !seen[$1]++')
+
+# Persist one input through zz-persist. The value is single-quoted (the file
+# is sourced, so spaces/metacharacters must survive) and the file is kept
+# owner-only, which zz-persist requires before it writes a secret.
+persist_input() {
+    (umask 077 && touch "$envfile") && chmod 600 "$envfile" 2>/dev/null || true
+    _q=$(printf '%s' "$2" | sed "s/'/'\\\\''/g")
+    zz-persist -f "$envfile" "$1" "'$_q'"
+}
+
+# Values the caller put in the environment win over the env file, and are
+# persisted so later runs keep them without being given again.
+explicit=
+while IFS="$us" read -r var _rest; do
+    [ -n "$var" ] || continue
+    _v=$(eval "printf '%s' \"\${$var:-}\"")
+    if [ -n "$_v" ]; then
+        explicit="$explicit $var"
+        eval "_explicit_$var=\$_v"
+    fi
+done <<EXPLICIT
+$all_inputs
+EXPLICIT
+if [ -f "$envfile" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    . "$envfile"
+    set +a
+fi
+for var in $explicit; do
+    eval "$var=\$_explicit_$var"
+    eval "export $var"
+    [ "$status_only" -eq 1 ] || persist_input "$var" "$(eval "printf '%s' \"\$$var\"")"
+done
 
 input_status() {
     if [ -n "$(eval "printf '%s' \"\${$1:-}\"")" ]; then
@@ -370,8 +398,7 @@ EOF
         if [ -n "$answer" ]; then
             eval "$choice=\"\$answer\""
             eval "export $choice"
-            quoted=$(printf '%s' "$answer" | sed "s/'/'\\\\''/g")
-            zz-persist -f "$envfile" "$choice" "'$quoted'"
+            persist_input "$choice" "$answer"
         fi
     done
 fi

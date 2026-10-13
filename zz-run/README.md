@@ -31,8 +31,11 @@ Same flow as `vps-setup`:
    a dependent is up (`--force-down` overrides).
 3. Lists the inputs the selected workspaces declare (`vps.inputs`, or
    `config.input` as in `zz-call`), shows which are set, and offers to set
-   them; answers are persisted to the env file and reloaded on the next run.
-   Remaining defaults are applied; a required input left empty only warns.
+   them. Every value is written with `zz-persist -f` (single-quoted, file
+   kept `chmod 600` so secrets can be stored) and reloaded on the next run:
+   typed answers, and values you passed in the environment, which also win
+   over the file. Remaining defaults are applied; a required input left empty
+   only warns.
 4. Runs `down` steps in reverse order, then `up` steps in order, each
    `run.sh` getting `up`/`down` (workspaces with a `vps` key only).
 
