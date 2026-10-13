@@ -240,7 +240,7 @@ flowchart TD
 | `zz-persist [-f\|-p] [-i <question> [-v\|-s <default>]] <key> [value]` | upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`; with `-i`, ask interactively instead (`-s` for a secret, masked when already set) |
 | `zz-call [-p package.json] [command...]`                               | resolve a caller's declared env vars (`config.input`/`config.output` in `package.json`; ask + persist if missing), then run a command                 |
 | `zz-install <pkg> [<manager>=<name>...]`                               | install a system package via apt/apk/dnf/yum/brew/pacman/zypper/winget, with per-manager name overrides                                               |
-| `zz-run <org>/<repo>[@<ref>] [args...]`                              | clone/update a GitHub repo and run its setup entrypoint (`<repo>-setup/run.sh`, `setup.sh`, `run.sh`), like `vps-setup` |
+| `zz-run <org>/<repo>[@<ref>] [args...]`                              | clone/update a GitHub repo, propose its runnable workspaces, offer their declared inputs, then run them (else its setup entrypoint), like `vps-setup` |
 
 ## Functional scripts
 
