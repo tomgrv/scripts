@@ -1,12 +1,12 @@
 #!/bin/sh
-# zz-run <org>/<repo>[@<ref>] [args...] — fetch a GitHub repo and run it
+# zz-setup <org>/<repo>[@<ref>] [args...] — fetch a GitHub repo and run it
 # the way vps-setup does for perspikapps/vps:
 #   1. shallow clone (or fast-forward) into a fixed directory;
 #   2. if the root package.json lists workspaces, propose the runnable ones
 #      (skip/up/down menu, dependencies auto-enabled), then list the inputs
 #      they declare, offer to set them (persisted to an env file), and run
 #      each selected workspace's run.sh;
-#   3. otherwise (or with ZZ_RUN_ENTRY) exec the repo's own installer with
+#   3. otherwise (or with ZZ_SETUP_ENTRY) exec the repo's own installer with
 #      the remaining arguments: <repo>-setup/run.sh, setup.sh, run.sh.
 #
 # Runnable workspace: has a run.sh. If any workspace has a "vps" key in its
@@ -17,11 +17,11 @@
 # Flags (workspace mode): --skip-<n> --with-<n> --only-<n> --down-<n>
 # --force-down -h. No flags on a terminal opens the menu.
 #
-# Env: ZZ_RUN_REF (default main; "@<ref>" wins), ZZ_RUN_DIR (parent of the
-# checkout; default /opt as root, else ~/.local/share), ZZ_RUN_URL_BASE
-# (default https://github.com), ZZ_RUN_ENTRY, ZZ_RUN_ENV_FILE (inputs; default
+# Env: ZZ_SETUP_REF (default main; "@<ref>" wins), ZZ_SETUP_DIR (parent of the
+# checkout; default /opt as root, else ~/.local/share), ZZ_SETUP_URL_BASE
+# (default https://github.com), ZZ_SETUP_ENTRY, ZZ_SETUP_ENV_FILE (inputs; default
 # /etc/<repo>.env as root, else <checkout>/.env, read literally, written by
-# zz-persist), ZZ_RUN_PROFILE (also export persisted inputs from
+# zz-persist), ZZ_SETUP_PROFILE (also export persisted inputs from
 # /etc/profile.d/<name>.sh).
 
 set -e
@@ -29,7 +29,7 @@ set -e
 . zz-colors
 
 [ -n "$1" ] || {
-    zz-log e "Usage: zz-run <org>/<repo>[@<ref>] [args...]"
+    zz-log e "Usage: zz-setup <org>/<repo>[@<ref>] [args...]"
     exit 1
 }
 
@@ -41,7 +41,7 @@ case "$spec" in
     ref=${spec#*@}
     spec=${spec%@*}
     ;;
-*) ref=${ZZ_RUN_REF:-main} ;;
+*) ref=${ZZ_SETUP_REF:-main} ;;
 esac
 
 case "$spec" in
@@ -57,10 +57,10 @@ case "$spec" in
 esac
 
 repo=${spec#*/}
-url="${ZZ_RUN_URL_BASE:-https://github.com}/$spec.git"
+url="${ZZ_SETUP_URL_BASE:-https://github.com}/$spec.git"
 
-if [ -n "$ZZ_RUN_DIR" ]; then
-    parent=$ZZ_RUN_DIR
+if [ -n "$ZZ_SETUP_DIR" ]; then
+    parent=$ZZ_SETUP_DIR
 elif [ "$(id -u)" -eq 0 ]; then
     parent=/opt
 else
@@ -68,22 +68,22 @@ else
 fi
 dir="$parent/$repo"
 
-zz-log i "[zz-run] repo=$spec ref=$ref dir=$dir"
-if [ -z "$ZZ_RUN_REF" ] && [ "$ref" = main ] && [ "${spec#*@}" = "$spec" ]; then
-    zz-log w "[zz-run] No ref given, using 'main'. A plain 'export' before 'sudo zz-run' is dropped by sudo: put it on the sudo line, e.g. 'sudo ZZ_RUN_REF=... zz-run'."
+zz-log i "[zz-setup] repo=$spec ref=$ref dir=$dir"
+if [ -z "$ZZ_SETUP_REF" ] && [ "$ref" = main ] && [ "${spec#*@}" = "$spec" ]; then
+    zz-log w "[zz-setup] No ref given, using 'main'. A plain 'export' before 'sudo zz-setup' is dropped by sudo: put it on the sudo line, e.g. 'sudo ZZ_SETUP_REF=... zz-setup'."
 fi
 
 command -v git >/dev/null 2>&1 || zz-install git
 
 if [ -d "$dir/.git" ]; then
-    zz-log i "[zz-run] Updating existing checkout..."
+    zz-log i "[zz-setup] Updating existing checkout..."
     git -C "$dir" fetch --depth 1 origin -- "$ref"
     git -C "$dir" checkout -q -B "$ref" FETCH_HEAD
     git -C "$dir" reset -q --hard FETCH_HEAD
 elif [ -d "$dir" ]; then
-    zz-log i "[zz-run] $dir exists and is not a git checkout; running it in place."
+    zz-log i "[zz-setup] $dir exists and is not a git checkout; running it in place."
 else
-    zz-log i "[zz-run] Cloning $url..."
+    zz-log i "[zz-setup] Cloning $url..."
     mkdir -p "$parent"
     git clone -q --depth 1 --branch "$ref" "$url" "$dir"
 fi
@@ -92,23 +92,23 @@ fi
 # --- entrypoint mode: no workspaces (or forced): hand over to the repo.
 run_entry() {
     entry=
-    for cand in "$ZZ_RUN_ENTRY" "$repo-setup/run.sh" setup.sh run.sh; do
+    for cand in "$ZZ_SETUP_ENTRY" "$repo-setup/run.sh" setup.sh run.sh; do
         if [ -n "$cand" ] && [ -f "$dir/$cand" ]; then
             entry=$cand
             break
         fi
     done
     [ -n "$entry" ] || {
-        zz-log e "[zz-run] No workspace or entrypoint found in $dir (tried $repo-setup/run.sh, setup.sh, run.sh)."
+        zz-log e "[zz-setup] No workspace or entrypoint found in $dir (tried $repo-setup/run.sh, setup.sh, run.sh)."
         exit 1
     }
-    zz-log i "[zz-run] Running {Purple $entry}..."
+    zz-log i "[zz-setup] Running {Purple $entry}..."
     cd "$dir"
     exec sh -c '[ -x "$0" ] && exec "$0" "$@" || exec bash "$0" "$@"' "$dir/$entry" "$@"
 }
 
 cd "$dir"
-[ -z "$ZZ_RUN_ENTRY" ] && [ -f package.json ] || run_entry "$@"
+[ -z "$ZZ_SETUP_ENTRY" ] && [ -f package.json ] || run_entry "$@"
 command -v jq >/dev/null 2>&1 || zz-install jq
 
 # --- discover runnable workspaces: "order<TAB>name<TAB>dir", sorted.
@@ -154,7 +154,7 @@ for n in $names; do
 done
 
 usage() {
-    echo "Usage: zz-run <org>/<repo>[@<ref>] [options]"
+    echo "Usage: zz-setup <org>/<repo>[@<ref>] [options]"
     echo "       (no options, on a terminal: interactive menu)"
     echo
     for n in $names; do
@@ -239,7 +239,7 @@ while [ "$pass" -lt 5 ]; do
         for dep in $(deps_of "$n"); do
             exists "$dep" || continue
             if [ "$(state_get "$dep")" = skip ]; then
-                zz-log w "[zz-run] Also enabling '$dep' (required by '$n')."
+                zz-log w "[zz-setup] Also enabling '$dep' (required by '$n')."
                 state_set "$dep" up
                 changed=1
             fi
@@ -256,7 +256,7 @@ if [ "$force_down" -ne 1 ]; then
             [ "$o" != "$n" ] && [ "$(state_get "$o")" = up ] || continue
             for dep in $(deps_of "$o"); do
                 [ "$dep" = "$n" ] || continue
-                zz-log e "[zz-run] Refusing to bring '$n' down: '$o' depends on it and is still enabled. Also pass --down-$o, or --force-down."
+                zz-log e "[zz-setup] Refusing to bring '$n' down: '$o' depends on it and is still enabled. Also pass --down-$o, or --force-down."
                 exit 1
             done
         done
@@ -266,7 +266,7 @@ fi
 up_names=
 for n in $names; do [ "$(state_get "$n")" = up ] && up_names="$up_names $n"; done
 [ "$status_only" -eq 1 ] || [ -n "$up_names$(for n in $names; do [ "$(state_get "$n")" = down ] && echo "$n"; done)" ] || {
-    zz-log w "[zz-run] Nothing selected, nothing to do."
+    zz-log w "[zz-setup] Nothing selected, nothing to do."
     exit 0
 }
 
@@ -281,7 +281,7 @@ inputs_of() {
          | [.var, (.question // ""), "false", (.default // ""), $n, "false"] | join("\u001f"))' "$(dir_of "$1")/package.json"
 }
 
-envfile="${ZZ_RUN_ENV_FILE:-}"
+envfile="${ZZ_SETUP_ENV_FILE:-}"
 if [ -z "$envfile" ]; then
     if [ "$(id -u)" -eq 0 ]; then envfile="/etc/$repo.env"; else envfile="$dir/.env"; fi
 fi
@@ -301,12 +301,12 @@ env_get() { [ ! -f "$envfile" ] || sed -n "s/^$1=//p" "$envfile" | tail -n1; }
 # Make the env file owner-only: zz-persist only stores a secret in one.
 env_secure() { (umask 077 && touch "$envfile") && chmod 600 "$envfile" 2>/dev/null || true; }
 
-# Also export a persisted value in new shells when ZZ_RUN_PROFILE names a
+# Also export a persisted value in new shells when ZZ_SETUP_PROFILE names a
 # /etc/profile.d/<name>.sh snippet (the value is quoted: shells source it).
 profile_persist() {
-    [ -n "$ZZ_RUN_PROFILE" ] || return 0
+    [ -n "$ZZ_SETUP_PROFILE" ] || return 0
     _q=$(printf '%s' "$2" | sed "s/'/'\\\\''/g")
-    zz-persist -p "$ZZ_RUN_PROFILE" "$1" "'$_q'"
+    zz-persist -p "$ZZ_SETUP_PROFILE" "$1" "'$_q'"
 }
 
 # Status view only (menu): the caller's environment, then the env file.
@@ -402,12 +402,12 @@ fi
 pkgs=
 for n in $up_names; do pkgs="$pkgs${pkgs:+:}$(dir_of "$n")/package.json"; done
 if [ -n "$pkgs" ]; then
-    eval "$(zz-call -n -e -f "$envfile" ${ZZ_RUN_PROFILE:+-P "$ZZ_RUN_PROFILE"} -p "$pkgs")"
+    eval "$(zz-call -n -e -f "$envfile" ${ZZ_SETUP_PROFILE:+-P "$ZZ_SETUP_PROFILE"} -p "$pkgs")"
 fi
 while IFS="$us" read -r var desc req def owner secret; do
     [ -n "$var" ] || continue
     [ "$(input_status "$var" "$req")" = required ] &&
-        zz-log w "[zz-run] $var is required by '$owner' but is empty; that step will likely fail without it."
+        zz-log w "[zz-setup] $var is required by '$owner' but is empty; that step will likely fail without it."
 done <<EOF
 $all_inputs
 EOF
@@ -417,14 +417,14 @@ run_step() {
     d=$(dir_of "$1")
     act=
     [ "$(jq -r 'has("vps")' "$d/package.json")" = true ] && act=$2
-    zz-log i "[zz-run] === Running $1 ($d/run.sh${act:+ $act}) ==="
+    zz-log i "[zz-setup] === Running $1 ($d/run.sh${act:+ $act}) ==="
     rc=0
     (cd "$d" && if [ -x run.sh ]; then ./run.sh $act; else bash run.sh $act; fi) || rc=$?
     if [ "$rc" -ne 0 ]; then
-        zz-log e "[zz-run] Step '$1' failed (exit $rc). Fix it and re-run just this step with: zz-run $spec --only-$1"
+        zz-log e "[zz-setup] Step '$1' failed (exit $rc). Fix it and re-run just this step with: zz-setup $spec --only-$1"
         exit 1
     fi
-    zz-log s "[zz-run] === Done: $1 ($2) ==="
+    zz-log s "[zz-setup] === Done: $1 ($2) ==="
 }
 
 for n in $(printf '%s\n' "$names" | sed '1!G;h;$!d'); do

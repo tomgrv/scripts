@@ -1,9 +1,9 @@
 {
-  "name": "@tomgrv/scripts-zz-run",
+  "name": "@tomgrv/scripts-zz-setup",
   "version": "1.0.0",
   "description": "Fetch a GitHub org/repo, propose its workspaces and their inputs, then run them, like vps-setup",
   "bin": {
-    "zz-run": "run.sh"
+    "zz-setup": "run.sh"
   },
   "scripts": {
     "test": "bats test.bats"

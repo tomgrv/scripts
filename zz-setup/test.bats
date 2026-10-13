@@ -16,7 +16,7 @@ setup() {
     git -C "$WORK/src" add -A
     git -C "$WORK/src" commit -q -m init
     git clone -q --bare "$WORK/src" "$WORK/remote/acme/tool.git"
-    export ZZ_RUN_URL_BASE="file://$WORK/remote" ZZ_RUN_DIR="$WORK/dir" ZZ_RUN_ENV_FILE="$WORK/default.env"
+    export ZZ_SETUP_URL_BASE="file://$WORK/remote" ZZ_SETUP_DIR="$WORK/dir" ZZ_SETUP_ENV_FILE="$WORK/default.env"
 }
 
 teardown() {
@@ -24,45 +24,45 @@ teardown() {
     teardown_scripts_path
 }
 
-@test "zz-run is on PATH and syntactically valid" {
-    run bash -n "$(command -v zz-run)"
+@test "zz-setup is on PATH and syntactically valid" {
+    run bash -n "$(command -v zz-setup)"
     [ "$status" -eq 0 ]
 }
 
-@test "zz-run requires a repository argument" {
-    run zz-run
+@test "zz-setup requires a repository argument" {
+    run zz-setup
     [ "$status" -eq 1 ]
     [[ "$output" == *"Usage"* ]]
 }
 
-@test "zz-run rejects a malformed repository" {
-    run zz-run notarepo
+@test "zz-setup rejects a malformed repository" {
+    run zz-setup notarepo
     [ "$status" -eq 1 ]
     [[ "$output" == *"Invalid repository"* ]]
 }
 
-@test "zz-run clones the repo and runs <repo>-setup/run.sh with the remaining args" {
-    run zz-run acme/tool --flag x
+@test "zz-setup clones the repo and runs <repo>-setup/run.sh with the remaining args" {
+    run zz-setup acme/tool --flag x
     [ "$status" -eq 0 ]
     [[ "$output" == *"ran:--flag x"* ]]
     [ -d "$WORK/dir/tool/.git" ]
 }
 
-@test "zz-run updates an existing checkout on a second run" {
-    zz-run acme/tool
+@test "zz-setup updates an existing checkout on a second run" {
+    zz-setup acme/tool
     printf '#!/bin/sh\necho "v2:$*"\n' >"$WORK/src/tool-setup/run.sh"
     git -C "$WORK/src" commit -q -am v2
     git -C "$WORK/src" push -q "$WORK/remote/acme/tool.git" main
-    run zz-run acme/tool@main go
+    run zz-setup acme/tool@main go
     [ "$status" -eq 0 ]
     [[ "$output" == *"v2:go"* ]]
 }
 
-@test "zz-run fails when the repo has no entrypoint" {
+@test "zz-setup fails when the repo has no entrypoint" {
     git -C "$WORK/src" rm -q -r tool-setup
     git -C "$WORK/src" commit -q -m empty
     git -C "$WORK/src" push -q "$WORK/remote/acme/tool.git" main
-    run zz-run acme/tool
+    run zz-setup acme/tool
     [ "$status" -eq 1 ]
     [[ "$output" == *"No workspace or entrypoint"* ]]
 }
@@ -90,9 +90,9 @@ make_workspace_remote() {
     cd "$BATS_TEST_DIRNAME"
 }
 
-@test "zz-run runs the selected workspace, enabling its dependency first, with input defaults" {
+@test "zz-setup runs the selected workspace, enabling its dependency first, with input defaults" {
     make_workspace_remote
-    run zz-run acme/ws --only-b
+    run zz-setup acme/ws --only-b
     [ "$status" -eq 0 ]
     [[ "$output" == *"Also enabling 'a'"* ]]
     [[ "$output" == *"a:up:bar"* ]]
@@ -100,101 +100,101 @@ make_workspace_remote() {
     [[ "$output" != *"lib"*"Running"* ]]
 }
 
-@test "zz-run honours inputs already set in the environment" {
+@test "zz-setup honours inputs already set in the environment" {
     make_workspace_remote
-    run env FOO=custom zz-run acme/ws --with-a
+    run env FOO=custom zz-setup acme/ws --with-a
     [ "$status" -eq 0 ]
     [[ "$output" == *"a:up:custom"* ]]
 }
 
-@test "zz-run runs a down step and refuses it while a dependent is up" {
+@test "zz-setup runs a down step and refuses it while a dependent is up" {
     make_workspace_remote
-    run zz-run acme/ws --down-a
+    run zz-setup acme/ws --down-a
     [ "$status" -eq 0 ]
     [[ "$output" == *"a:down"* ]]
-    run zz-run acme/ws --with-b --down-a
+    run zz-setup acme/ws --with-b --down-a
     [ "$status" -eq 1 ]
 }
 
-@test "zz-run rejects an unknown workspace flag and does nothing when none is selected" {
+@test "zz-setup rejects an unknown workspace flag and does nothing when none is selected" {
     make_workspace_remote
-    run zz-run acme/ws --with-nope
+    run zz-setup acme/ws --with-nope
     [ "$status" -eq 1 ]
-    run zz-run acme/ws
+    run zz-setup acme/ws
     [ "$status" -eq 0 ]
     [[ "$output" == *"Nothing selected"* ]]
 }
 
-@test "zz-run -h lists only the runnable vps workspaces" {
+@test "zz-setup -h lists only the runnable vps workspaces" {
     make_workspace_remote
-    run zz-run acme/ws -h
+    run zz-setup acme/ws -h
     [ "$status" -eq 0 ]
     [[ "$output" == *"--with-a"* ]]
     [[ "$output" != *"--with-lib"* ]]
 }
 
-@test "zz-run --status reports states and input status, and runs nothing" {
+@test "zz-setup --status reports states and input status, and runs nothing" {
     make_workspace_remote
-    run env FOO= zz-run acme/ws --status --with-b
+    run env FOO= zz-setup acme/ws --status --with-b
     [ "$status" -eq 0 ]
     [[ "$output" == *"up"*"b"* ]]
     [[ "$output" == *"input FOO"*"[optional]"* ]]
     [[ "$output" != *"Running"* ]]
 }
 
-@test "zz-run --down-all brings every workspace down in reverse order" {
+@test "zz-setup --down-all brings every workspace down in reverse order" {
     make_workspace_remote
-    run zz-run acme/ws --down-all
+    run zz-setup acme/ws --down-all
     [ "$status" -eq 0 ]
     [[ "$output" == *"b:down"*"a:down"* ]]
 }
 
-@test "zz-run keeps an input with an empty default and description in the right field" {
+@test "zz-setup keeps an input with an empty default and description in the right field" {
     make_workspace_remote
     jq '.vps.inputs.BAR = {}' "$WORK/ws/a/package.json" >"$WORK/ws/a/p.json"
     mv "$WORK/ws/a/p.json" "$WORK/ws/a/package.json"
     git -C "$WORK/ws" commit -q -am bar
     git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
-    run zz-run acme/ws --status
+    run zz-setup acme/ws --status
     [ "$status" -eq 0 ]
     [[ "$output" == *"input BAR"*" a"* ]]
 }
 
-@test "zz-run persists caller-provided inputs via zz-persist (owner-only, quoted) and reuses them" {
+@test "zz-setup persists caller-provided inputs via zz-persist (owner-only, quoted) and reuses them" {
     make_workspace_remote
-    export ZZ_RUN_ENV_FILE="$WORK/run.env"
-    run env FOO="it's a value" zz-run acme/ws --with-a
+    export ZZ_SETUP_ENV_FILE="$WORK/run.env"
+    run env FOO="it's a value" zz-setup acme/ws --with-a
     [ "$status" -eq 0 ]
     [[ "$output" == *"a:up:it's a value"* ]]
     [ "$(stat -c %a "$WORK/run.env")" = 600 ]
     grep -qx "FOO=it's a value" "$WORK/run.env"
-    run zz-run acme/ws --with-a
+    run zz-setup acme/ws --with-a
     [[ "$output" == *"a:up:it's a value"* ]]
 }
 
-@test "zz-run lets the caller's environment win over the persisted env file" {
+@test "zz-setup lets the caller's environment win over the persisted env file" {
     make_workspace_remote
-    export ZZ_RUN_ENV_FILE="$WORK/run.env"
+    export ZZ_SETUP_ENV_FILE="$WORK/run.env"
     echo "FOO=old" >"$WORK/run.env"
-    run env FOO=new zz-run acme/ws --with-a
+    run env FOO=new zz-setup acme/ws --with-a
     [[ "$output" == *"a:up:new"* ]]
     grep -qx "FOO=new" "$WORK/run.env"
 }
 
-@test "zz-run reads the env file literally and never executes it" {
+@test "zz-setup reads the env file literally and never executes it" {
     make_workspace_remote
-    export ZZ_RUN_ENV_FILE="$WORK/run.env"
+    export ZZ_SETUP_ENV_FILE="$WORK/run.env"
     echo 'FOO=$(touch '"$WORK"'/pwned)' >"$WORK/run.env"
-    run zz-run acme/ws --with-a
+    run zz-setup acme/ws --with-a
     [ "$status" -eq 0 ]
     [ ! -e "$WORK/pwned" ]
     [[ "$output" == *'a:up:$(touch'* ]]
 }
 
-@test "zz-run also exports persisted inputs from a profile.d snippet when ZZ_RUN_PROFILE is set" {
+@test "zz-setup also exports persisted inputs from a profile.d snippet when ZZ_SETUP_PROFILE is set" {
     make_workspace_remote
-    run env FOO="x y" ZZ_RUN_PROFILE=zz-run-test-$$ zz-run acme/ws --with-a
+    run env FOO="x y" ZZ_SETUP_PROFILE=zz-setup-test-$$ zz-setup acme/ws --with-a
     [ "$status" -eq 0 ]
-    grep -qx "export FOO='x y'" /etc/profile.d/zz-run-test-$$.sh
-    rm -f /etc/profile.d/zz-run-test-$$.sh
+    grep -qx "export FOO='x y'" /etc/profile.d/zz-setup-test-$$.sh
+    rm -f /etc/profile.d/zz-setup-test-$$.sh
 }

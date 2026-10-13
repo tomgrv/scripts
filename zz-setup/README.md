@@ -1,22 +1,22 @@
 <!-- @format -->
 
-# zz-run
+# zz-setup
 
 Fetch a GitHub `org/repo` and run its setup entrypoint — the generic version
 of what `vps-setup` does for
 [`perspikapps/vps`](https://github.com/perspikapps/vps).
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
-and linked onto `PATH` as `zz-run`.
+and linked onto `PATH` as `zz-setup`.
 
 ## Usage
 
 ```sh
-zz-run <org>/<repo>[@<ref>] [options]
+zz-setup <org>/<repo>[@<ref>] [options]
 
-zz-run perspikapps/vps                       # menu on a terminal
-sudo zz-run perspikapps/vps --skip-vps-rancher
-sudo zz-run perspikapps/vps --only-vps-k3s
+zz-setup perspikapps/vps                       # menu on a terminal
+sudo zz-setup perspikapps/vps --skip-vps-rancher
+sudo zz-setup perspikapps/vps --only-vps-k3s
 ```
 
 Same flow as `vps-setup`:
@@ -39,8 +39,8 @@ Same flow as `vps-setup`:
 4. Runs `down` steps in reverse order, then `up` steps in order, each
    `run.sh` getting `up`/`down` (workspaces with a `vps` key only).
 
-No workspaces (or `ZZ_RUN_ENTRY` set): execs the repo's entrypoint with the
-remaining arguments — first match of `$ZZ_RUN_ENTRY`, `<repo>-setup/run.sh`,
+No workspaces (or `ZZ_SETUP_ENTRY` set): execs the repo's entrypoint with the
+remaining arguments — first match of `$ZZ_SETUP_ENTRY`, `<repo>-setup/run.sh`,
 `setup.sh`, `run.sh`.
 
 Without a terminal, use flags: `--skip-<n>`, `--with-<n>`, `--only-<n>`
@@ -53,12 +53,12 @@ as `set` / `required` / `optional`, then exits without running anything.
 
 | Variable          | Default                                           |
 | ----------------- | ------------------------------------------------- |
-| `ZZ_RUN_REF`      | `main` (`@<ref>` wins)                            |
-| `ZZ_RUN_DIR`      | `/opt` as root, else `~/.local/share`             |
-| `ZZ_RUN_URL_BASE` | `https://github.com`                              |
-| `ZZ_RUN_ENTRY`    | forces entrypoint mode; path relative to checkout |
-| `ZZ_RUN_ENV_FILE` | `/etc/<repo>.env` as root, else `<checkout>/.env` |
-| `ZZ_RUN_PROFILE`  | unset; a name also exports persisted inputs from `/etc/profile.d/<name>.sh` |
+| `ZZ_SETUP_REF`      | `main` (`@<ref>` wins)                            |
+| `ZZ_SETUP_DIR`      | `/opt` as root, else `~/.local/share`             |
+| `ZZ_SETUP_URL_BASE` | `https://github.com`                              |
+| `ZZ_SETUP_ENTRY`    | forces entrypoint mode; path relative to checkout |
+| `ZZ_SETUP_ENV_FILE` | `/etc/<repo>.env` as root, else `<checkout>/.env` |
+| `ZZ_SETUP_PROFILE`  | unset; a name also exports persisted inputs from `/etc/profile.d/<name>.sh` |
 
 `sudo` drops exported variables: put them on the `sudo` line.
 
