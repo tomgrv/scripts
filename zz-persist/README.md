@@ -9,11 +9,14 @@ and linked onto `PATH` as `zz-persist`.
 
 ```sh
 zz-persist [-f file] [-p profile] <key> <value>
-zz-persist [-f file] [-p profile] -i "question" [-v default|-s default] <key>
+zz-persist [-f file] [-p profile] -i "question" [-v default|-s default|-S] <key>
 ```
 
 At least one of `-f`/`-p` is required. Both are idempotent — running twice
 replaces the existing entry instead of duplicating it.
+
+With `-S` (or `-s`, or an already-set key) the value is a secret: the prompt
+is masked and it is only written to an owner-only file.
 
 With `-i`, the value is asked for interactively instead of being passed on
 the command line (only when stdin is a terminal; otherwise the default is

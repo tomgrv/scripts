@@ -167,7 +167,7 @@ make_workspace_remote() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"a:up:it's a value"* ]]
     [ "$(stat -c %a "$WORK/run.env")" = 600 ]
-    grep -q "^FOO='it'\\\\''s a value'$" "$WORK/run.env"
+    grep -qx "FOO=it's a value" "$WORK/run.env"
     run zz-run acme/ws --with-a
     [[ "$output" == *"a:up:it's a value"* ]]
 }
@@ -175,8 +175,26 @@ make_workspace_remote() {
 @test "zz-run lets the caller's environment win over the persisted env file" {
     make_workspace_remote
     export ZZ_RUN_ENV_FILE="$WORK/run.env"
-    echo "FOO='old'" >"$WORK/run.env"
+    echo "FOO=old" >"$WORK/run.env"
     run env FOO=new zz-run acme/ws --with-a
     [[ "$output" == *"a:up:new"* ]]
-    grep -q "^FOO='new'$" "$WORK/run.env"
+    grep -qx "FOO=new" "$WORK/run.env"
+}
+
+@test "zz-run reads the env file literally and never executes it" {
+    make_workspace_remote
+    export ZZ_RUN_ENV_FILE="$WORK/run.env"
+    echo 'FOO=$(touch '"$WORK"'/pwned)' >"$WORK/run.env"
+    run zz-run acme/ws --with-a
+    [ "$status" -eq 0 ]
+    [ ! -e "$WORK/pwned" ]
+    [[ "$output" == *'a:up:$(touch'* ]]
+}
+
+@test "zz-run also exports persisted inputs from a profile.d snippet when ZZ_RUN_PROFILE is set" {
+    make_workspace_remote
+    run env FOO="x y" ZZ_RUN_PROFILE=zz-run-test-$$ zz-run acme/ws --with-a
+    [ "$status" -eq 0 ]
+    grep -qx "export FOO='x y'" /etc/profile.d/zz-run-test-$$.sh
+    rm -f /etc/profile.d/zz-run-test-$$.sh
 }

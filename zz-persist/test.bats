@@ -152,3 +152,16 @@ teardown() {
     ! grep -q '^export KEY=first$' /etc/profile.d/zzptest2.sh
     rm -f "$tmp" /etc/profile.d/zzptest2.sh
 }
+
+@test "zz-persist -S treats the value as a secret even without a default" {
+    tmp=$(mktemp)
+    chmod 644 "$tmp"
+    run zz-persist -f "$tmp" -i "Enter secret" -S KEY </dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'refusing to persist secret'* ]]
+    chmod 600 "$tmp"
+    run zz-persist -f "$tmp" -i "Enter secret" -S KEY </dev/null
+    [ "$status" -eq 0 ]
+    grep -q '^KEY=$' "$tmp"
+    rm -f "$tmp"
+}

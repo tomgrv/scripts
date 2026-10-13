@@ -13,6 +13,7 @@ eval $(
         i question  question    Ask interactively for the value with this prompt (terminal only)
         v default   value_default   Default value for a non-secret interactive prompt
         s default   secret_default  Default value for a secret interactive prompt (masked)
+        S -         secret      Treat the value as a secret (masked prompt, owner-only file) even without a default
         - key       key         Variable name
         - value     value       Variable value
 help
@@ -48,6 +49,7 @@ if [ -n "$question" ]; then
     [ -z "$current" ] && [ -n "$profile" ] && current=$(read_current "/etc/profile.d/$profile.sh" "export $key=")
 
     [ -n "$secret_default" ] && is_secret=1
+    [ -n "$secret" ] && is_secret=1
     [ -n "$current" ] && is_secret=1
 
     default="${current:-${value_default:-$secret_default}}"

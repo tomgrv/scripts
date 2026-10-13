@@ -13,8 +13,7 @@
     "@tomgrv/scripts-zz-install": "*",
     "@tomgrv/scripts-zz-log": "*",
     "@tomgrv/scripts-zz-menu": "*",
-    "@tomgrv/scripts-zz-persist": "*",
-    "@tomgrv/scripts-zz-prompt": "*"
+    "@tomgrv/scripts-zz-persist": "*"
   },
   "private": true
 }

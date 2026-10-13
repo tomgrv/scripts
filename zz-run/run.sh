@@ -20,7 +20,9 @@
 # Env: ZZ_RUN_REF (default main; "@<ref>" wins), ZZ_RUN_DIR (parent of the
 # checkout; default /opt as root, else ~/.local/share), ZZ_RUN_URL_BASE
 # (default https://github.com), ZZ_RUN_ENTRY, ZZ_RUN_ENV_FILE (inputs; default
-# /etc/<repo>.env as root, else <checkout>/.env).
+# /etc/<repo>.env as root, else <checkout>/.env, read literally, written by
+# zz-persist), ZZ_RUN_PROFILE (also export persisted inputs from
+# /etc/profile.d/<name>.sh).
 
 set -e
 
@@ -292,39 +294,41 @@ for n in $([ "$status_only" -eq 1 ] && echo "$names" || echo "$up_names"); do
 done
 all_inputs=$(printf '%s' "$all_inputs" | awk -F"$us" 'NF && !seen[$1]++')
 
-# Persist one input through zz-persist. The value is single-quoted (the file
-# is sourced, so spaces/metacharacters must survive) and the file is kept
-# owner-only, which zz-persist requires before it writes a secret.
-persist_input() {
-    (umask 077 && touch "$envfile") && chmod 600 "$envfile" 2>/dev/null || true
+# The env file is plain KEY=VALUE (zz-persist's format), read literally and
+# never sourced, so a value can hold spaces/quotes without being executed.
+env_get() { [ ! -f "$envfile" ] || sed -n "s/^$1=//p" "$envfile" | tail -n1; }
+
+# Make the env file owner-only: zz-persist only stores a secret in one.
+env_secure() { (umask 077 && touch "$envfile") && chmod 600 "$envfile" 2>/dev/null || true; }
+
+# Also export a persisted value in new shells when ZZ_RUN_PROFILE names a
+# /etc/profile.d/<name>.sh snippet (the value is quoted: shells source it).
+profile_persist() {
+    [ -n "$ZZ_RUN_PROFILE" ] || return 0
     _q=$(printf '%s' "$2" | sed "s/'/'\\\\''/g")
-    zz-persist -f "$envfile" "$1" "'$_q'"
+    zz-persist -p "$ZZ_RUN_PROFILE" "$1" "'$_q'"
 }
 
-# Values the caller put in the environment win over the env file, and are
-# persisted so later runs keep them without being given again.
-explicit=
+persist_input() {
+    env_secure
+    zz-persist -f "$envfile" "$1" "$2"
+    profile_persist "$1" "$2"
+}
+
+# Value order: the caller's environment, then the env file. Caller values
+# are persisted so later runs keep them without being given again.
 while IFS="$us" read -r var _rest; do
     [ -n "$var" ] || continue
-    _v=$(eval "printf '%s' \"\${$var:-}\"")
-    if [ -n "$_v" ]; then
-        explicit="$explicit $var"
-        eval "_explicit_$var=\$_v"
+    if [ -n "$(eval "printf '%s' \"\${$var:-}\"")" ]; then
+        [ "$status_only" -eq 1 ] || persist_input "$var" "$(eval "printf '%s' \"\$$var\"")"
+    else
+        _v=$(env_get "$var")
+        [ -n "$_v" ] && eval "$var=\$_v"
     fi
+    eval "export $var"
 done <<EXPLICIT
 $all_inputs
 EXPLICIT
-if [ -f "$envfile" ]; then
-    set -a
-    # shellcheck disable=SC1090
-    . "$envfile"
-    set +a
-fi
-for var in $explicit; do
-    eval "$var=\$_explicit_$var"
-    eval "export $var"
-    [ "$status_only" -eq 1 ] || persist_input "$var" "$(eval "printf '%s' \"\$$var\"")"
-done
 
 input_status() {
     if [ -n "$(eval "printf '%s' \"\${$1:-}\"")" ]; then
@@ -348,16 +352,6 @@ $all_inputs
 STATUS
     exit 0
 fi
-
-# Like zz-prompt, but nothing is echoed (secret inputs); no default shown.
-ask_secret() {
-    printf '%s ' "$1" >&2
-    stty -echo 2>/dev/null || true
-    read -r _secret
-    stty echo 2>/dev/null || true
-    echo >&2
-    printf '%s\n' "$_secret"
-}
 
 if [ -t 0 ] && [ -n "$all_inputs" ]; then
     while :; do
@@ -387,18 +381,26 @@ EOF
         desc=$(printf '%s' "$row" | cut -d"$us" -f2)
         def=$(printf '%s' "$row" | cut -d"$us" -f4)
         secret=$(printf '%s' "$row" | cut -d"$us" -f6)
-        current=$(eval "printf '%s' \"\${$choice:-}\"")
-        if [ "$secret" = true ]; then
-            answer=$(ask_secret "${choice}${desc:+ ($desc)}${current:+ - enter to keep the current value}:")
-        elif [ -n "$current" ]; then
-            answer=$(zz-prompt "${choice}${desc:+ ($desc)} - enter to keep the current value:")
+        # zz-persist asks (masked for secrets), shows the stored value, and
+        # writes it; the answer is then read back into this run.
+        env_secure
+        q="${choice}${desc:+ ($desc)}"
+        if [ "$secret" != true ]; then
+            if [ -n "$def" ]; then
+                zz-persist -f "$envfile" -i "$q" -v "$def" "$choice"
+            else
+                zz-persist -f "$envfile" -i "$q" "$choice"
+            fi
+        elif [ -n "$def" ]; then
+            zz-persist -f "$envfile" -i "$q" -s "$def" "$choice"
         else
-            answer=$(zz-prompt "${choice}${desc:+ ($desc)}:" "$def")
+            zz-persist -f "$envfile" -i "$q" -S "$choice"
         fi
-        if [ -n "$answer" ]; then
-            eval "$choice=\"\$answer\""
+        _v=$(env_get "$choice")
+        if [ -n "$_v" ]; then
+            eval "$choice=\$_v"
             eval "export $choice"
-            persist_input "$choice" "$answer"
+            profile_persist "$choice" "$_v"
         fi
     done
 fi

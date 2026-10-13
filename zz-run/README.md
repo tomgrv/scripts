@@ -31,11 +31,11 @@ Same flow as `vps-setup`:
    a dependent is up (`--force-down` overrides).
 3. Lists the inputs the selected workspaces declare (`vps.inputs`, or
    `config.input` as in `zz-call`), shows which are set, and offers to set
-   them. Every value is written with `zz-persist -f` (single-quoted, file
-   kept `chmod 600` so secrets can be stored) and reloaded on the next run:
-   typed answers, and values you passed in the environment, which also win
-   over the file. Remaining defaults are applied; a required input left empty
-   only warns.
+   them with `zz-persist -i` (masked for `"secret": true`, current value shown
+   and kept on enter). The env file is plain `KEY=VALUE`, kept `chmod 600` and
+   read literally, never sourced. Values passed in the environment win over
+   the file and are persisted too. Remaining defaults are applied; a required
+   input left empty only warns.
 4. Runs `down` steps in reverse order, then `up` steps in order, each
    `run.sh` getting `up`/`down` (workspaces with a `vps` key only).
 
@@ -49,7 +49,7 @@ Without a terminal, use flags: `--skip-<n>`, `--with-<n>`, `--only-<n>`
 
 `--status` shows each workspace's resulting state and every declared input
 as `set` / `required` / `optional`, then exits without running anything.
-Inputs declared `"secret": true` are read without echo.
+
 
 | Variable          | Default                                           |
 | ----------------- | ------------------------------------------------- |
@@ -58,6 +58,7 @@ Inputs declared `"secret": true` are read without echo.
 | `ZZ_RUN_URL_BASE` | `https://github.com`                              |
 | `ZZ_RUN_ENTRY`    | forces entrypoint mode; path relative to checkout |
 | `ZZ_RUN_ENV_FILE` | `/etc/<repo>.env` as root, else `<checkout>/.env` |
+| `ZZ_RUN_PROFILE`  | unset; a name also exports persisted inputs from `/etc/profile.d/<name>.sh` |
 
 `sudo` drops exported variables: put them on the `sudo` line.
 
