@@ -41,8 +41,12 @@ remaining arguments — first match of `$ZZ_RUN_ENTRY`, `<repo>-setup/run.sh`,
 `setup.sh`, `run.sh`.
 
 Without a terminal, use flags: `--skip-<n>`, `--with-<n>`, `--only-<n>`
-(repeatable, overrides the others), `--down-<n>`, `--force-down`, `-h`.
-Supply inputs as environment variables.
+(repeatable, overrides the others), `--down-<n>`, `--down-all`,
+`--force-down`, `-h`. Supply inputs as environment variables.
+
+`--status` shows each workspace's resulting state and every declared input
+as `set` / `required` / `optional`, then exits without running anything.
+Inputs declared `"secret": true` are read without echo.
 
 | Variable          | Default                                           |
 | ----------------- | ------------------------------------------------- |

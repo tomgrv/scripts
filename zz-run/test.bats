@@ -132,3 +132,30 @@ make_workspace_remote() {
     [[ "$output" == *"--with-a"* ]]
     [[ "$output" != *"--with-lib"* ]]
 }
+
+@test "zz-run --status reports states and input status, and runs nothing" {
+    make_workspace_remote
+    run env FOO= zz-run acme/ws --status --with-b
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"up"*"b"* ]]
+    [[ "$output" == *"input FOO"*"[optional]"* ]]
+    [[ "$output" != *"Running"* ]]
+}
+
+@test "zz-run --down-all brings every workspace down in reverse order" {
+    make_workspace_remote
+    run zz-run acme/ws --down-all
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"b:down"*"a:down"* ]]
+}
+
+@test "zz-run keeps an input with an empty default and description in the right field" {
+    make_workspace_remote
+    jq '.vps.inputs.BAR = {}' "$WORK/ws/a/package.json" >"$WORK/ws/a/p.json"
+    mv "$WORK/ws/a/p.json" "$WORK/ws/a/package.json"
+    git -C "$WORK/ws" commit -q -am bar
+    git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
+    run zz-run acme/ws --status
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"input BAR"*" a"* ]]
+}

@@ -160,15 +160,18 @@ usage() {
     done
     echo
     echo "Also: --skip-<n>, --only-<n> (repeatable, overrides skip/with), --down-<n>,"
-    echo "      --force-down (allow --down-<n> while a dependent is up), -h"
+    echo "      --down-all, --force-down (allow --down-<n> while a dependent is up),"
+    echo "      --status (show each workspace's state and inputs, run nothing), -h"
 }
 
 force_down=0
+status_only=0
 only=
 nflags=0
 for arg in "$@"; do
     nflags=$((nflags + 1))
     case "$arg" in
+    --down-all) for n in $names; do state_set "$n" down; done ;;
     --skip-* | --with-* | --only-* | --down-*)
         kind=${arg#--}
         kind=${kind%%-*}
@@ -186,6 +189,7 @@ for arg in "$@"; do
         esac
         ;;
     --force-down) force_down=1 ;;
+    --status) status_only=1 ;;
     -h | --help)
         usage
         exit 0
@@ -259,19 +263,20 @@ fi
 
 up_names=
 for n in $names; do [ "$(state_get "$n")" = up ] && up_names="$up_names $n"; done
-[ -n "$up_names$(for n in $names; do [ "$(state_get "$n")" = down ] && echo "$n"; done)" ] || {
+[ "$status_only" -eq 1 ] || [ -n "$up_names$(for n in $names; do [ "$(state_get "$n")" = down ] && echo "$n"; done)" ] || {
     zz-log w "[zz-run] Nothing selected, nothing to do."
     exit 0
 }
 
-# --- inputs: "VAR<TAB>description<TAB>required<TAB>default<TAB>name",
+# --- inputs: "VAR<US>description<US>required<US>default<US>name<US>secret"
+# (US = \037; a whitespace separator like tab would collapse empty fields),
 # from "vps.inputs" (object keyed by var) and "config.input" (zz-call array).
 inputs_of() {
     jq -r --arg n "$1" '
       ((.vps.inputs // {}) | to_entries[]
-         | [.key, (.value.description // ""), ((.value.required // false) | tostring), (.value.default // ""), $n] | @tsv),
+         | [.key, (.value.description // ""), ((.value.required // false) | tostring), (.value.default // ""), $n, ((.value.secret // false) | tostring)] | join("\u001f")),
       ((.config.input // [])[]
-         | [.var, (.question // ""), "false", (.default // ""), $n] | @tsv)' "$(dir_of "$1")/package.json"
+         | [.var, (.question // ""), "false", (.default // ""), $n, "false"] | join("\u001f"))' "$(dir_of "$1")/package.json"
 }
 
 envfile="${ZZ_RUN_ENV_FILE:-}"
@@ -285,13 +290,13 @@ if [ -f "$envfile" ]; then
     set +a
 fi
 
-tab=$(printf '\t')
+us=$(printf '\037')
 all_inputs=
-for n in $up_names; do
+for n in $([ "$status_only" -eq 1 ] && echo "$names" || echo "$up_names"); do
     all_inputs="$all_inputs$(inputs_of "$n")
 "
 done
-all_inputs=$(printf '%s' "$all_inputs" | awk -F'\t' 'NF && !seen[$1]++')
+all_inputs=$(printf '%s' "$all_inputs" | awk -F"$us" 'NF && !seen[$1]++')
 
 input_status() {
     if [ -n "$(eval "printf '%s' \"\${$1:-}\"")" ]; then
@@ -303,11 +308,34 @@ input_status() {
     fi
 }
 
+if [ "$status_only" -eq 1 ]; then
+    for n in $names; do
+        printf '%-6s %-22s %s\n' "$(state_get "$n")" "$n" "$(desc_of "$n")"
+    done
+    while IFS="$us" read -r var desc req def owner secret; do
+        [ -n "$var" ] || continue
+        printf '  input %-24s [%s] %s\n' "$var" "$(input_status "$var" "$req")" "$owner"
+    done <<STATUS
+$all_inputs
+STATUS
+    exit 0
+fi
+
+# Like zz-prompt, but nothing is echoed (secret inputs); no default shown.
+ask_secret() {
+    printf '%s ' "$1" >&2
+    stty -echo 2>/dev/null || true
+    read -r _secret
+    stty echo 2>/dev/null || true
+    echo >&2
+    printf '%s\n' "$_secret"
+}
+
 if [ -t 0 ] && [ -n "$all_inputs" ]; then
     while :; do
         set --
         unset_count=0
-        while IFS="$tab" read -r var desc req def owner; do
+        while IFS="$us" read -r var desc req def owner secret; do
             st=$(input_status "$var" "$req")
             [ "$st" = set ] || unset_count=$((unset_count + 1))
             set -- "$@" "$var=$(printf '%-24s' "$var") [$(printf '%-8s' "$st")] $owner${desc:+ - $desc}"
@@ -327,11 +355,14 @@ EOF
             ;;
         *) break ;;
         esac
-        row=$(printf '%s\n' "$all_inputs" | awk -F'\t' -v v="$choice" '$1 == v { print; exit }')
-        desc=$(printf '%s' "$row" | cut -f2)
-        def=$(printf '%s' "$row" | cut -f4)
+        row=$(printf '%s\n' "$all_inputs" | awk -F"$us" -v v="$choice" '$1 == v { print; exit }')
+        desc=$(printf '%s' "$row" | cut -d"$us" -f2)
+        def=$(printf '%s' "$row" | cut -d"$us" -f4)
+        secret=$(printf '%s' "$row" | cut -d"$us" -f6)
         current=$(eval "printf '%s' \"\${$choice:-}\"")
-        if [ -n "$current" ]; then
+        if [ "$secret" = true ]; then
+            answer=$(ask_secret "${choice}${desc:+ ($desc)}${current:+ - enter to keep the current value}:")
+        elif [ -n "$current" ]; then
             answer=$(zz-prompt "${choice}${desc:+ ($desc)} - enter to keep the current value:")
         else
             answer=$(zz-prompt "${choice}${desc:+ ($desc)}:" "$def")
@@ -346,7 +377,7 @@ EOF
 fi
 
 # Defaults for the rest; required-but-empty is a warning, like vps-setup.
-while IFS="$tab" read -r var desc req def owner; do
+while IFS="$us" read -r var desc req def owner secret; do
     [ -n "$var" ] || continue
     if [ -z "$(eval "printf '%s' \"\${$var:-}\"")" ] && [ -n "$def" ]; then
         eval "$var=\$def"
