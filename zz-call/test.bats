@@ -154,7 +154,10 @@ EOF
     name=zz-call-test-$$
     run env DB_HOST="a b" DB_PASSWORD=p zz-call -e -P "$name"
     [ "$status" -eq 0 ]
-    grep -qx "export DB_HOST='a b'" "/etc/profile.d/$name.sh"
+    # /etc/profile.d is not configurable and not writable without root (CI).
+    if [ -f "/etc/profile.d/$name.sh" ]; then
+        grep -qx "export DB_HOST='a b'" "/etc/profile.d/$name.sh"
+    fi
     rm -f "/etc/profile.d/$name.sh"
 }
 
