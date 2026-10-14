@@ -27,8 +27,9 @@ zz-call [-p package.json[:more.json]] [-f envfile] [-P profile] [-n] [-e] [comma
 Besides `config.input`, `vps.inputs` (an object keyed by var, with
 `description`, `default`, `secret`) is read. Resolution order: environment,
 then the env file (read literally, never sourced), then a prompt. A `secret`
-input is asked with `zz-persist -i` (masked) and the env file is kept
-`chmod 600`.
+input is only flagged to `zz-persist` (`-s`), which asks for it masked and
+refuses any target that others can read: `zz-call` has no secret handling of
+its own.
 
 What to check/ask/set, and what to print back, is declared in a
 `package.json` (default: `./package.json` — the caller's own, since every
@@ -106,4 +107,4 @@ bats test.bats
 - `vps.inputs` from several package.json files, first definition wins
 - `-n` never prompts or persists defaults; the env file is read literally
 - `-f`/`-e`/`-P` choose the file, persist environment values, export via profile.d
-- a `secret` input is persisted by `zz-persist` into an owner-only file
+- a `secret` input is asked and persisted by `zz-persist -s` into an owner-only file

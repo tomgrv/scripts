@@ -290,17 +290,6 @@ all_inputs=$(printf '%s' "$all_inputs" | awk -F"$us" 'NF && !seen[$1]++')
 # never sourced, so a value can hold spaces/quotes without being executed.
 env_get() { [ ! -f "$envfile" ] || sed -n "s/^$1=//p" "$envfile" | tail -n1; }
 
-# Make the env file owner-only: zz-persist only stores a secret in one.
-env_secure() { (umask 077 && touch "$envfile") && chmod 600 "$envfile" 2>/dev/null || true; }
-
-# Also export a persisted value in new shells when ZZ_SETUP_PROFILE names a
-# /etc/profile.d/<name>.sh snippet (the value is quoted: shells source it).
-profile_persist() {
-    [ -n "$ZZ_SETUP_PROFILE" ] || return 0
-    _q=$(printf '%s' "$2" | sed "s/'/'\\\\''/g")
-    zz-persist -p "$ZZ_SETUP_PROFILE" "$1" "'$_q'"
-}
-
 # Status view only (menu): the caller's environment, then the env file.
 # The final resolution, defaults and persistence are zz-call's, below.
 while IFS="$us" read -r var _rest; do
@@ -364,27 +353,13 @@ EOF
         desc=$(printf '%s' "$row" | cut -d"$us" -f2)
         def=$(printf '%s' "$row" | cut -d"$us" -f4)
         secret=$(printf '%s' "$row" | cut -d"$us" -f6)
-        # zz-persist asks (masked for secrets), shows the stored value, and
-        # writes it; the answer is then read back into this run.
-        env_secure
-        q="${choice}${desc:+ ($desc)}"
-        if [ "$secret" != true ]; then
-            if [ -n "$def" ]; then
-                zz-persist -f "$envfile" -i "$q" -v "$def" "$choice"
-            else
-                zz-persist -f "$envfile" -i "$q" "$choice"
-            fi
-        elif [ -n "$def" ]; then
-            zz-persist -f "$envfile" -i "$q" -s "$def" "$choice"
-        else
-            zz-persist -f "$envfile" -i "$q" -S "$choice"
-        fi
+        # zz-persist asks (masked with -s), shows the stored value and writes
+        # it; the answer is then read back into this run.
+        if [ "$secret" = true ]; then set -- -s; else set --; fi
+        [ -z "$def" ] || set -- "$@" -v "$def"
+        zz-persist -f "$envfile" -i "${choice}${desc:+ ($desc)}" "$@" "$choice"
         _v=$(env_get "$choice")
-        if [ -n "$_v" ]; then
-            eval "$choice=\$_v"
-            eval "export $choice"
-            profile_persist "$choice" "$_v"
-        fi
+        [ -z "$_v" ] || eval "export $choice=\$_v"
     done
 fi
 

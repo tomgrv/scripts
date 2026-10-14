@@ -98,21 +98,20 @@ _parse_entry() {
 # Value of $1 in the env file, read literally (the file is never sourced).
 _file_get() { [ ! -f "$file" ] || sed -n "s/^$1=//p" "$file" | tail -n1; }
 
-# Create the env file owner-only if it does not exist yet; a secret also
-# tightens an existing one, as zz-persist only stores secrets in such files.
-_secure() {
-    [ -e "$file" ] || (umask 077 && touch "$file")
-    [ "$1" != true ] || chmod 600 "$file" 2>/dev/null || true
+# Persisting, secrets included, is zz-persist's job alone: a secret entry is
+# only flagged (-s), and zz-persist masks, restricts the file and refuses.
+# $1=var $2=value $3=secret(true|false)
+_flag() { [ "$1" != true ] || printf '%s' -s; }
+
+_persist_profile() {
+    [ -n "$profile" ] || return 0
+    _q=$(printf '%s' "$2" | sed "s/'/'\\\\''/g")
+    zz-persist -p "$profile" $(_flag "$3") "$1" "'$_q'"
 }
 
-# Persist $1=$2 to the env file (and the profile snippet, quoted).
 _persist() {
-    _secure "$3"
-    zz-persist -f "$file" "$1" "$2"
-    if [ -n "$profile" ]; then
-        _q=$(printf '%s' "$2" | sed "s/'/'\\\\''/g")
-        zz-persist -p "$profile" "$1" "'$_q'"
-    fi
+    zz-persist -f "$file" $(_flag "$3") "$1" "$2"
+    _persist_profile "$1" "$2" "$3"
 }
 
 # jq's own output is looped over via a captured command substitution, not
@@ -136,18 +135,10 @@ for _entry in $_input_entries; do
         elif [ -n "$noprompt" ]; then
             _current=$default
         elif [ "$secret" = true ]; then
-            # zz-persist masks the prompt and writes the answer itself.
-            _secure true
-            if [ -n "$default" ]; then
-                zz-persist -f "$file" -i "${question:-$var}" -s "$default" "$var"
-            else
-                zz-persist -f "$file" -i "${question:-$var}" -S "$var"
-            fi
+            # Asked and stored by zz-persist (masked, owner-only).
+            zz-persist -f "$file" -s -i "${question:-$var}" ${default:+-v "$default"} "$var"
             _current=$(_file_get "$var")
-            if [ -n "$profile" ] && [ -n "$_current" ]; then
-                _q=$(printf '%s' "$_current" | sed "s/'/'\\\\''/g")
-                zz-persist -p "$profile" "$var" "'$_q'"
-            fi
+            [ -z "$_current" ] || _persist_profile "$var" "$_current" true
         else
             _current=$(zz-prompt "${question:-Value for $var?}" "$default")
             _persist "$var" "$_current" false

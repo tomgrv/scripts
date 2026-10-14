@@ -35,7 +35,7 @@ Same flow as `vps-setup`:
    `zz-persist -i` (masked for `"secret": true`, current value shown and kept
    on enter). Then `zz-call -n -e` resolves them all: the caller's
    environment first (also persisted), then the env file, then the default.
-   The env file is plain `KEY=VALUE`, kept `chmod 600` and read literally,
+   The env file is plain `KEY=VALUE`, created owner-only by `zz-persist` and read literally,
    never sourced. A required input left empty only warns.
 4. Runs `down` steps in reverse order, then `up` steps in order, each
    `run.sh` getting `up`/`down` (workspaces with a `vps` key only).

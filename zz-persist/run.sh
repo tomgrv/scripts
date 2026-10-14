@@ -10,17 +10,16 @@ eval $(
     zz-args "Persist a key=value pair durably" $0 "$@" <<-help
         f file      file        Upsert KEY=VALUE into this .env-style file
         p name      profile     Export KEY=VALUE from /etc/profile.d/<profile>.sh
-        i question  question    Ask interactively for the value with this prompt (terminal only)
-        v default   value_default   Default value for a non-secret interactive prompt
-        s default   secret_default  Default value for a secret interactive prompt (masked)
-        S -         secret      Treat the value as a secret (masked prompt, owner-only file) even without a default
+        i question  question    Ask for the value with this prompt (terminal only, else the default is used)
+        v default   value_default   Default offered by -i (the stored value, if any, wins)
+        s -         secret      The value is a secret: masked prompt, never logged, written only to owner-only files
         - key       key         Variable name
         - value     value       Variable value
 help
 )
 
 if [ -z "$key" ]; then
-    zz-log e "Usage: zz-persist [-f file] [-p profile] [-i question [-v default|-s default]] <key> [value]"
+    zz-log e "Usage: zz-persist [-f file] [-p profile] [-s] [-i question [-v default]] <key> [value]"
     exit 1
 fi
 
@@ -39,20 +38,17 @@ fi
 
 # Read an existing KEY= or export KEY= line's value from a file, if any.
 read_current() {
-    [ -f "$1" ] && sed -n "s/^$2//p" "$1" | tail -n1
+    [ ! -f "$1" ] || sed -n "s/^$2//p" "$1" | tail -n1
 }
 
 is_secret=0
+[ -n "$secret" ] && is_secret=1
 
 if [ -n "$question" ]; then
     current=$(read_current "$file" "$key=")
     [ -z "$current" ] && [ -n "$profile" ] && current=$(read_current "/etc/profile.d/$profile.sh" "export $key=")
 
-    [ -n "$secret_default" ] && is_secret=1
-    [ -n "$secret" ] && is_secret=1
-    [ -n "$current" ] && is_secret=1
-
-    default="${current:-${value_default:-$secret_default}}"
+    default="${current:-$value_default}"
 
     if [ -n "$current" ]; then
         if [ "$is_secret" = 1 ]; then
@@ -116,13 +112,17 @@ persist_line() {
     zz-log i "$key persisted to {U $target}"
 }
 
+# Files zz-persist creates: the env file is always owner-only (it may hold
+# credentials next to plain settings); a profile.d snippet only for a secret,
+# otherwise every shell must be able to source it.
 if [ -n "$file" ]; then
-    touch "$file"
+    [ -e "$file" ] || (umask 077 && touch "$file")
     persist_line "$file" "$key="
 fi
 
 if [ -n "$profile" ]; then
     profile_file="/etc/profile.d/$profile.sh"
+    [ "$is_secret" = 1 ] && umask 077
     if mkdir -p /etc/profile.d 2>/dev/null && touch "$profile_file" 2>/dev/null; then
         persist_line "$profile_file" "export $key="
     else
