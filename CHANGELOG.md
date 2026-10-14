@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.2.0 (2026-10-14)
+
+*Commits from: v2.1.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v2.1.0' into develop
+- update features (#68)
+### 📦 scripts-zz-setup changes
+
+#### Features
+
+- ✨ abort on empty required inputs, accept a local checkout path (#71)
+- ✨ add org/repo fetch-and-setup script (#70)
+
+### 📦 scripts-zz-use changes
+
+#### Bug Fixes
+
+- 🐛 let update-features push workflow changes with an optional token (#67)
+
 ## 2.1.0 (2026-10-08)
 
 *Commits from: v2.0.0..HEAD*
@@ -677,5 +700,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-10-08 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-10-14 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
