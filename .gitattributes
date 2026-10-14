@@ -14,3 +14,5 @@ CHANGELOG.md export-ignore
 .agents export-ignore
 .claude export-ignore
 .gemini export-ignore
+*.yaml merge=yaml
+*.yml merge=yaml
