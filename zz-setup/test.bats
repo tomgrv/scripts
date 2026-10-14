@@ -92,7 +92,7 @@ make_workspace_remote() {
 
 @test "zz-setup runs the selected workspace, enabling its dependency first, with input defaults" {
     make_workspace_remote
-    run zz-setup acme/ws --only-b
+    run zz-setup acme/ws -o b
     [ "$status" -eq 0 ]
     [[ "$output" == *"Also enabling 'a'"* ]]
     [[ "$output" == *"a:up:bar"* ]]
@@ -102,23 +102,23 @@ make_workspace_remote() {
 
 @test "zz-setup honours inputs already set in the environment" {
     make_workspace_remote
-    run env FOO=custom zz-setup acme/ws --with-a
+    run env FOO=custom zz-setup acme/ws -w a
     [ "$status" -eq 0 ]
     [[ "$output" == *"a:up:custom"* ]]
 }
 
 @test "zz-setup runs a down step and refuses it while a dependent is up" {
     make_workspace_remote
-    run zz-setup acme/ws --down-a
+    run zz-setup acme/ws -d a
     [ "$status" -eq 0 ]
     [[ "$output" == *"a:down"* ]]
-    run zz-setup acme/ws --with-b --down-a
+    run zz-setup acme/ws -w b -d a
     [ "$status" -eq 1 ]
 }
 
 @test "zz-setup rejects an unknown workspace flag and does nothing when none is selected" {
     make_workspace_remote
-    run zz-setup acme/ws --with-nope
+    run zz-setup acme/ws -w nope
     [ "$status" -eq 1 ]
     run zz-setup acme/ws
     [ "$status" -eq 0 ]
@@ -128,23 +128,34 @@ make_workspace_remote() {
 @test "zz-setup -h lists only the runnable vps workspaces" {
     make_workspace_remote
     run zz-setup acme/ws -h
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"workspaces: a b"* ]]
+    [[ "$output" == *"-w <names>"* ]]
+    [[ "$output" != *"lib"* ]]
+}
+
+@test "zz-setup takes comma/space separated workspace lists and rejects unknown arguments" {
+    make_workspace_remote
+    run zz-setup acme/ws -w a,b
     [ "$status" -eq 0 ]
-    [[ "$output" == *"--with-a"* ]]
-    [[ "$output" != *"--with-lib"* ]]
+    [[ "$output" == *"a:up"* && "$output" == *"b:up"* ]]
+    run zz-setup acme/ws bogus
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Unknown argument: bogus"* ]]
 }
 
 @test "zz-setup --status reports states and input status, and runs nothing" {
     make_workspace_remote
-    run env FOO= zz-setup acme/ws --status --with-b
+    run env FOO= zz-setup acme/ws -S -w b
     [ "$status" -eq 0 ]
     [[ "$output" == *"up"*"b"* ]]
     [[ "$output" == *"input FOO"*"[optional]"* ]]
     [[ "$output" != *"Running"* ]]
 }
 
-@test "zz-setup --down-all brings every workspace down in reverse order" {
+@test "zz-setup -d all brings every workspace down in reverse order" {
     make_workspace_remote
-    run zz-setup acme/ws --down-all
+    run zz-setup acme/ws -D
     [ "$status" -eq 0 ]
     [[ "$output" == *"b:down"*"a:down"* ]]
 }
@@ -155,7 +166,7 @@ make_workspace_remote() {
     mv "$WORK/ws/a/p.json" "$WORK/ws/a/package.json"
     git -C "$WORK/ws" commit -q -am bar
     git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
-    run zz-setup acme/ws --status
+    run zz-setup acme/ws -S
     [ "$status" -eq 0 ]
     [[ "$output" == *"input BAR"*" a"* ]]
 }
@@ -163,12 +174,12 @@ make_workspace_remote() {
 @test "zz-setup persists caller-provided inputs via zz-persist (owner-only, quoted) and reuses them" {
     make_workspace_remote
     export ZZ_SETUP_ENV_FILE="$WORK/run.env"
-    run env FOO="it's a value" zz-setup acme/ws --with-a
+    run env FOO="it's a value" zz-setup acme/ws -w a
     [ "$status" -eq 0 ]
     [[ "$output" == *"a:up:it's a value"* ]]
     [ "$(stat -c %a "$WORK/run.env")" = 600 ]
     grep -qx "FOO=it's a value" "$WORK/run.env"
-    run zz-setup acme/ws --with-a
+    run zz-setup acme/ws -w a
     [[ "$output" == *"a:up:it's a value"* ]]
 }
 
@@ -176,7 +187,7 @@ make_workspace_remote() {
     make_workspace_remote
     export ZZ_SETUP_ENV_FILE="$WORK/run.env"
     echo "FOO=old" >"$WORK/run.env"
-    run env FOO=new zz-setup acme/ws --with-a
+    run env FOO=new zz-setup acme/ws -w a
     [[ "$output" == *"a:up:new"* ]]
     grep -qx "FOO=new" "$WORK/run.env"
 }
@@ -185,7 +196,7 @@ make_workspace_remote() {
     make_workspace_remote
     export ZZ_SETUP_ENV_FILE="$WORK/run.env"
     echo 'FOO=$(touch '"$WORK"'/pwned)' >"$WORK/run.env"
-    run zz-setup acme/ws --with-a
+    run zz-setup acme/ws -w a
     [ "$status" -eq 0 ]
     [ ! -e "$WORK/pwned" ]
     [[ "$output" == *'a:up:$(touch'* ]]
@@ -193,7 +204,7 @@ make_workspace_remote() {
 
 @test "zz-setup also exports persisted inputs from a profile.d snippet when ZZ_SETUP_PROFILE is set" {
     make_workspace_remote
-    run env FOO="x y" ZZ_SETUP_PROFILE=zz-setup-test-$$ zz-setup acme/ws --with-a
+    run env FOO="x y" ZZ_SETUP_PROFILE=zz-setup-test-$$ zz-setup acme/ws -w a
     [ "$status" -eq 0 ]
     # /etc/profile.d is not configurable and not writable without root (CI).
     if [ -f /etc/profile.d/zz-setup-test-$$.sh ]; then

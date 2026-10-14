@@ -14,8 +14,9 @@
 # preselects, "vps.inputs" or "config.input" declare inputs); a "vps"
 # workspace's run.sh gets "up"/"down" as argument.
 #
-# Flags (workspace mode): --skip-<n> --with-<n> --only-<n> --down-<n>
-# --force-down -h. No flags on a terminal opens the menu.
+# Options (parsed with zz-args, after the repository; names are space- or
+# comma-separated): -w enable, -s skip, -d down, -o only these, -D down all,
+# -F force down, -S status only, -h. No options on a terminal opens the menu.
 #
 # Env: ZZ_SETUP_REF (default main; "@<ref>" wins), ZZ_SETUP_DIR (parent of the
 # checkout; default /opt as root, else ~/.local/share), ZZ_SETUP_URL_BASE
@@ -28,13 +29,17 @@ set -e
 
 . zz-colors
 
-[ -n "$1" ] || {
-    zz-log e "Usage: zz-setup <org>/<repo>[@<ref>] [args...]"
+# Repository first (getopts stops there), then everything else untouched in "$@".
+eval "$(zz-args "Fetch a GitHub org/repo, propose its workspaces and inputs, then run them" "$0" "$@" <<help
+- repo spec <org>/<repo>[@<ref>]: the repository to fetch and run
+# args rest Options for its workspaces (zz-setup <repo> -h), or arguments for its entrypoint
+help
+)"
+
+[ -n "$spec" ] || {
+    zz-log e "Usage: zz-setup <org>/<repo>[@<ref>] [options] (-h for help)"
     exit 1
 }
-
-spec=$1
-shift
 
 case "$spec" in
 *@*)
@@ -153,56 +158,43 @@ for n in $names; do
     fi
 done
 
-usage() {
-    echo "Usage: zz-setup <org>/<repo>[@<ref>] [options]"
-    echo "       (no options, on a terminal: interactive menu)"
-    echo
-    for n in $names; do
-        printf '  --with-%-20s %s\n' "$n" "$(desc_of "$n")"
-    done
-    echo
-    echo "Also: --skip-<n>, --only-<n> (repeatable, overrides skip/with), --down-<n>,"
-    echo "      --down-all, --force-down (allow --down-<n> while a dependent is up),"
-    echo "      --status (show each workspace's state and inputs, run nothing), -h"
-}
-
-force_down=0
-status_only=0
-only=
-nflags=0
-for arg in "$@"; do
-    nflags=$((nflags + 1))
-    case "$arg" in
-    --down-all) for n in $names; do state_set "$n" down; done ;;
-    --skip-* | --with-* | --only-* | --down-*)
-        kind=${arg#--}
-        kind=${kind%%-*}
-        n=${arg#--"$kind"-}
+apply_state() {
+    for n in $(printf '%s' "$2" | tr ',' ' '); do
         exists "$n" || {
-            zz-log e "Unknown option: $arg"
-            usage >&2
+            zz-log e "Unknown workspace: $n (available: $(printf '%s' "$names" | tr '\n' ' '))"
             exit 1
         }
-        case "$kind" in
-        skip) state_set "$n" skip ;;
-        with) state_set "$n" up ;;
-        down) state_set "$n" down ;;
-        only) only="$only $n" ;;
-        esac
-        ;;
-    --force-down) force_down=1 ;;
-    --status) status_only=1 ;;
-    -h | --help)
-        usage
-        exit 0
-        ;;
-    *)
-        zz-log e "Unknown option: $arg"
-        usage >&2
-        exit 1
-        ;;
-    esac
-done
+        state_set "$n" "$1"
+    done
+}
+
+eval "$(zz-args "$spec workspaces: $(printf '%s' "$names" | tr '\n' ' ')" "zz-setup $spec" "$@" <<help
+w names with_list Enable workspaces (space/comma-separated)
+s names skip_list Skip workspaces
+d names down_list Bring workspaces down
+o names only_list Run ONLY these workspaces (overrides -w/-s/-d)
+D - down_all Bring every workspace down
+F - force_flag Allow -d while a dependent stays enabled
+S - status_flag Show each workspace's state and inputs, run nothing
+# extra extra Unknown arguments (rejected)
+help
+)"
+[ "$#" -eq 0 ] || {
+    zz-log e "Unknown argument: $1 (zz-setup $spec -h)"
+    exit 1
+}
+
+force_down=0 status_only=0 only=
+[ -z "$force_flag" ] || force_down=1
+[ -z "$status_flag" ] || status_only=1
+nflags=$(printf '%s' "$with_list$skip_list$down_list$only_list$down_all$force_flag$status_flag" | wc -c)
+
+apply_state up "$with_list"
+apply_state skip "$skip_list"
+[ -z "$down_all" ] || apply_state down "$names"
+apply_state down "$down_list"
+apply_state up "$only_list"
+only=$(printf '%s' "$only_list" | tr ',' ' ')
 
 if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
     items=
@@ -256,7 +248,7 @@ if [ "$force_down" -ne 1 ]; then
             [ "$o" != "$n" ] && [ "$(state_get "$o")" = up ] || continue
             for dep in $(deps_of "$o"); do
                 [ "$dep" = "$n" ] || continue
-                zz-log e "[zz-setup] Refusing to bring '$n' down: '$o' depends on it and is still enabled. Also pass --down-$o, or --force-down."
+                zz-log e "[zz-setup] Refusing to bring '$n' down: '$o' depends on it and is still enabled. Also pass -d $o, or -F."
                 exit 1
             done
         done
@@ -421,7 +413,7 @@ run_step() {
     rc=0
     (cd "$d" && if [ -x run.sh ]; then ./run.sh $act; else bash run.sh $act; fi) || rc=$?
     if [ "$rc" -ne 0 ]; then
-        zz-log e "[zz-setup] Step '$1' failed (exit $rc). Fix it and re-run just this step with: zz-setup $spec --only-$1"
+        zz-log e "[zz-setup] Step '$1' failed (exit $rc). Fix it and re-run just this step with: zz-setup $spec -o $1"
         exit 1
     fi
     zz-log s "[zz-setup] === Done: $1 ($2) ==="
