@@ -8,19 +8,30 @@ and linked onto `PATH` as `zz-persist`.
 ## Usage
 
 ```sh
-zz-persist [-f file] [-p profile] <key> <value>
-zz-persist [-f file] [-p profile] -i "question" [-v default|-s default] <key>
+zz-persist [-f file] [-p profile] [-s] <key> <value>
+zz-persist [-f file] [-p profile] [-s] -i "question" [-v default] <key>
 ```
 
-At least one of `-f`/`-p` is required. Both are idempotent — running twice
+| Option | Meaning |
+| ------ | ------- |
+| `-f file` | upsert `KEY=VALUE` into this env-style file |
+| `-p profile` | upsert `export KEY=VALUE` into `/etc/profile.d/<profile>.sh` |
+| `-i question` | ask for the value (terminal only; otherwise the default is used as-is) |
+| `-v default` | default offered by `-i`; a value already stored for the key wins |
+| `-s` | the value is a secret (see below) |
+
+At least one of `-f`/`-p` is required. Both are idempotent: running twice
 replaces the existing entry instead of duplicating it.
 
-With `-i`, the value is asked for interactively instead of being passed on
-the command line (only when stdin is a terminal; otherwise the default is
-used as-is, so non-interactive/piped runs still work). If the key is
-already persisted, its current value is shown for reference and offered as
-the default — as-is with `-v`, masked as `***` with `-s` since it's a
-secret.
+**Secrets (`-s`).** The prompt is masked, the stored value is shown as `***`
+in the log, and the value is only written to an owner-only file: a target
+that others can read is refused with a warning. Nothing else is implied: a
+key is never treated as secret just because it already has a value.
+
+**Files it creates.** A new env file (`-f`) is always created owner-only
+(`600`), so a secret can be stored right away and later values can share the
+file. A new profile.d snippet is owner-only only for a secret; otherwise every
+shell must be able to source it.
 
 ## Dependencies
 

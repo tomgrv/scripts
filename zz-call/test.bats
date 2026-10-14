@@ -112,3 +112,62 @@ EOF
     grep -q '^DB_HOST=myhost$' custom.env
     [ ! -f .env ]
 }
+
+@test "zz-call reads vps.inputs from several package.json files (first definition wins)" {
+    cat > a.json <<'EOF'
+{"vps": {"inputs": {"A_VAR": {"description": "A?", "default": "adef"}, "SHARED": {"default": "first"}}}}
+EOF
+    cat > b.json <<'EOF'
+{"vps": {"inputs": {"B_VAR": {"default": "bdef"}, "SHARED": {"default": "second"}}}}
+EOF
+    run zz-call -n -p a.json:b.json
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"export A_VAR='adef'"* ]]
+    [[ "$output" == *"export B_VAR='bdef'"* ]]
+    [[ "$output" == *"export SHARED='first'"* ]]
+}
+
+@test "zz-call -n never prompts or persists defaults" {
+    run zz-call -n
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"export DB_HOST='localhost'"* ]]
+    [ ! -f .env ]
+}
+
+@test "zz-call reads a persisted value literally from the env file instead of prompting" {
+    echo 'DB_HOST=$(touch pwned)' >.env
+    run env DB_PASSWORD=p zz-call
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'export DB_HOST='"'"'$(touch pwned)'"'"* ]]
+    [ ! -e pwned ]
+}
+
+@test "zz-call -f chooses the env file and -e persists values already in the environment" {
+    run env DB_HOST="my host" DB_PASSWORD=p zz-call -e -f custom.env
+    [ "$status" -eq 0 ]
+    grep -qx 'DB_HOST=my host' custom.env
+    grep -qx 'DB_PASSWORD=p' custom.env
+    [ "$(stat -c %a custom.env)" = 600 ]
+}
+
+@test "zz-call -P also exports persisted values from a profile.d snippet" {
+    name=zz-call-test-$$
+    run env DB_HOST="a b" DB_PASSWORD=p zz-call -e -P "$name"
+    [ "$status" -eq 0 ]
+    # /etc/profile.d is not configurable and not writable without root (CI).
+    if [ -f "/etc/profile.d/$name.sh" ]; then
+        grep -qx "export DB_HOST='a b'" "/etc/profile.d/$name.sh"
+    fi
+    rm -f "/etc/profile.d/$name.sh"
+}
+
+@test "zz-call persists a secret input through zz-persist into an owner-only file" {
+    cat > package.json <<'EOF'
+{"vps": {"inputs": {"TOK": {"description": "Token", "secret": true, "default": "dflt"}}}}
+EOF
+    run zz-call </dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"export TOK='dflt'"* ]]
+    grep -qx 'TOK=dflt' .env
+    [ "$(stat -c %a .env)" = 600 ]
+}

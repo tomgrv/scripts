@@ -111,7 +111,7 @@ teardown() {
     tmp=$(mktemp)
     run zz-persist -f "$tmp" KEY supersecret
     [ "$status" -eq 0 ]
-    run zz-persist -f "$tmp" -i "Enter secret" -s ignored KEY </dev/null
+    run zz-persist -f "$tmp" -i "Enter secret" -s -v ignored KEY </dev/null
     [ "$status" -eq 0 ]
     [[ "$output" == *'***'* ]]
     [[ "$output" != *'supersecret'* ]]
@@ -122,7 +122,7 @@ teardown() {
 @test "zz-persist refuses to persist a secret into a non-owner-only file" {
     tmp=$(mktemp)
     chmod 644 "$tmp"
-    run zz-persist -f "$tmp" -i "Enter secret" -s ignored KEY </dev/null
+    run zz-persist -f "$tmp" -i "Enter secret" -s -v ignored KEY </dev/null
     [ "$status" -eq 0 ]
     [[ "$output" == *'refusing to persist secret'* ]]
     ! grep -q '^KEY=' "$tmp"
@@ -132,7 +132,7 @@ teardown() {
 @test "zz-persist persists a secret into an owner-only file" {
     tmp=$(mktemp)
     chmod 600 "$tmp"
-    run zz-persist -f "$tmp" -i "Enter secret" -s injected KEY </dev/null
+    run zz-persist -f "$tmp" -i "Enter secret" -s -v injected KEY </dev/null
     [ "$status" -eq 0 ]
     grep -q '^KEY=injected$' "$tmp"
     rm -f "$tmp"
@@ -151,4 +151,42 @@ teardown() {
     grep -q '^export KEY=second$' /etc/profile.d/zzptest2.sh
     ! grep -q '^export KEY=first$' /etc/profile.d/zzptest2.sh
     rm -f "$tmp" /etc/profile.d/zzptest2.sh
+}
+
+@test "zz-persist -s without -i refuses a secret value for a non-owner-only file" {
+    tmp=$(mktemp)
+    chmod 644 "$tmp"
+    run zz-persist -f "$tmp" -s KEY topsecret
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'refusing to persist secret'* ]]
+    ! grep -q '^KEY=' "$tmp"
+    chmod 600 "$tmp"
+    run zz-persist -f "$tmp" -s KEY topsecret
+    grep -qx 'KEY=topsecret' "$tmp"
+    rm -f "$tmp"
+}
+
+@test "zz-persist creates a new env file owner-only, so a secret can be stored right away" {
+    d=$(mktemp -d)
+    run zz-persist -f "$d/new.env" -s KEY topsecret
+    [ "$status" -eq 0 ]
+    [ "$(stat -c %a "$d/new.env")" = 600 ]
+    grep -qx 'KEY=topsecret' "$d/new.env"
+    rm -rf "$d"
+}
+
+@test "zz-persist only masks when -s is given" {
+    tmp=$(mktemp)
+    run zz-persist -f "$tmp" KEY plainvalue
+    run zz-persist -f "$tmp" -i "Enter value" KEY </dev/null
+    [[ "$output" == *'plainvalue'* ]]
+    rm -f "$tmp"
+}
+
+@test "zz-persist -i works when the target file does not exist yet" {
+    d=$(mktemp -d)
+    run zz-persist -f "$d/new.env" -i "Enter value" -v dflt KEY </dev/null
+    [ "$status" -eq 0 ]
+    grep -qx 'KEY=dflt' "$d/new.env"
+    rm -rf "$d"
 }
