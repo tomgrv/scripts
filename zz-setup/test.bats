@@ -212,3 +212,29 @@ make_workspace_remote() {
     fi
     rm -f /etc/profile.d/zz-setup-test-$$.sh
 }
+
+@test "zz-setup aborts before running anything when a required input is empty, and -s skips it" {
+    make_workspace_remote
+    jq '.vps.inputs.NEEDED = {"required": true}' "$WORK/ws/a/package.json" >"$WORK/ws/a/p.json"
+    mv "$WORK/ws/a/p.json" "$WORK/ws/a/package.json"
+    git -C "$WORK/ws" commit -q -am needed
+    git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
+    run zz-setup acme/ws -w a
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"NEEDED is required by 'a'"* ]]
+    [[ "$output" != *"a:up"* ]]
+    run env NEEDED=x zz-setup acme/ws -w a
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"a:up"* ]]
+    run zz-setup acme/ws -w b -s a
+    [ "$status" -eq 0 ]
+}
+
+@test "zz-setup runs a local checkout in place without cloning" {
+    make_workspace_remote
+    run zz-setup "$WORK/ws" -w a
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Using the local checkout in place"* ]]
+    [[ "$output" == *"a:up:bar"* ]]
+    [ ! -d "$WORK/dir/ws" ]
+}
