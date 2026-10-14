@@ -238,3 +238,65 @@ make_workspace_remote() {
     [[ "$output" == *"a:up:bar"* ]]
     [ ! -d "$WORK/dir/ws" ]
 }
+
+# Capabilities: "c" requires "net"; "a" and "b" both provide it.
+make_capability_remote() {
+    make_workspace_remote
+    cd "$WORK/ws"
+    mkdir c
+    echo '{"name":"@x/c","vps":{"order":3,"requires":["net"]}}' >c/package.json
+    printf '#!/bin/sh\necho "c:$1"\n' >c/run.sh
+    chmod +x c/run.sh
+    jq '.vps.provides = {"net": {"interface": "eth9"}}' a/package.json >a/p.json && mv a/p.json a/package.json
+    jq '.vps.provides = ["net"] | del(.dependencies)' b/package.json >b/p.json && mv b/p.json b/package.json
+    jq '.workspaces += ["c"]' package.json >p.json && mv p.json package.json
+    git add -A
+    git commit -q -m caps
+    git push -q "$WORK/remote/acme/ws.git" main
+    cd "$BATS_TEST_DIRNAME"
+}
+
+@test "zz-setup enables the first workspace providing a required capability" {
+    make_capability_remote
+    run zz-setup acme/ws -o c
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Also enabling 'a' (required by 'c')"* ]]
+    [[ "$output" == *"a:up"* && "$output" == *"c:up"* ]]
+    [[ "$output" != *"b:up"* ]]
+}
+
+@test "zz-setup accepts an already-enabled alternative provider instead of the default" {
+    make_capability_remote
+    run zz-setup acme/ws -s a -w b,c
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"Also enabling 'a'"* ]]
+    [[ "$output" == *"b:up"* && "$output" == *"c:up"* && "$output" != *"a:up"* ]]
+}
+
+@test "zz-setup treats ZZ_SETUP_PROVIDES as a capability supplied from outside" {
+    make_capability_remote
+    run env ZZ_SETUP_PROVIDES=net zz-setup acme/ws -o c
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"c:up"* && "$output" != *"a:up"* && "$output" != *"b:up"* ]]
+}
+
+@test "zz-setup refuses to bring a provider down while a requiring workspace stays up" {
+    make_capability_remote
+    run zz-setup acme/ws -w c -d a
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Refusing to bring 'a' down: 'c' depends on it"* ]]
+}
+
+@test "zz-setup fails when a required capability has no provider" {
+    make_workspace_remote
+    cd "$WORK/ws"
+    mkdir c
+    echo '{"name":"@x/c","vps":{"order":3,"requires":["nothing"]}}' >c/package.json
+    printf '#!/bin/sh\necho c\n' >c/run.sh && chmod +x c/run.sh
+    jq '.workspaces += ["c"]' package.json >p.json && mv p.json package.json
+    git add -A && git commit -q -m c && git push -q "$WORK/remote/acme/ws.git" main
+    cd "$BATS_TEST_DIRNAME"
+    run zz-setup acme/ws -o c
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"'c' requires 'nothing' but no workspace provides it"* ]]
+}

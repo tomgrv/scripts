@@ -38,6 +38,15 @@ Same flow as `vps-setup`:
    The env file is plain `KEY=VALUE`, created owner-only by `zz-persist` and read literally,
    never sourced. A required input still empty aborts the run before any step starts (set
    it, or skip the workspace with `-s`).
+   **Capabilities** decouple a workspace from whatever supplies what it needs: a
+   workspace declares `"vps": {"requires": ["private-access"]}` and any other
+   declares `"vps": {"provides": {"private-access": {...}}}` (an array of names
+   works too; an object lets the provider carry details for the others to read).
+   Enabling the requirer also enables the provider: one that is already
+   enabled, else the first by order that declares it. `-d` on a provider is
+   refused while a requirer stays up, like any dependency. A capability supplied
+   from outside the repo is declared with `ZZ_SETUP_PROVIDES=name[,name]`; one
+   nobody provides aborts the run.
 4. Runs `down` steps in reverse order, then `up` steps in order, each
    `run.sh` getting `up`/`down` (workspaces with a `vps` key only).
 
@@ -72,6 +81,7 @@ variables when there is no terminal.
 | `ZZ_SETUP_DIR`      | `/opt` as root, else `~/.local/share`             |
 | `ZZ_SETUP_URL_BASE` | `https://github.com`                              |
 | `ZZ_SETUP_ENTRY`    | forces entrypoint mode; path relative to checkout |
+| `ZZ_SETUP_PROVIDES` | unset; capabilities supplied from outside the repo (comma list) |
 | `ZZ_SETUP_ENV_FILE` | `/etc/<repo>.env` as root, else `<checkout>/.env` |
 | `ZZ_SETUP_PROFILE`  | unset; a name also exports persisted inputs from `/etc/profile.d/<name>.sh` |
 

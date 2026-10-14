@@ -157,8 +157,37 @@ names=$(printf '%s\n' "$list" | cut -f2)
 dir_of() { printf '%s\n' "$list" | awk -F'\t' -v n="$1" '$2 == n { print $3; exit }'; }
 exists() { [ -n "$(dir_of "$1")" ]; }
 desc_of() { jq -r '.description // empty' "$(dir_of "$1")/package.json"; }
+# Capabilities ("vps.provides" array or object keyed by name, "vps.requires"
+# array) decouple a workspace from whichever one supplies what it needs.
+# ZZ_SETUP_PROVIDES (comma list) declares capabilities supplied from outside.
+provides_of() { jq -r '(.vps.provides // []) | if type == "array" then .[] else keys[] end' "$(dir_of "$1")/package.json"; }
+requires_of() { jq -r '(.vps.requires // [])[]' "$(dir_of "$1")/package.json"; }
+provided_outside() { case ",$ZZ_SETUP_PROVIDES," in *,"$1",*) return 0 ;; esac; return 1; }
+
+# The workspace supplying capability $1: an enabled one if any, else the first
+# (by order) that declares it.
+provider_of() {
+    _first=
+    for _n in $names; do
+        for _c in $(provides_of "$_n"); do
+            [ "$_c" = "$1" ] || continue
+            [ "$(state_get "$_n")" != skip ] && {
+                printf '%s\n' "$_n"
+                return
+            }
+            [ -n "$_first" ] || _first=$_n
+        done
+    done
+    printf '%s\n' "$_first"
+}
+
+# What a workspace needs: its package dependencies, plus the provider of each
+# capability it requires.
 deps_of() {
     jq -r '((.dependencies // {}) + (.peerDependencies // {})) | keys[] | sub("^@[^/]*/"; "")' "$(dir_of "$1")/package.json"
+    for _r in $(requires_of "$1"); do
+        provided_outside "$_r" || provider_of "$_r"
+    done
 }
 var_of() { printf 'STATE_%s' "$1" | tr -c 'A-Za-z0-9_\n' '_'; }
 state_get() { eval "printf '%s' \"\${$(var_of "$1"):-skip}\""; }
@@ -235,6 +264,17 @@ if [ -n "$only" ]; then
     for n in $names; do state_set "$n" skip; done
     for n in $only; do state_set "$n" up; done
 fi
+
+# A required capability nobody supplies is fatal.
+for n in $names; do
+    [ "$(state_get "$n")" = up ] || continue
+    for c in $(requires_of "$n"); do
+        provided_outside "$c" || [ -n "$(provider_of "$c")" ] || {
+            zz-log e "[zz-setup] '$n' requires '$c' but no workspace provides it (ZZ_SETUP_PROVIDES=$c if it is supplied from outside)."
+            exit 1
+        }
+    done
+done
 
 # Enable what a selected workspace depends on.
 pass=0
