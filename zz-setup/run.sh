@@ -49,7 +49,18 @@ case "$spec" in
 *) ref=${ZZ_SETUP_REF:-main} ;;
 esac
 
+# A local checkout (./x, ../x, /x) is used in place: nothing is fetched.
+local=
 case "$spec" in
+/* | ./* | ../*)
+    [ -d "$spec" ] || {
+        zz-log e "No such directory: {Purple $spec}"
+        exit 1
+    }
+    local=$(cd "$spec" && pwd)
+    spec=$(basename "$local")
+    ref=local
+    ;;
 */*/* | /* | */ | */*[!A-Za-z0-9._-]* | *[!A-Za-z0-9._/-]*)
     zz-log e "Invalid repository {Purple $spec}, expected <org>/<repo>"
     exit 1
@@ -72,15 +83,18 @@ else
     parent=$HOME/.local/share
 fi
 dir="$parent/$repo"
+[ -z "$local" ] || dir=$local
 
 zz-log i "[zz-setup] repo=$spec ref=$ref dir=$dir"
-if [ -z "$ZZ_SETUP_REF" ] && [ "$ref" = main ] && [ "${spec#*@}" = "$spec" ]; then
+if [ -z "$local" ] && [ -z "$ZZ_SETUP_REF" ] && [ "$ref" = main ] && [ "${spec#*@}" = "$spec" ]; then
     zz-log w "[zz-setup] No ref given, using 'main'. A plain 'export' before 'sudo zz-setup' is dropped by sudo: put it on the sudo line, e.g. 'sudo ZZ_SETUP_REF=... zz-setup'."
 fi
 
-command -v git >/dev/null 2>&1 || zz-install git
+command -v git >/dev/null 2>&1 || [ -n "$local" ] || zz-install git
 
-if [ -d "$dir/.git" ]; then
+if [ -n "$local" ]; then
+    zz-log i "[zz-setup] Using the local checkout in place."
+elif [ -d "$dir/.git" ]; then
     zz-log i "[zz-setup] Updating existing checkout..."
     git -C "$dir" fetch --depth 1 origin -- "$ref"
     git -C "$dir" checkout -q -B "$ref" FETCH_HEAD
@@ -365,19 +379,23 @@ fi
 
 # Resolve every declared input with zz-call: the caller's environment (also
 # persisted), then the env file, then the default; nothing is prompted here.
-# Required-but-empty is a warning, like vps-setup.
+# A required input still empty aborts before anything runs.
 pkgs=
 for n in $up_names; do pkgs="$pkgs${pkgs:+:}$(dir_of "$n")/package.json"; done
 if [ -n "$pkgs" ]; then
     eval "$(zz-call -n -e -f "$envfile" ${ZZ_SETUP_PROFILE:+-P "$ZZ_SETUP_PROFILE"} -p "$pkgs")"
 fi
+missing=0
 while IFS="$us" read -r var desc req def owner secret; do
     [ -n "$var" ] || continue
-    [ "$(input_status "$var" "$req")" = required ] &&
-        zz-log w "[zz-setup] $var is required by '$owner' but is empty; that step will likely fail without it."
+    if [ "$(input_status "$var" "$req")" = required ]; then
+        zz-log e "[zz-setup] $var is required by '$owner' but is empty: set it, or skip the workspace with -s $owner."
+        missing=1
+    fi
 done <<EOF
 $all_inputs
 EOF
+[ "$missing" -eq 0 ] || exit 1
 
 # --- run: down in reverse order first, then up in order.
 run_step() {

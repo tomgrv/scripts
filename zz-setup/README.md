@@ -36,9 +36,13 @@ Same flow as `vps-setup`:
    on enter). Then `zz-call -n -e` resolves them all: the caller's
    environment first (also persisted), then the env file, then the default.
    The env file is plain `KEY=VALUE`, created owner-only by `zz-persist` and read literally,
-   never sourced. A required input left empty only warns.
+   never sourced. A required input still empty aborts the run before any step starts (set
+   it, or skip the workspace with `-s`).
 4. Runs `down` steps in reverse order, then `up` steps in order, each
    `run.sh` getting `up`/`down` (workspaces with a `vps` key only).
+
+A local checkout works too: `zz-setup ./path/to/repo -w a` (a path starting with
+`/`, `./` or `../`) is used in place, nothing is fetched.
 
 No workspaces (or `ZZ_SETUP_ENTRY` set): execs the repo's entrypoint with the
 remaining arguments — first match of `$ZZ_SETUP_ENTRY`, `<repo>-setup/run.sh`,
