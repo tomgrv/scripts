@@ -60,6 +60,21 @@ teardown() {
     rm -f "$tmp"
 }
 
+@test "zz-persist accepts a single-letter or underscore-led key and rejects the rest" {
+    tmp=$(mktemp)
+    run zz-persist -f "$tmp" A one
+    [ "$status" -eq 0 ]
+    run zz-persist -f "$tmp" _x two
+    [ "$status" -eq 0 ]
+    grep -qx 'A=one' "$tmp"
+    grep -qx '_x=two' "$tmp"
+    run zz-persist -f "$tmp" "A-B" three
+    [ "$status" -ne 0 ]
+    run zz-persist -f "$tmp" "9x" four
+    [ "$status" -ne 0 ]
+    rm -f "$tmp"
+}
+
 @test "zz-persist requires at least one of -f/-p" {
     run zz-persist FOO bar
     [ "$status" -ne 0 ]
