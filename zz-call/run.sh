@@ -87,8 +87,7 @@ _parse_entry() {
     secret=$(printf '%s' "$1" | jq -r '.secret // false')
 
     case "$var" in
-    [A-Za-z_][A-Za-z0-9_]*) ;;
-    *)
+    "" | [0-9]* | *[!A-Za-z0-9_]*)
         zz-log e "Invalid variable name in {U $pkgs}: {Purple $var}"
         exit 1
         ;;

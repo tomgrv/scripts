@@ -36,7 +36,7 @@ for json in "$workspace"/*.json; do
     # `set -e` would otherwise abort the whole script the instant this
     # command substitution's underlying command exits non-zero, before the
     # status check below ever runs -- guard it with an if so a failing test
-    # script is handled here instead of killing run-workspace-tests outright.
+    # script is handled here instead of killing ws-test outright.
     if output=$(cd "$workspace" && sh -c "$test_cmd" 2>&1); then
         status=0
     else

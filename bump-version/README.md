@@ -6,7 +6,7 @@ Update version numbers in files listed under `bump-version.files` in
 `package.json` — root files (type `json`/`plain-text`) and/or per-workspace
 files (type `json@ws`/`plain-text@ws`), the latter restricted to workspaces
 affected by a given commit range in `-m`/minimal mode (via
-[`git-workspaces`](../git-workspaces)).
+[`ws-list`](../ws-list)).
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `bump-version`.

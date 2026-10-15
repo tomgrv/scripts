@@ -1,5 +1,23 @@
 # Changelog
 
+## 3.0.0 (2026-10-15)
+
+*Commits from: v2.2.0..HEAD*
+
+### 💥 BREAKING CHANGES
+
+- git-workspaces (and the `git workspaces` subcommand) and
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v2.2.0' into develop
+### 📦 scripts-zz-persist changes
+
+#### Bug Fixes
+
+- 🐛 accept single-letter keys (#73)
+
 ## 2.2.0 (2026-10-14)
 
 *Commits from: v2.1.0..HEAD*
@@ -701,5 +719,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-10-14 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-10-15 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*

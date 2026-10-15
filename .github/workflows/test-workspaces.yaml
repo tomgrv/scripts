@@ -2,66 +2,92 @@
 
 name: Test workspaces
 
+# A draft pull request only runs the workspaces its changes impact (the ones
+# owning a changed file, and what depends on them - see ws-impacted); marking it
+# ready for review, any push to a non-draft pull request and the long-lived
+# branches run every workspace.
 on:
-    push:
-        paths:
-            - '*/package.json'
-    pull_request:
-        paths:
-            - '*/package.json'
+  push:
+    branches: [main, develop]
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
 
 permissions:
-    contents: read
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-    list-packages:
-        runs-on: ubuntu-latest
-        outputs:
-            packages: ${{ steps.list.outputs.packages }}
-        steps:
-            - uses: actions/checkout@v7
+  list-packages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      packages: ${{ steps.list.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The pull request merge commit and its base-side parent, to diff them.
+          fetch-depth: 2
 
-            - name: List packages
-              id: list
-              uses: tomgrv/actions/list-packages@v4
-              with:
-                  require-repository: 'false'
+      # ws-impacted (and ws-list) come from this branch's own ref, so a change to them is tested by itself.
+      - name: Install ws-impacted
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft
+        uses: tomgrv/actions/setup-scripts@v4
+        with:
+          scripts: ws-impacted
+          scripts-ref: ${{ github.head_ref }}
 
-    test:
-        needs: list-packages
-        if: needs.list-packages.outputs.packages != '[]'
-        runs-on: ubuntu-latest
-        strategy:
-            fail-fast: false
-            matrix:
-                package: ${{ fromJson(needs.list-packages.outputs.packages) }}
-        steps:
-            - uses: actions/checkout@v7
+      - name: Scope to the impacted workspaces (draft pull requests)
+        id: scope
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft
+        run: echo "filter=$(ws-impacted -r HEAD^1..HEAD)" >> "$GITHUB_OUTPUT"
 
-            - name: Setup Bats
-              uses: bats-core/bats-action@4.0.0
-              with:
-                  github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: List packages
+        id: list
+        uses: tomgrv/actions/list-packages@v4
+        with:
+          require-repository: 'false'
+          filter: ${{ steps.scope.outputs.filter }}
 
-            - name: Run workspace tests
-              uses: tomgrv/actions/run-workspace-tests@v4
-              with:
-                  workspace: ${{ matrix.package.path }}
+  test:
+    needs: list-packages
+    if: needs.list-packages.outputs.packages != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJson(needs.list-packages.outputs.packages) }}
+    steps:
+      - uses: actions/checkout@v7
 
-    repo-tests:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v7
+      - name: Setup Bats
+        uses: bats-core/bats-action@4.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Setup Bats
-              uses: bats-core/bats-action@4.0.0
-              with:
-                  github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run workspace tests
+        uses: tomgrv/actions/run-workspace-tests@v4
+        with:
+          workspace: ${{ matrix.package.path }}
 
-            - name: Run repo-wide tests
-              run: |
-                  if compgen -G ".repo/tests/*.bats" > /dev/null; then
-                    bats .repo/tests/
-                  else
-                    echo "No repo-wide tests under .repo/tests/, skipping."
-                  fi
+  repo-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Bats
+        uses: bats-core/bats-action@4.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run repo-wide tests
+        run: |
+          if compgen -G "tests/*.bats" > /dev/null; then
+            bats tests/
+          else
+            echo "No repo-wide tests under tests/, skipping."
+          fi

@@ -1,7 +1,7 @@
 {
   "name": "@tomgrv/scripts",
   "description": "Reusable POSIX shell scripts shared across tomgrv devcontainer-features and vps",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "config": {
     "commitizen": {
       "path": "@commitlint/cz-commitlint"
@@ -223,12 +223,13 @@
     "git-release-hotfix",
     "git-release-prod",
     "git-unset",
-    "git-workspaces",
+    "ws-impacted",
+    "ws-list",
     "gv",
     "bump-tag",
     "bump-changelog",
     "bump-version",
-    "run-workspace-tests",
+    "ws-test",
     "php-list-changed"
   ]
 }

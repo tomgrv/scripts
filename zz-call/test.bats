@@ -38,6 +38,16 @@ teardown() {
     grep -q '^DB_PASSWORD=secret123$' .env
 }
 
+@test "zz-call accepts a single-letter variable name and rejects an invalid one" {
+    printf '{"config":{"input":[{"var":"X","question":"x?"}]}}' > package.json
+    run env X=1 zz-call
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"export X='1'"* ]]
+    printf '{"config":{"input":[{"var":"9X","question":"x?"}]}}' > package.json
+    run env zz-call
+    [ "$status" -ne 0 ]
+}
+
 @test "zz-call does not prompt or persist when vars are already set" {
     run env DB_HOST=envhost DB_PASSWORD=envpass zz-call
     [ "$status" -eq 0 ]

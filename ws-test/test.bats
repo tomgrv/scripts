@@ -14,73 +14,73 @@ teardown() {
     teardown_scripts_path
 }
 
-@test "run-workspace-tests is installed on PATH and syntactically valid" {
-    command -v run-workspace-tests
+@test "ws-test is installed on PATH and syntactically valid" {
+    command -v ws-test
     run sh -n "$BATS_TEST_DIRNAME/run.sh"
     [ "$status" -eq 0 ]
 }
 
-@test "run-workspace-tests -h prints usage and exits non-zero" {
-    run run-workspace-tests -h
+@test "ws-test -h prints usage and exits non-zero" {
+    run ws-test -h
     [ "$status" -ne 0 ]
     [[ "$output" == *"Usage:"* ]]
 }
 
-@test "run-workspace-tests errors with no arguments" {
-    run run-workspace-tests
+@test "ws-test errors with no arguments" {
+    run ws-test
     [ "$status" -ne 0 ]
 }
 
-@test "run-workspace-tests errors when the workspace directory does not exist" {
-    run run-workspace-tests ./missing-workspace
+@test "ws-test errors when the workspace directory does not exist" {
+    run ws-test ./missing-workspace
     [ "$status" -ne 0 ]
 }
 
-@test "run-workspace-tests silently skips a workspace with no root json file" {
+@test "ws-test silently skips a workspace with no root json file" {
     mkdir ws
-    run run-workspace-tests ws
+    run ws-test ws
     [ "$status" -eq 0 ]
     [[ "$output" != *"No "* ]]
     [[ "$output" != *"Running"* ]]
 }
 
-@test "run-workspace-tests warns and succeeds when scripts.test is absent" {
+@test "ws-test warns and succeeds when scripts.test is absent" {
     mkdir ws
     echo '{"name":"ws"}' >ws/package.json
-    run run-workspace-tests ws
+    run ws-test ws
     [ "$status" -eq 0 ]
     [[ "$output" == *"No"* ]]
 }
 
-@test "run-workspace-tests propagates a non-zero exit from the test script" {
+@test "ws-test propagates a non-zero exit from the test script" {
     mkdir ws
     echo '{"scripts":{"test":"echo boom && exit 3"}}' >ws/package.json
-    run run-workspace-tests ws
+    run ws-test ws
     [ "$status" -ne 0 ]
     [[ "$output" == *"boom"* ]]
 }
 
-@test "run-workspace-tests errors when the test script produces no output" {
+@test "ws-test errors when the test script produces no output" {
     mkdir ws
     echo '{"scripts":{"test":"true"}}' >ws/package.json
-    run run-workspace-tests ws
+    run ws-test ws
     [ "$status" -ne 0 ]
     [[ "$output" == *"no output"* ]]
 }
 
-@test "run-workspace-tests passes on the happy path" {
+@test "ws-test passes on the happy path" {
     mkdir ws
     echo '{"scripts":{"test":"echo all good"}}' >ws/package.json
-    run run-workspace-tests ws
+    run ws-test ws
     [ "$status" -eq 0 ]
     [[ "$output" == *"all good"* ]]
 }
 
-@test "run-workspace-tests runs the script from within the workspace directory" {
+@test "ws-test runs the script from within the workspace directory" {
     mkdir ws
     echo 'marker' >ws/marker.txt
     echo '{"scripts":{"test":"cat marker.txt"}}' >ws/package.json
-    run run-workspace-tests ws
+    run ws-test ws
     [ "$status" -eq 0 ]
     [[ "$output" == *"marker"* ]]
 }
