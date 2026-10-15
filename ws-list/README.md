@@ -1,12 +1,11 @@
 <!-- @format -->
 
-# git-workspaces
+# ws-list
 
 List workspace directories and affected workspaces.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
-and linked onto `PATH` as `git-workspaces` (invoke via `git workspaces`, since
-git resolves any `git-*` executable on `PATH` as a subcommand).
+and linked onto `PATH` as `ws-list`.
 
 ## Dependencies
 

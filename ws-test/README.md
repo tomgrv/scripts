@@ -1,15 +1,15 @@
-# run-workspace-tests
+# ws-test
 
 Run a workspace's `.scripts.test` entry (from each root `*.json` file) as its
 test suite.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
-and linked onto `PATH` as `run-workspace-tests`.
+and linked onto `PATH` as `ws-test`.
 
 ## Usage
 
 ```sh
-run-workspace-tests <workspace>
+ws-test <workspace>
 ```
 
 For every root-level `*.json` file directly under `<workspace>` (not

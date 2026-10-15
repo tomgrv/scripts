@@ -1,0 +1,16 @@
+{
+  "name": "@tomgrv/scripts-ws-impacted",
+  "version": "1.0.0",
+  "description": "Print the list-packages filter selecting the workspaces impacted by changed files",
+  "bin": {
+    "ws-impacted": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-ws-list": "*",
+    "@tomgrv/scripts-zz-args": "*"
+  },
+  "private": true
+}
