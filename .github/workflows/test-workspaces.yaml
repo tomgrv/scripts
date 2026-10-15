@@ -31,13 +31,13 @@ jobs:
           # The pull request merge commit and its base-side parent, to diff them.
           fetch-depth: 2
 
-      # ws-impacted comes from this branch, so a change to it is tested by itself.
+      # ws-impacted (and ws-list) come from this branch's own ref, so a change to them is tested by itself.
       - name: Install ws-impacted
         if: github.event_name == 'pull_request' && github.event.pull_request.draft
         uses: tomgrv/actions/setup-scripts@v4
         with:
           scripts: ws-impacted
-          scripts-branch: ${{ github.head_ref }}
+          scripts-ref: ${{ github.head_ref }}
 
       - name: Scope to the impacted workspaces (draft pull requests)
         id: scope
