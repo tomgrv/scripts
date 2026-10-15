@@ -34,7 +34,7 @@ jobs:
       # ws-impacted (and ws-list) come from this branch's own ref, so a change to them is tested by itself.
       - name: Install ws-impacted
         if: github.event_name == 'pull_request' && github.event.pull_request.draft
-        uses: tomgrv/actions/setup-scripts@v4
+        uses: tomgrv/actions/setup-scripts@v5
         with:
           scripts: ws-impacted
           scripts-ref: ${{ github.head_ref }}
@@ -46,7 +46,7 @@ jobs:
 
       - name: List packages
         id: list
-        uses: tomgrv/actions/list-packages@v4
+        uses: tomgrv/actions/list-packages@v5
         with:
           require-repository: 'false'
           filter: ${{ steps.scope.outputs.filter }}
@@ -69,7 +69,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run workspace tests
-        uses: tomgrv/actions/run-workspace-tests@v4
+        uses: tomgrv/actions/run-workspace-tests@v5
         with:
           workspace: ${{ matrix.package.path }}
 
