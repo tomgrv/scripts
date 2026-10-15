@@ -125,10 +125,10 @@ update_version_files() {
             # is being bumped -- multiple @ws entries in bump-version.files
             # share the same range, so cache the lookup (and its "no
             # workspaces affected" warning) per range instead of repeating
-            # both the git-workspaces call and the warning for every entry.
+            # both the ws-list call and the warning for every entry.
             if [ "$range" != "${_workspace_list_range:-}" ]; then
                 _workspace_list_range="$range"
-                _workspace_list_cache=$(git workspaces -r "$range" 2>/dev/null || echo "")
+                _workspace_list_cache=$(ws-list -r "$range" 2>/dev/null || echo "")
                 if [ -z "$_workspace_list_cache" ]; then
                     zz-log w "No workspaces affected by commits in range $range"
                 else
@@ -141,7 +141,7 @@ update_version_files() {
                 return 0
             fi
         else
-            workspace_list=$(git workspaces 2>/dev/null || echo "")
+            workspace_list=$(ws-list 2>/dev/null || echo "")
         fi
 
         if [ -n "$workspace_list" ] && [ -n "$filename" ]; then

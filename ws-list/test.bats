@@ -18,51 +18,51 @@ teardown() {
     teardown_scripts_path
 }
 
-@test "git-workspaces is installed on PATH and syntactically valid" {
-    command -v git-workspaces
+@test "ws-list is installed on PATH and syntactically valid" {
+    command -v ws-list
     run sh -n "$BATS_TEST_DIRNAME/run.sh"
     [ "$status" -eq 0 ]
 }
 
-@test "git-workspaces -h prints usage and exits non-zero" {
-    run git-workspaces -h
+@test "ws-list -h prints usage and exits non-zero" {
+    run ws-list -h
     [ "$status" -ne 0 ]
     [[ "$output" == *"Usage:"* ]]
 }
 
-@test "git-workspaces falls back to listing all top-level directories with no package.json" {
+@test "ws-list falls back to listing all top-level directories with no package.json" {
     mkdir -p dir1 dir2
     touch file.txt
-    run git-workspaces
+    run ws-list
     [ "$status" -eq 0 ]
     [[ "$output" == *"./dir1"* ]]
     [[ "$output" == *"./dir2"* ]]
 }
 
-@test "git-workspaces lists directories matching package.json workspaces globs" {
+@test "ws-list lists directories matching package.json workspaces globs" {
     mkdir -p packages/a packages/b other
     touch packages/a/f packages/b/f other/f
     cat >package.json <<'EOF'
 {"workspaces": ["packages/*"]}
 EOF
-    run git-workspaces
+    run ws-list
     [ "$status" -eq 0 ]
     [[ "$output" == *"packages/a"* ]]
     [[ "$output" == *"packages/b"* ]]
     [[ "$output" != *"./other"* ]]
 }
 
-@test "git-workspaces lists a literal (non-glob) workspace entry" {
+@test "ws-list lists a literal (non-glob) workspace entry" {
     mkdir -p libs/core
     cat >package.json <<'EOF'
 {"workspaces": ["libs/core"]}
 EOF
-    run git-workspaces
+    run ws-list
     [ "$status" -eq 0 ]
     [[ "$output" == *"libs/core"* ]]
 }
 
-@test "git-workspaces -r reports only workspaces touched within a commit range" {
+@test "ws-list -r reports only workspaces touched within a commit range" {
     mkdir -p packages/a packages/b
     cat >package.json <<'EOF'
 {"workspaces": ["packages/*"]}
@@ -75,13 +75,13 @@ EOF
     git add -A
     git commit -q -m "touch a"
 
-    run git-workspaces -r HEAD~1..HEAD
+    run ws-list -r HEAD~1..HEAD
     [ "$status" -eq 0 ]
     [[ "$output" == *"packages/a"* ]]
     [[ "$output" != *"packages/b"* ]]
 }
 
-@test "git-workspaces -r prints nothing when the range touches no workspace" {
+@test "ws-list -r prints nothing when the range touches no workspace" {
     mkdir -p packages/a
     cat >package.json <<'EOF'
 {"workspaces": ["packages/*"]}
@@ -91,7 +91,7 @@ EOF
     git commit -q -m "initial"
     git commit -q --allow-empty -m "empty change"
 
-    run git-workspaces -r HEAD~1..HEAD
+    run ws-list -r HEAD~1..HEAD
     [ "$status" -eq 0 ]
     [ -z "$output" ]
 }

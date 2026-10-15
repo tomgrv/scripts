@@ -260,6 +260,14 @@ flowchart TD
 
 See each folder's own `README.md` for its usage line.
 
+## Workspace scripts (`ws-*`)
+
+| Script        | Purpose                                                                       |
+| ------------- | ----------------------------------------------------------------------------- |
+| `ws-list`     | list workspace directories and affected workspaces                            |
+| `ws-impacted` | print the `list-packages` filter for the workspaces impacted by changed files |
+| `ws-test`     | run a workspace's `.scripts.test` entry as its test suite                     |
+
 ## Git utilities
 
 Migrated from `tomgrv/devcontainer-features`'s `gitutils` feature (which
@@ -313,7 +321,6 @@ lifecycle — only the script implementations moved.
 | `git-release-hotfix`        | start a hotfix branch via Git Flow                                       |
 | `git-release-prod`          | finish a release/hotfix branch via Git Flow                              |
 | `git-unset`                 | unset all git config keys starting with a given prefix                   |
-| `git-workspaces`            | list workspace directories and affected workspaces                       |
 | `php-list-changed`          | list PHP test parts (core/modules/packages) affected by a change         |
 
 ## Usage
@@ -360,11 +367,11 @@ job for the whole repo.
 
 A **draft** pull request only runs the workspaces its changes impact: the ones
 owning a changed file plus, transitively, the workspaces depending on them
-(`.github/scripts/impacted-workspaces.sh`; Markdown impacts nobody, and a changed
+([`ws-impacted`](ws-impacted/README.md); Markdown impacts nobody, and a changed
 file owned by no workspace — root manifest, `tests/`, workflows — impacts
 everybody). Marking it ready for review, pushing to a non-draft pull request, and
-pushes to `main`/`develop` run every workspace. The workflow and the script are
-the copies deployed by `tomgrv/devcontainer-features`' `common-utils` stub.
+pushes to `main`/`develop` run every workspace. The workflow is the copy deployed
+by `tomgrv/devcontainer-features`' `common-utils` stub.
 
 ## Upgrading
 
