@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-ws-list",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "description": "List workspace directories and affected workspaces",
   "bin": {
     "ws-list": "run.sh"
