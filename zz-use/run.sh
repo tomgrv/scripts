@@ -160,15 +160,6 @@ _have() {
     return 1
 }
 
-# True unless <tool>'s config entry carries a "check" shell command that
-# fails on the current PATH — i.e. a same-named but wrong tool (e.g. the
-# python yq standing in for mikefarah/yq) doesn't count as installed.
-_check_ok() {
-    [ -f "$ZZ_USE_CONFIG" ] && _ensure_jq || return 0
-    _c_cmd=$(jq -r --arg t "$1" '.[$t].check // empty' "$ZZ_USE_CONFIG" 2>/dev/null)
-    [ -z "$_c_cmd" ] || sh -c "$_c_cmd" >/dev/null 2>&1
-}
-
 # Run a command as root: directly, through sudo, or fail.
 _as_root() {
     if [ "$(id -u)" = "0" ]; then
@@ -667,7 +658,7 @@ _use() {
         # edits to a sibling checkout are picked up).
         if [ "$FORCE" -eq 0 ] || { [ "${tool#zz-}" = "$tool" ] && [ "$tool" != "zz" ]; }; then
             if [ -z "$ref" ] && [ "$origin" = "$ZZ_ORIGIN" ]; then
-                if _have "$tool" && _check_ok "$tool"; then
+                if _have "$tool"; then
                     zz-log d "{Purple $tool} already available"
                     continue
                 fi
