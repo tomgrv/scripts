@@ -20,7 +20,10 @@ Declared in `package.json` `peerDependencies` (installed recursively,
 from the same origin/ref as the script when it ships them). npm packages
 a script only runs through `npx`/`zz-npx` go in `dependencies`, which
 `zz-use` ignores. `config/zz-use.json` entries may carry a `sha256` (a
-single hash, or an object keyed `<os>_<arch>`) verified before install.
+single hash, or an object keyed `<os>_<arch>`) verified before install,
+and a `check` shell command: a same-named tool already on `PATH` only
+counts as installed when it succeeds (e.g. `yq` must be mikefarah's, not
+the python one).
 
 Environment: `ZZ_CACHE_TTL` (minutes, default 1440, `0` = never) sets
 when a cached archive for a mutable ref (branch, npm `latest`) is
@@ -33,6 +36,7 @@ bats test.bats
 ```
 
 - skips a tool already on PATH, reporting "already available"
+- reinstalls a tool on PATH whose config `check` command fails
 - requires at least one tool argument
 - prints its usage error even when zz-log isn't resolvable yet
 - rejects an unknown option instead of treating it as a tool name

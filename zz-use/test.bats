@@ -455,3 +455,15 @@ _sha_config() {
     [ ! -e "$bindir/fake-dl-tool" ]
     rm -rf "$payload" "$cfg" "$bindir"
 }
+
+@test "zz-use reinstalls a tool on PATH whose config check fails" {
+    _sha_payload
+    cfg=$(mktemp)
+    printf '{"sh":{"url":"file://%s","archive":"raw","check":"false"}}' "$payload" >"$cfg"
+    bindir=$(mktemp -d)
+    zz_use_bin=$(command -v zz-use)
+    run env ZZ_USE_CONFIG="$cfg" INSTALL_BIN_DIR="$bindir" PATH="$TEST_BIN:/usr/bin:/bin" "$zz_use_bin" sh
+    [ "$status" -eq 0 ]
+    [[ "$("$bindir/sh")" == "downloaded" ]]
+    rm -rf "$payload" "$cfg" "$bindir"
+}
