@@ -11,7 +11,7 @@
 #
 # Runnable workspace: has a run.sh and an "engines.zz-setup" field in its
 # package.json (the run context, any value such as "*"). Its settings live in
-# "config.zz": "order" sorts, "default" preselects, "inputs" (or "config.input")
+# "config": "order" sorts, "default" preselects, "inputs" (or "config.input")
 # declare inputs. Its run.sh gets "up"/"down" as argument.
 #
 # Options (parsed with zz-args, after the repository; names are space- or
@@ -143,7 +143,7 @@ done
 list=
 for w in $cands; do
     [ "$(jq -r '(.engines // {}) | has("zz-setup")' "$w/package.json")" = true ] || continue
-    list="$list$(jq -r --arg d "$w" '[(.config.zz.order // 1000), (.name | sub("^@[^/]*/"; "")), $d] | @tsv' "$w/package.json")
+    list="$list$(jq -r --arg d "$w" '[(.config.order // 1000), (.name | sub("^@[^/]*/"; "")), $d] | @tsv' "$w/package.json")
 "
 done
 list=$(printf '%s' "$list" | sort -n -k1,1)
@@ -161,7 +161,7 @@ state_get() { eval "printf '%s' \"\${$(var_of "$1"):-skip}\""; }
 state_set() { eval "$(var_of "$1")=\$2"; }
 
 for n in $names; do
-    if [ "$(jq -r '.config.zz.default // false' "$(dir_of "$n")/package.json")" = true ]; then
+    if [ "$(jq -r '.config.default // false' "$(dir_of "$n")/package.json")" = true ]; then
         state_set "$n" up
     else
         state_set "$n" skip
@@ -211,7 +211,7 @@ if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
     set --
     for n in $names; do
         mark=" "
-        [ "$(jq -r '.config.zz.default // false' "$(dir_of "$n")/package.json")" = true ] && mark="*"
+        [ "$(jq -r '.config.default // false' "$(dir_of "$n")/package.json")" = true ] && mark="*"
         set -- "$@" "$n:$(state_get "$n")=$mark $(printf '%-20s' "$n") $(desc_of "$n")"
     done
     rc=0
@@ -274,10 +274,10 @@ for n in $names; do [ "$(state_get "$n")" = up ] && up_names="$up_names $n"; don
 
 # --- inputs: "VAR<US>description<US>required<US>default<US>name<US>secret"
 # (US = \037; a whitespace separator like tab would collapse empty fields),
-# from "config.zz.inputs" (object keyed by var) and "config.input" (zz-call array).
+# from "config.inputs" (object keyed by var) and "config.input" (zz-call array).
 inputs_of() {
     jq -r --arg n "$1" '
-      ((.config.zz.inputs // {}) | to_entries[]
+      ((.config.inputs // {}) | to_entries[]
          | [.key, (.value.description // ""), ((.value.required // false) | tostring), (.value.default // ""), $n, ((.value.secret // false) | tostring)] | join("\u001f")),
       ((.config.input // [])[]
          | [.var, (.question // ""), "false", (.default // ""), $n, "false"] | join("\u001f"))' "$(dir_of "$1")/package.json"

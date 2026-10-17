@@ -21,13 +21,11 @@ zz-setup acme/tool -o a            # run only a
    checkout). A local path (`./x`, `../x`, `/x`) is used in place.
 2. Runnable workspaces are the root `package.json` workspaces that have a
    `run.sh` and an `engines.zz-setup` field (the run context, any value such
-   as `"*"`). Their settings live under `config.zz`:
+   as `"*"`). Their settings live under `config`:
 
    ```json
    "engines": { "zz-setup": "*" },
-   "config": {
-     "zz": { "order": 1, "default": true, "inputs": { "FOO": { "default": "bar" } } }
-   }
+   "config": { "order": 1, "default": true, "inputs": { "FOO": { "default": "bar" } } }
    ```
 
    `order` sorts, `default` preselects, `inputs` (or `config.input`) declares

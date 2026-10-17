@@ -28,7 +28,7 @@
 # - "output": which resolved vars to print as `export <as>='value'`.
 #   Defaults to "input" when omitted.
 #
-# Also accepted: "config.zz.inputs" (object keyed by var: description, default,
+# Also accepted: "config.inputs" (object keyed by var: description, default,
 # secret) next to "config.input", several package.json files at once
 # (-p a.json:b.json), and a persisted-value lookup in the env file (read
 # literally, never sourced): environment first, then the file, then a prompt.
@@ -65,14 +65,14 @@ pkg=$first
 
 file="${envfile:-$(jq -r '.config.file // ".env"' "$first")}"
 
-# Collect input entries from every package: config.input plus config.zz.inputs
+# Collect input entries from every package: config.input plus config.inputs
 # (normalised to the same shape), first definition of a var wins.
 _collect() {
     for _p in $(printf '%s' "$pkgs" | tr ':' ' '); do
         jq -c "$1" "$_p"
     done | jq -c -s 'reduce .[] as $e ([]; if any(.[]; .var == $e.var) then . else . + [$e] end) | .[]'
 }
-_inputs='(.config.input // [])[], ((.config.zz.inputs // {}) | to_entries[] | {var: .key, question: .value.description, default: .value.default, secret: .value.secret})'
+_inputs='(.config.input // [])[], ((.config.inputs // {}) | to_entries[] | {var: .key, question: .value.description, default: .value.default, secret: .value.secret})'
 _input_entries=$(_collect "$_inputs")
 _output_entries=$(_collect '(.config.output // [])[]')
 [ -n "$_output_entries" ] || _output_entries=$_input_entries
