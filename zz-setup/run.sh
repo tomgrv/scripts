@@ -11,7 +11,8 @@
 #
 # Runnable workspace: has a "bin" and an "engines.zz-setup" field in its
 # package.json (the run context, any value such as "*"). Its optional "config"
-# holds the settings: "order" sorts, "default" preselects, "inputs" (or
+# holds the settings: "order" sorts, "default" preselects, "conflicts" lists
+# workspaces that cannot be enabled together with it, "inputs" (or
 # "config.input") declare inputs. Its (first) bin gets "up"/"down" as argument.
 #
 # Options (parsed with zz-args, after the repository; names are space- or
@@ -160,6 +161,9 @@ desc_of() { jq -r '.description // empty' "$(dir_of "$1")/package.json"; }
 deps_of() {
     jq -r '((.dependencies // {}) + (.peerDependencies // {})) | keys[] | sub("^@[^/]*/"; "")' "$(dir_of "$1")/package.json"
 }
+conflicts_of() {
+    jq -r '(.config.conflicts // [])[] | sub("^@[^/]*/"; "")' "$(dir_of "$1")/package.json"
+}
 var_of() { printf 'STATE_%s' "$1" | tr -c 'A-Za-z0-9_\n' '_'; }
 state_get() { eval "printf '%s' \"\${$(var_of "$1"):-skip}\""; }
 state_set() { eval "$(var_of "$1")=\$2"; }
@@ -254,6 +258,19 @@ while [ "$pass" -lt 5 ]; do
     [ "$changed" -eq 1 ] || break
     pass=$((pass + 1))
 done
+
+# Refuse two enabled workspaces where one declares the other incompatible,
+# before anything runs (checked after the dependencies above were enabled).
+if [ "$status_only" -ne 1 ]; then
+    for n in $names; do
+        [ "$(state_get "$n")" = up ] || continue
+        for c in $(conflicts_of "$n"); do
+            exists "$c" && [ "$(state_get "$c")" = up ] || continue
+            zz-log e "[zz-setup] '$n' conflicts with '$c' and both are enabled. Skip one of them: -s $c, or -s $n."
+            exit 1
+        done
+    done
+fi
 
 if [ "$force_down" -ne 1 ]; then
     for n in $names; do
