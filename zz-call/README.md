@@ -24,7 +24,7 @@ zz-call [-p package.json[:more.json]] [-f envfile] [-P profile] [-n] [-e] [comma
 | `-n` | never prompt: a missing var falls back to its `default`, not persisted |
 | `-e` | also persist values already set in the environment |
 
-Besides `config.input`, `vps.inputs` (an object keyed by var, with
+Besides `config.input`, `config.inputs` (an object keyed by var, with
 `description`, `default`, `secret`) is read. Resolution order: environment,
 then the env file (read literally, never sourced), then a prompt. A `secret`
 input is only flagged to `zz-persist` (`-s`), which asks for it masked and
@@ -104,7 +104,7 @@ bats test.bats
 - a missing var's default is offered, and persisted when accepted
 - `-p` points at a non-default `package.json` path
 - `config.file` redirects persistence to a non-`.env` target
-- `vps.inputs` from several package.json files, first definition wins
+- `config.inputs` from several package.json files, first definition wins
 - `-n` never prompts or persists defaults; the env file is read literally
 - `-f`/`-e`/`-P` choose the file, persist environment values, export via profile.d
 - a `secret` input is asked and persisted by `zz-persist -s` into an owner-only file
