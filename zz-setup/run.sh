@@ -1,6 +1,6 @@
 #!/bin/sh
 # zz-setup <org>/<repo>[@<ref>] [args...] — fetch a GitHub repo and run it
-# the way vps-setup does for perspikapps/vps:
+# the way a workspace installer does:
 #   1. shallow clone (or fast-forward) into a fixed directory;
 #   2. if the root package.json lists workspaces, propose the runnable ones
 #      (skip/up/down menu, dependencies auto-enabled), then list the inputs
@@ -9,10 +9,9 @@
 #   3. otherwise (or with ZZ_SETUP_ENTRY) exec the repo's own installer with
 #      the remaining arguments: <repo>-setup/run.sh, setup.sh, run.sh.
 #
-# Runnable workspace: has a run.sh. If any workspace has a "vps" key in its
-# package.json, only those are proposed ("vps.order" sorts, "vps.default"
-# preselects, "vps.inputs" or "config.input" declare inputs); a "vps"
-# workspace's run.sh gets "up"/"down" as argument.
+# Runnable workspace: has a run.sh and an "engines.zz-setup" field in its
+# package.json ("order" sorts, "default" preselects, "inputs" or
+# "config.input" declare inputs). Its run.sh gets "up"/"down" as argument.
 #
 # Options (parsed with zz-args, after the repository; names are space- or
 # comma-separated): -w enable, -s skip, -d down, -o only these, -D down all,
@@ -140,14 +139,10 @@ for w in $all; do
     cands="$cands$w
 "
 done
-has_vps=0
-for w in $cands; do
-    [ "$(jq -r 'has("vps")' "$w/package.json")" = true ] && has_vps=1
-done
 list=
 for w in $cands; do
-    [ "$has_vps" -eq 0 ] || [ "$(jq -r 'has("vps")' "$w/package.json")" = true ] || continue
-    list="$list$(jq -r --arg d "$w" '[(.vps.order // 1000), (.name | sub("^@[^/]*/"; "")), $d] | @tsv' "$w/package.json")
+    [ "$(jq -r '(.engines // {}) | has("zz-setup")' "$w/package.json")" = true ] || continue
+    list="$list$(jq -r --arg d "$w" '[(.engines["zz-setup"].order // 1000), (.name | sub("^@[^/]*/"; "")), $d] | @tsv' "$w/package.json")
 "
 done
 list=$(printf '%s' "$list" | sort -n -k1,1)
@@ -165,7 +160,7 @@ state_get() { eval "printf '%s' \"\${$(var_of "$1"):-skip}\""; }
 state_set() { eval "$(var_of "$1")=\$2"; }
 
 for n in $names; do
-    if [ "$(jq -r '.vps.default // false' "$(dir_of "$n")/package.json")" = true ]; then
+    if [ "$(jq -r '.engines["zz-setup"].default // false' "$(dir_of "$n")/package.json")" = true ]; then
         state_set "$n" up
     else
         state_set "$n" skip
@@ -215,7 +210,7 @@ if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
     set --
     for n in $names; do
         mark=" "
-        [ "$(jq -r '.vps.default // false' "$(dir_of "$n")/package.json")" = true ] && mark="*"
+        [ "$(jq -r '.engines["zz-setup"].default // false' "$(dir_of "$n")/package.json")" = true ] && mark="*"
         set -- "$@" "$n:$(state_get "$n")=$mark $(printf '%-20s' "$n") $(desc_of "$n")"
     done
     rc=0
@@ -278,10 +273,10 @@ for n in $names; do [ "$(state_get "$n")" = up ] && up_names="$up_names $n"; don
 
 # --- inputs: "VAR<US>description<US>required<US>default<US>name<US>secret"
 # (US = \037; a whitespace separator like tab would collapse empty fields),
-# from "vps.inputs" (object keyed by var) and "config.input" (zz-call array).
+# from "engines.zz-setup.inputs" (object keyed by var) and "config.input" (zz-call array).
 inputs_of() {
     jq -r --arg n "$1" '
-      ((.vps.inputs // {}) | to_entries[]
+      ((.engines["zz-setup"].inputs // {}) | to_entries[]
          | [.key, (.value.description // ""), ((.value.required // false) | tostring), (.value.default // ""), $n, ((.value.secret // false) | tostring)] | join("\u001f")),
       ((.config.input // [])[]
          | [.var, (.question // ""), "false", (.default // ""), $n, "false"] | join("\u001f"))' "$(dir_of "$1")/package.json"
@@ -400,11 +395,9 @@ EOF
 # --- run: down in reverse order first, then up in order.
 run_step() {
     d=$(dir_of "$1")
-    act=
-    [ "$(jq -r 'has("vps")' "$d/package.json")" = true ] && act=$2
-    zz-log i "[zz-setup] === Running $1 ($d/run.sh${act:+ $act}) ==="
+    zz-log i "[zz-setup] === Running $1 ($d/run.sh $2) ==="
     rc=0
-    (cd "$d" && if [ -x run.sh ]; then ./run.sh $act; else bash run.sh $act; fi) || rc=$?
+    (cd "$d" && if [ -x run.sh ]; then ./run.sh $2; else bash run.sh $2; fi) || rc=$?
     if [ "$rc" -ne 0 ]; then
         zz-log e "[zz-setup] Step '$1' failed (exit $rc). Fix it and re-run just this step with: zz-setup $spec -o $1"
         exit 1
