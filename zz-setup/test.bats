@@ -77,10 +77,10 @@ make_workspace_remote() {
     git config user.email t@t
     git config user.name t
     echo '{"name":"ws","workspaces":["a","b","lib"]}' >package.json
-    echo '{"name":"@x/a","engines":{"zz-setup":"*"},"config":{"order":1,"default":false,"inputs":{"FOO":{"description":"foo","default":"bar"}}}}' >a/package.json
-    echo '{"name":"@x/b","dependencies":{"@x/a":"*"},"engines":{"zz-setup":"*"},"config":{"order":2,"default":false}}' >b/package.json
-    echo '{"name":"@x/lib"}' >lib/package.json
-    mkdir -p str && echo '{"name":"@x/str","engines":{"zz-setup":"*"}}' >str/package.json && printf '#!/bin/sh\necho str\n' >str/run.sh && chmod +x str/run.sh
+    echo '{"name":"@x/a","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":1,"default":false,"inputs":{"FOO":{"description":"foo","default":"bar"}}}}' >a/package.json
+    echo '{"name":"@x/b","dependencies":{"@x/a":"*"},"bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":2,"default":false}}' >b/package.json
+    echo '{"name":"@x/lib","engines":{"zz-setup":"*"}}' >lib/package.json
+    mkdir -p str && echo '{"name":"@x/str","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"}}' >str/package.json && printf '#!/bin/sh\necho str\n' >str/run.sh && chmod +x str/run.sh
     echo '{"name":"ws","workspaces":["a","b","lib","str"]}' >package.json
     printf '#!/bin/sh\necho "a:$1:$FOO"\n' >a/run.sh
     printf '#!/bin/sh\necho "b:$1"\n' >b/run.sh

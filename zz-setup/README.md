@@ -20,10 +20,11 @@ zz-setup acme/tool -o a            # run only a
 1. Shallow-clones the repo into `<dir>/<repo>` (or fast-forwards an existing
    checkout). A local path (`./x`, `../x`, `/x`) is used in place.
 2. Runnable workspaces are the root `package.json` workspaces that have a
-   `run.sh` and an `engines.zz-setup` field (the run context, any value such
-   as `"*"`). Their settings live under `config`:
+   `bin` and an `engines.zz-setup` field (the run context, any value such as
+   `"*"`); the bin file is what runs. An optional `config` holds their settings:
 
    ```json
+   "bin": { "tool": "run.sh" },
    "engines": { "zz-setup": "*" },
    "config": { "order": 1, "default": true, "inputs": { "FOO": { "default": "bar" } } }
    ```
@@ -33,7 +34,7 @@ zz-setup acme/tool -o a            # run only a
    default; required ones abort the run). Workspaces listed in
    `dependencies` / `peerDependencies` are enabled automatically.
 3. Runs `down` steps in reverse order, then `up` steps in order; each
-   `run.sh` gets `up` or `down`.
+   bin gets `up` or `down`.
 
 No runnable workspace (or `ZZ_SETUP_ENTRY` set): execs the first match of
 `$ZZ_SETUP_ENTRY`, `<repo>-setup/run.sh`, `setup.sh`, `run.sh` with the
