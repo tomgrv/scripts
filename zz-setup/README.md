@@ -33,6 +33,11 @@ zz-setup acme/tool -o a            # run only a
    the variables resolved by `zz-call` (environment, then env file, then
    default; required ones abort the run). Workspaces listed in
    `dependencies` / `peerDependencies` are enabled automatically.
+   `conflicts` (names of other workspaces) marks workspaces that cannot run on
+   the same host: if both end up enabled (explicitly or through a dependency),
+   the run aborts before any step starts and names the pair, e.g.
+   `"config": { "conflicts": ["k3s"] }`. Only `up` counts; the declaration need
+   only be on one side.
 3. Runs `down` steps in reverse order, then `up` steps in order; each
    bin gets `up` or `down`.
 
