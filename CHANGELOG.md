@@ -1,5 +1,20 @@
 # Changelog
 
+## 4.1.0 (2026-10-17)
+
+*Commits from: v4.0.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v4.0.0' into develop
+### 📦 scripts-zz-setup changes
+
+#### Features
+
+- refuse conflicting workspaces before any step runs
+
 ## 4.0.0 (2026-10-17)
 
 *Commits from: v3.1.0..HEAD*
@@ -733,6 +748,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 

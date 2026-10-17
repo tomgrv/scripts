@@ -102,6 +102,48 @@ make_workspace_remote() {
     [[ "$output" != *"lib"*"Running"* ]]
 }
 
+# "p" declares a conflict with "q"; "r" depends on "q" and so enables it.
+make_conflict_remote() {
+    rm -rf "$WORK/cf" "$WORK/remote/acme/cf.git"
+    mkdir -p "$WORK/cf/p" "$WORK/cf/q" "$WORK/cf/r"
+    cd "$WORK/cf"
+    git init -q -b main
+    git config user.email t@t
+    git config user.name t
+    echo '{"name":"cf","workspaces":["p","q","r"]}' >package.json
+    echo '{"name":"@x/p","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":1,"conflicts":["@x/q"]}}' >p/package.json
+    echo '{"name":"@x/q","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":2}}' >q/package.json
+    echo '{"name":"@x/r","dependencies":{"@x/q":"*"},"bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":3}}' >r/package.json
+    for w in p q r; do printf '#!/bin/sh\necho "%s:$1"\n' "$w" >"$w/run.sh"; chmod +x "$w/run.sh"; done
+    git add -A
+    git commit -q -m init
+    git clone -q --bare "$WORK/cf" "$WORK/remote/acme/cf.git"
+    cd "$BATS_TEST_DIRNAME"
+}
+
+@test "zz-setup refuses conflicting workspaces before running anything, also through a dependency" {
+    make_conflict_remote
+    run zz-setup acme/cf -w p,q
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"'p' conflicts with 'q'"* ]]
+    [[ "$output" != *"p:up"* ]]
+    run zz-setup acme/cf -w p,r
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Also enabling 'q'"* ]]
+    [[ "$output" == *"'p' conflicts with 'q'"* ]]
+}
+
+@test "zz-setup allows a conflicting pair when only one is up (the other skipped or coming down)" {
+    make_conflict_remote
+    run zz-setup acme/cf -o p
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"p:up"* ]]
+    run zz-setup acme/cf -w p -d q
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"p:up"* ]]
+    [[ "$output" == *"q:down"* ]]
+}
+
 @test "zz-setup honours inputs already set in the environment" {
     make_workspace_remote
     run env FOO=custom zz-setup acme/ws -w a
