@@ -67,7 +67,7 @@ teardown() {
     [[ "$output" == *"No workspace or entrypoint"* ]]
 }
 
-# Workspace mode: root package.json with two "vps" workspaces; "b" depends
+# Workspace mode: root package.json with two "engines.zz-setup" workspaces; "b" depends
 # on "a", "a" declares an input with a default.
 make_workspace_remote() {
     rm -rf "$WORK/ws" "$WORK/remote/acme/ws.git"
@@ -77,9 +77,11 @@ make_workspace_remote() {
     git config user.email t@t
     git config user.name t
     echo '{"name":"ws","workspaces":["a","b","lib"]}' >package.json
-    echo '{"name":"@x/a","vps":{"order":1,"default":false,"inputs":{"FOO":{"description":"foo","default":"bar"}}}}' >a/package.json
-    echo '{"name":"@x/b","dependencies":{"@x/a":"*"},"vps":{"order":2,"default":false}}' >b/package.json
-    echo '{"name":"@x/lib"}' >lib/package.json
+    echo '{"name":"@x/a","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":1,"default":false,"inputs":{"FOO":{"description":"foo","default":"bar"}}}}' >a/package.json
+    echo '{"name":"@x/b","dependencies":{"@x/a":"*"},"bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":2,"default":false}}' >b/package.json
+    echo '{"name":"@x/lib","engines":{"zz-setup":"*"}}' >lib/package.json
+    mkdir -p str && echo '{"name":"@x/str","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"}}' >str/package.json && printf '#!/bin/sh\necho str\n' >str/run.sh && chmod +x str/run.sh
+    echo '{"name":"ws","workspaces":["a","b","lib","str"]}' >package.json
     printf '#!/bin/sh\necho "a:$1:$FOO"\n' >a/run.sh
     printf '#!/bin/sh\necho "b:$1"\n' >b/run.sh
     printf '#!/bin/sh\necho "lib"\n' >lib/run.sh
@@ -125,11 +127,11 @@ make_workspace_remote() {
     [[ "$output" == *"Nothing selected"* ]]
 }
 
-@test "zz-setup -h lists only the runnable vps workspaces" {
+@test "zz-setup -h lists only the runnable workspaces" {
     make_workspace_remote
     run zz-setup acme/ws -h
     [ "$status" -eq 1 ]
-    [[ "$output" == *"workspaces: a b"* ]]
+    [[ "$output" == *"workspaces: a b str"* ]]
     [[ "$output" == *"-w <names>"* ]]
     [[ "$output" != *"lib"* ]]
 }
@@ -162,7 +164,7 @@ make_workspace_remote() {
 
 @test "zz-setup keeps an input with an empty default and description in the right field" {
     make_workspace_remote
-    jq '.vps.inputs.BAR = {}' "$WORK/ws/a/package.json" >"$WORK/ws/a/p.json"
+    jq '.config.inputs.BAR = {}' "$WORK/ws/a/package.json" >"$WORK/ws/a/p.json"
     mv "$WORK/ws/a/p.json" "$WORK/ws/a/package.json"
     git -C "$WORK/ws" commit -q -am bar
     git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
@@ -215,7 +217,7 @@ make_workspace_remote() {
 
 @test "zz-setup aborts before running anything when a required input is empty, and -s skips it" {
     make_workspace_remote
-    jq '.vps.inputs.NEEDED = {"required": true}' "$WORK/ws/a/package.json" >"$WORK/ws/a/p.json"
+    jq '.config.inputs.NEEDED = {"required": true}' "$WORK/ws/a/package.json" >"$WORK/ws/a/p.json"
     mv "$WORK/ws/a/p.json" "$WORK/ws/a/package.json"
     git -C "$WORK/ws" commit -q -am needed
     git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main

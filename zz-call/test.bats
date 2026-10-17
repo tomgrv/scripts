@@ -125,10 +125,10 @@ EOF
 
 @test "zz-call reads vps.inputs from several package.json files (first definition wins)" {
     cat > a.json <<'EOF'
-{"vps": {"inputs": {"A_VAR": {"description": "A?", "default": "adef"}, "SHARED": {"default": "first"}}}}
+{"config":{"inputs": {"A_VAR": {"description": "A?", "default": "adef"}, "SHARED": {"default": "first"}}}}
 EOF
     cat > b.json <<'EOF'
-{"vps": {"inputs": {"B_VAR": {"default": "bdef"}, "SHARED": {"default": "second"}}}}
+{"config":{"inputs": {"B_VAR": {"default": "bdef"}, "SHARED": {"default": "second"}}}}
 EOF
     run zz-call -n -p a.json:b.json
     [ "$status" -eq 0 ]
@@ -173,7 +173,7 @@ EOF
 
 @test "zz-call persists a secret input through zz-persist into an owner-only file" {
     cat > package.json <<'EOF'
-{"vps": {"inputs": {"TOK": {"description": "Token", "secret": true, "default": "dflt"}}}}
+{"config":{"inputs": {"TOK": {"description": "Token", "secret": true, "default": "dflt"}}}}
 EOF
     run zz-call </dev/null
     [ "$status" -eq 0 ]
