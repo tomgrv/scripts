@@ -142,7 +142,7 @@ done
 list=
 for w in $cands; do
     [ "$(jq -r '(.engines // {}) | has("zz-setup")' "$w/package.json")" = true ] || continue
-    list="$list$(jq -r --arg d "$w" '[(.engines["zz-setup"].order // 1000), (.name | sub("^@[^/]*/"; "")), $d] | @tsv' "$w/package.json")
+    list="$list$(jq -r --arg d "$w" '[((.engines["zz-setup"] | objects).order // 1000), (.name | sub("^@[^/]*/"; "")), $d] | @tsv' "$w/package.json")
 "
 done
 list=$(printf '%s' "$list" | sort -n -k1,1)
@@ -160,7 +160,7 @@ state_get() { eval "printf '%s' \"\${$(var_of "$1"):-skip}\""; }
 state_set() { eval "$(var_of "$1")=\$2"; }
 
 for n in $names; do
-    if [ "$(jq -r '.engines["zz-setup"].default // false' "$(dir_of "$n")/package.json")" = true ]; then
+    if [ "$(jq -r '(.engines["zz-setup"] | objects).default // false' "$(dir_of "$n")/package.json")" = true ]; then
         state_set "$n" up
     else
         state_set "$n" skip
@@ -210,7 +210,7 @@ if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
     set --
     for n in $names; do
         mark=" "
-        [ "$(jq -r '.engines["zz-setup"].default // false' "$(dir_of "$n")/package.json")" = true ] && mark="*"
+        [ "$(jq -r '(.engines["zz-setup"] | objects).default // false' "$(dir_of "$n")/package.json")" = true ] && mark="*"
         set -- "$@" "$n:$(state_get "$n")=$mark $(printf '%-20s' "$n") $(desc_of "$n")"
     done
     rc=0
@@ -276,7 +276,7 @@ for n in $names; do [ "$(state_get "$n")" = up ] && up_names="$up_names $n"; don
 # from "engines.zz-setup.inputs" (object keyed by var) and "config.input" (zz-call array).
 inputs_of() {
     jq -r --arg n "$1" '
-      ((.engines["zz-setup"].inputs // {}) | to_entries[]
+      (((.engines["zz-setup"] | objects).inputs // {}) | to_entries[]
          | [.key, (.value.description // ""), ((.value.required // false) | tostring), (.value.default // ""), $n, ((.value.secret // false) | tostring)] | join("\u001f")),
       ((.config.input // [])[]
          | [.var, (.question // ""), "false", (.default // ""), $n, "false"] | join("\u001f"))' "$(dir_of "$1")/package.json"

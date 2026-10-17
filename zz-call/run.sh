@@ -72,7 +72,7 @@ _collect() {
         jq -c "$1" "$_p"
     done | jq -c -s 'reduce .[] as $e ([]; if any(.[]; .var == $e.var) then . else . + [$e] end) | .[]'
 }
-_inputs='(.config.input // [])[], ((.engines["zz-setup"].inputs // {}) | to_entries[] | {var: .key, question: .value.description, default: .value.default, secret: .value.secret})'
+_inputs='(.config.input // [])[], (((.engines["zz-setup"] | objects).inputs // {}) | to_entries[] | {var: .key, question: .value.description, default: .value.default, secret: .value.secret})'
 _input_entries=$(_collect "$_inputs")
 _output_entries=$(_collect '(.config.output // [])[]')
 [ -n "$_output_entries" ] || _output_entries=$_input_entries
