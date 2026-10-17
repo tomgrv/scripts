@@ -1,5 +1,18 @@
 # Changelog
 
+## 4.0.0 (2026-10-17)
+
+*Commits from: v3.1.0..HEAD*
+
+### 💥 BREAKING CHANGES
+
+- 💥 ✨ runnable workspaces declare engines.zz-setup (#77)
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v3.1.0' into develop
+
 ## 3.1.0 (2026-10-15)
 
 *Commits from: v3.0.0..HEAD*
@@ -736,5 +749,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-10-15 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-10-17 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
