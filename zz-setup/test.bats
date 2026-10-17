@@ -67,7 +67,7 @@ teardown() {
     [[ "$output" == *"No workspace or entrypoint"* ]]
 }
 
-# Workspace mode: root package.json with two "engines.zz-setup" workspaces; "b" depends
+# Workspace mode: root package.json with two "engines.zz-setup" workspaces (config in "config.zz"); "b" depends
 # on "a", "a" declares an input with a default.
 make_workspace_remote() {
     rm -rf "$WORK/ws" "$WORK/remote/acme/ws.git"
@@ -77,8 +77,8 @@ make_workspace_remote() {
     git config user.email t@t
     git config user.name t
     echo '{"name":"ws","workspaces":["a","b","lib"]}' >package.json
-    echo '{"name":"@x/a","engines":{"zz-setup":{"order":1,"default":false,"inputs":{"FOO":{"description":"foo","default":"bar"}}}}}' >a/package.json
-    echo '{"name":"@x/b","dependencies":{"@x/a":"*"},"engines":{"zz-setup":{"order":2,"default":false}}}' >b/package.json
+    echo '{"name":"@x/a","engines":{"zz-setup":"*"},"config":{"zz":{"order":1,"default":false,"inputs":{"FOO":{"description":"foo","default":"bar"}}}}}' >a/package.json
+    echo '{"name":"@x/b","dependencies":{"@x/a":"*"},"engines":{"zz-setup":"*"},"config":{"zz":{"order":2,"default":false}}}' >b/package.json
     echo '{"name":"@x/lib"}' >lib/package.json
     mkdir -p str && echo '{"name":"@x/str","engines":{"zz-setup":"*"}}' >str/package.json && printf '#!/bin/sh\necho str\n' >str/run.sh && chmod +x str/run.sh
     echo '{"name":"ws","workspaces":["a","b","lib","str"]}' >package.json
@@ -164,7 +164,7 @@ make_workspace_remote() {
 
 @test "zz-setup keeps an input with an empty default and description in the right field" {
     make_workspace_remote
-    jq '.engines["zz-setup"].inputs.BAR = {}' "$WORK/ws/a/package.json" >"$WORK/ws/a/p.json"
+    jq '.config.zz.inputs.BAR = {}' "$WORK/ws/a/package.json" >"$WORK/ws/a/p.json"
     mv "$WORK/ws/a/p.json" "$WORK/ws/a/package.json"
     git -C "$WORK/ws" commit -q -am bar
     git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
@@ -217,7 +217,7 @@ make_workspace_remote() {
 
 @test "zz-setup aborts before running anything when a required input is empty, and -s skips it" {
     make_workspace_remote
-    jq '.engines["zz-setup"].inputs.NEEDED = {"required": true}' "$WORK/ws/a/package.json" >"$WORK/ws/a/p.json"
+    jq '.config.zz.inputs.NEEDED = {"required": true}' "$WORK/ws/a/package.json" >"$WORK/ws/a/p.json"
     mv "$WORK/ws/a/p.json" "$WORK/ws/a/package.json"
     git -C "$WORK/ws" commit -q -am needed
     git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main

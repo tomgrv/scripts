@@ -20,11 +20,13 @@ zz-setup acme/tool -o a            # run only a
 1. Shallow-clones the repo into `<dir>/<repo>` (or fast-forwards an existing
    checkout). A local path (`./x`, `../x`, `/x`) is used in place.
 2. Runnable workspaces are the root `package.json` workspaces that have a
-   `run.sh` and declare an `engines.zz-setup` field:
+   `run.sh` and an `engines.zz-setup` field (the run context, any value such
+   as `"*"`). Their settings live under `config.zz`:
 
    ```json
-   "engines": {
-     "zz-setup": { "order": 1, "default": true, "inputs": { "FOO": { "default": "bar" } } }
+   "engines": { "zz-setup": "*" },
+   "config": {
+     "zz": { "order": 1, "default": true, "inputs": { "FOO": { "default": "bar" } } }
    }
    ```
 
