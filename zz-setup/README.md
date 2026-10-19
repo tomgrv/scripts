@@ -60,7 +60,10 @@ Lists are space- or comma-separated workspace names.
 | `-S`         | show workspace states and inputs, run nothing      |
 | `-h`         | help (lists the workspaces)                        |
 
-No options on a terminal opens the menu. Supply inputs as environment
+No options on a terminal opens the menu, preselected with the states of the last
+run: each workspace that ran is remembered in the env file as
+`ZZ_STATE_<name>=up|skip` (`down` is stored as `skip`, so it is never sticky).
+Flags and non-interactive runs ignore it. Supply inputs as environment
 variables when there is no terminal (`sudo` drops them: put them on the
 `sudo` line).
 

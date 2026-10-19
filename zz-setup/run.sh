@@ -15,6 +15,9 @@
 # workspaces that cannot be enabled together with it, "inputs" (or
 # "config.input") declare inputs. Its (first) bin gets "up"/"down" as argument.
 #
+# The state of each workspace you run is remembered in the env file
+# (ZZ_STATE_<name>=up|skip) and preselects the next menu.
+#
 # Options (parsed with zz-args, after the repository; names are space- or
 # comma-separated): -w enable, -s skip, -d down, -o only these, -D down all,
 # -F force down, -S status only, -h. No options on a terminal opens the menu.
@@ -168,6 +171,20 @@ var_of() { printf 'STATE_%s' "$1" | tr -c 'A-Za-z0-9_\n' '_'; }
 state_get() { eval "printf '%s' \"\${$(var_of "$1"):-skip}\""; }
 state_set() { eval "$(var_of "$1")=\$2"; }
 
+envfile="${ZZ_SETUP_ENV_FILE:-}"
+if [ -z "$envfile" ]; then
+    if [ "$(id -u)" -eq 0 ]; then envfile="/etc/$repo.env"; else envfile="$dir/.env"; fi
+fi
+
+# The env file is plain KEY=VALUE (zz-persist's format), read literally and
+# never sourced, so a value can hold spaces/quotes without being executed.
+env_get() { [ ! -f "$envfile" ] || sed -n "s/^$1=//p" "$envfile" | tail -n1; }
+
+# The last successful run is remembered per workspace (up, or skip once brought
+# down; "down" is never sticky) and preselects the menu, which only opens on a
+# terminal with no option, so flags and non-interactive runs are unchanged.
+state_key() { printf 'ZZ_%s' "$(var_of "$1")"; }
+
 for n in $names; do
     if [ "$(jq -r '.config.default // false' "$(dir_of "$n")/package.json")" = true ]; then
         state_set "$n" up
@@ -215,6 +232,10 @@ apply_state up "$only_list"
 only=$(printf '%s' "$only_list" | tr ',' ' ')
 
 if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
+    for n in $names; do
+        saved=$(env_get "$(state_key "$n")")
+        case "$saved" in up | skip) state_set "$n" "$saved" ;; esac
+    done
     items=
     set --
     for n in $names; do
@@ -304,11 +325,6 @@ inputs_of() {
          | [.var, (.question // ""), "false", (.default // ""), $n, "false"] | join("\u001f"))' "$(dir_of "$1")/package.json"
 }
 
-envfile="${ZZ_SETUP_ENV_FILE:-}"
-if [ -z "$envfile" ]; then
-    if [ "$(id -u)" -eq 0 ]; then envfile="/etc/$repo.env"; else envfile="$dir/.env"; fi
-fi
-
 us=$(printf '\037')
 all_inputs=
 for n in $([ "$status_only" -eq 1 ] && echo "$names" || echo "$up_names"); do
@@ -316,10 +332,6 @@ for n in $([ "$status_only" -eq 1 ] && echo "$names" || echo "$up_names"); do
 "
 done
 all_inputs=$(printf '%s' "$all_inputs" | awk -F"$us" 'NF && !seen[$1]++')
-
-# The env file is plain KEY=VALUE (zz-persist's format), read literally and
-# never sourced, so a value can hold spaces/quotes without being executed.
-env_get() { [ ! -f "$envfile" ] || sed -n "s/^$1=//p" "$envfile" | tail -n1; }
 
 # Status view only (menu): the caller's environment, then the env file.
 # The final resolution, defaults and persistence are zz-call's, below.
@@ -426,6 +438,8 @@ run_step() {
         exit 1
     fi
     zz-log s "[zz-setup] === Done: $1 ($2) ==="
+    if [ "$2" = up ]; then _remember=up; else _remember=skip; fi
+    zz-persist -f "$envfile" "$(state_key "$1")" "$_remember"
 }
 
 for n in $(printf '%s\n' "$names" | sed '1!G;h;$!d'); do
