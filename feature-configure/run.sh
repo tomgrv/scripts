@@ -153,6 +153,13 @@ if [ -d $source/stubs ]; then
             rm -f "$dest"
         fi
 
+        # Multi-config layout: a .devcontainer/devcontainer.json stub merges into
+        # the single .devcontainer/<name>/devcontainer.json instead of creating a stray one.
+        if [ "$dest" = ".devcontainer/devcontainer.json" ] && [ ! -f "$dest" ]; then
+            found=$(find .devcontainer -mindepth 2 -maxdepth 2 -name devcontainer.json 2>/dev/null)
+            [ -n "$found" ] && [ "$(printf '%s\n' "$found" | wc -l)" -eq 1 ] && dest=$found
+        fi
+
         if [ "$(basename $file | cut -c1)" = "#" ]; then
             dest=$(echo $dest | sed 's/\/\#/\//g')
             zz-log - "Add {U $dest} to .gitignore"

@@ -83,6 +83,33 @@ teardown() {
     grep -q '"a"' newfile.json
 }
 
+@test "feature-configure merges a .devcontainer/devcontainer.json stub into the single multi-config devcontainer.json" {
+    mkdir -p src/stubs/.devcontainer .devcontainer/main
+    echo '{"features":{"b":{}}}' >src/stubs/.devcontainer/devcontainer.json
+    echo '{"features":{"a":{}}}' >.devcontainer/main/devcontainer.json
+    run feature-configure -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ ! -f .devcontainer/devcontainer.json ]
+    [ "$(jq -c '.features | keys' .devcontainer/main/devcontainer.json)" = '["a","b"]' ]
+}
+
+@test "feature-configure copies a .devcontainer/devcontainer.json stub flat when there is no or more than one multi-config file" {
+    mkdir -p src/stubs/.devcontainer
+    echo '{"b":2}' >src/stubs/.devcontainer/devcontainer.json
+    run feature-configure -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ -f .devcontainer/devcontainer.json ]
+
+    rm .devcontainer/devcontainer.json
+    mkdir -p .devcontainer/one .devcontainer/two
+    echo '{}' >.devcontainer/one/devcontainer.json
+    echo '{}' >.devcontainer/two/devcontainer.json
+    run feature-configure -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    [ -f .devcontainer/devcontainer.json ]
+    [ "$(jq -c . .devcontainer/one/devcontainer.json)" = '{}' ]
+}
+
 @test "feature-configure reconciles a fragment additively into an existing plain-text file" {
     mkdir -p src/stubs
     printf 'line1\nline2\n' >src/stubs/frag.txt
