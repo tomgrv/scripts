@@ -282,3 +282,35 @@ make_conflict_remote() {
     [[ "$output" == *"a:up:bar"* ]]
     [ ! -d "$WORK/dir/ws" ]
 }
+
+@test "zz-setup remembers the state of each workspace it ran, down is stored as skip" {
+    make_workspace_remote
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    run zz-setup acme/ws -o a
+    [ "$status" -eq 0 ]
+    grep -qx 'ZZ_STATE_a=up' "$ZZ_SETUP_ENV_FILE"
+    ! grep -q 'ZZ_STATE_b' "$ZZ_SETUP_ENV_FILE"
+    run zz-setup acme/ws -d a
+    [ "$status" -eq 0 ]
+    grep -qx 'ZZ_STATE_a=skip' "$ZZ_SETUP_ENV_FILE"
+}
+
+@test "zz-setup ignores remembered states without a menu" {
+    make_workspace_remote
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    echo 'ZZ_STATE_a=up' >"$ZZ_SETUP_ENV_FILE"
+    run zz-setup acme/ws </dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Nothing selected"* ]]
+}
+
+@test "zz-setup preselects the menu from the remembered states" {
+    command -v script >/dev/null || skip "script(1) not available"
+    make_workspace_remote
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    echo 'ZZ_STATE_a=up' >"$ZZ_SETUP_ENV_FILE"
+    run script -qec "zz-setup acme/ws" /dev/null < <(printf "\n\n")
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"a:up:bar"* ]]
+    [[ "$output" != *"b:up"* ]]
+}
