@@ -177,26 +177,7 @@ teardown() {
     [[ "$output" != *"[fetch]"* ]]
 }
 
-@test "zz-log -N is the plain level N levels deep, on top of ZZ_LOG_INDENT" {
-    run bash -c 'zz-log -2 "deep" 2>&1'
-    [[ "$output" == "      "*"deep"* && "$output" != "       "* ]]
-    run bash -c 'ZZ_LOG_INDENT=4 zz-log -1 "child" 2>&1'
-    [[ "$output" == "        "*"child"* && "$output" != "         "* ]]
-    run bash -c 'zz-log - "base" 2>&1'
-    [[ "$output" == "  base"* && "$output" != "   "* ]]
-}
-
-@test "zz-log -N keeps working as a plain level: no pictogram, no step tag" {
-    run bash -c 'ZZ_LOG_STEP=s zz-log -1 "x" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
-    [ "$output" = "    x" ]
-}
-
-@test "zz-log treats -x (not an integer) as an unknown level, printed as its own prefix" {
-    run bash -c 'zz-log -x "y" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
-    [ "$output" = "-x y" ]
-}
-
-@test "zz-log -0 is the same as -" {
-    run bash -c 'a=$(zz-log -0 "same" 2>&1); b=$(zz-log - "same" 2>&1); [ "$a" = "$b" ]'
-    [ "$status" -eq 0 ]
+@test "zz-log - is a plain detail line indented by ZZ_LOG_INDENT, without pictogram or step tag" {
+    run bash -c 'ZZ_LOG_STEP=s ZZ_LOG_INDENT=4 zz-log - "detail" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "      detail" ]
 }

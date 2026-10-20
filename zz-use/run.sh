@@ -129,6 +129,11 @@ _have() {
     return 1
 }
 
+# A detail line one level under the message above it.
+_hint() {
+    ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2)) zz-log - "$@"
+}
+
 # Run a command one level deeper: its zz-log lines are indented under ours.
 _nest() {
     (
@@ -203,10 +208,10 @@ _fetch_archive() {
             mv "$_tmp/x" "$_cache_dir"
         elif _cache_warm "$_cache_dir"; then
             zz-log w "Could not refresh ${_desc}"
-            zz-log -1 "Using the stale cache at {U ${_cache_dir}}"
+            _hint "Using the stale cache at {U ${_cache_dir}}"
         else
             zz-log e "Could not retrieve ${_desc}"
-            zz-log -1 "The download failed, or it holds no <name>/run.sh script"
+            _hint "The download failed, or it holds no <name>/run.sh script"
             return 1
         fi
     else
@@ -232,11 +237,11 @@ _resolve_npm() {
         if [ -z "$_tarball" ]; then
             _cache_warm "$_cache_dir" || {
                 zz-log e "Could not resolve the npm tarball for {Purple ${_req_origin}@${_npm_ref}}"
-                zz-log -1 "Looked it up at {U ${_meta_url}}"
+                _hint "Looked it up at {U ${_meta_url}}"
                 return 1
             }
             zz-log w "Could not refresh {Purple ${_req_origin}@${_npm_ref}}"
-            zz-log -1 "Using the stale cache"
+            _hint "Using the stale cache"
         fi
     fi
     _fetch_archive "$_cache_dir" "$_tarball" "npm package ({B ${_req_origin}@${_npm_ref}})"
@@ -602,7 +607,7 @@ _use() {
 
         if ! _have "$tool"; then
             zz-log e "Cannot provide {Purple $tool}"
-            zz-log -1 "It is not installed, and no source could install it"
+            _hint "It is not installed, and no source could install it"
             return 1
         fi
 

@@ -99,7 +99,7 @@ make_workspace_remote() {
     [[ "$output" == *"Also enabling"*"a"*"required by"* ]]
     [[ "$output" == *"a:up:bar"* ]]
     [[ "$output" == *"b:up"* ]]
-    [[ "$output" != *"lib"*"Running"* ]]
+    [[ "$output" != *"lib: up"* ]]
 }
 
 # "p" declares a conflict with "q"; "r" depends on "q" and so enables it.
@@ -319,4 +319,19 @@ make_conflict_remote() {
     run zz-setup acme/tool@nope
     [ "$status" -ne 0 ]
     [[ "$output" == *"ZZ_ORIGIN_REF"* ]]
+}
+
+@test "zz-setup shows a workspace's raw output as operation output when stdin is not a terminal" {
+    make_workspace_remote
+    run zz-setup acme/ws -o b </dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"│ b:up"* ]]
+}
+
+@test "zz-setup hint lines sit one level (2 spaces) under their error" {
+    make_workspace_remote
+    run zz-setup acme/ws -w nope </dev/null
+    [ "$status" -ne 0 ]
+    plain=$(printf '%s\n' "$output" | sed 's/\x1b\[[0-9;]*m//g')
+    [[ "$plain" == *$'\n''    Available: '* ]]
 }

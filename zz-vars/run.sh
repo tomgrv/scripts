@@ -108,7 +108,7 @@ ROWS
         case "$rc" in
         0) ;;
         1)
-            echo "Aborted, nothing changed." >&2
+            zz-log n "Aborted, nothing changed"
             exit 3
             ;;
         *) break ;;

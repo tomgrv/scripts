@@ -19,6 +19,7 @@ eval "$(
         i question  question    Ask for the value with this prompt (terminal only, else the default is used)
         v default   value_default   Default offered by -i (the stored value, if any, wins)
         s -         secret      The value is a secret: masked prompt, never logged, written only to owner-only files
+        q -         quiet       Do not log the write (internal state)
         - key       key         Variable name
         - value     value       Variable value
 help
@@ -108,7 +109,7 @@ persist_line() {
         fi
     fi
     upsert_line "$1" "$2" "$3"
-    zz-log i "$key persisted to {U $1}"
+    [ -n "$quiet" ] || zz-log i "$key persisted to {U $1}"
 }
 
 # --- value: ask when -i, else take the argument

@@ -11,10 +11,9 @@
 #     behind a "│" gutter, with no pictogram and no step tag. Pipe it:
 #       cmd 2>&1 | zz-log o        (or keep the status: out=$(cmd 2>&1) || rc=$?)
 #
-# Depth: ":N" (N an integer: :1, :2, ...) is the plain level, nested N levels
-# (2 spaces each) under the message above it, on top of the depth ZZ_LOG_INDENT
-# gives it. ":" alone is depth 0. Typical use: a hint under an error:
-#   zz-log e "Could not fetch x"; zz-log :1 "Check the ref"
+# Indent: ZZ_LOG_INDENT (spaces) indents every line of a script and of the
+# children it starts. A caller nests by raising it for a command, e.g. a hint
+# under an error: ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2)) zz-log - "Check the ref"
 #
 # Custom level: any other string is printed as the line's own prefix, the way
 # json-validate nests its output ("zz-log \"$prefix -\" msg"). The caller owns
@@ -27,7 +26,7 @@
 #   w  something is degraded but the run continues
 #   e  the run stops: say what failed, then a "-" line saying what to do
 #   d  internals, only with ZZ_DEBUG
-#   -  a detail line under the message above it (-1, -2, ... nest deeper)
+#   -  a detail line under the message above it
 #   o  what a command printed (git, an installer), see above
 #
 # Inline colour: "{Name text}" prints text in colour Name (any zz-colors
@@ -49,11 +48,8 @@
 lvl="$1" && shift
 
 # --- parameters
-# Drop leading zeros of the depth: $((08)) would be read as octal.
-depth=${depth#"${depth%%[!0]*}"}
 indent=${ZZ_LOG_INDENT:-0}
 case "$indent" in *[!0-9]*) indent=0 ;; esac
-indent=$((indent + ${depth:-0} * 2))
 # The step tag is dimmed so it recedes behind the message; step is its plain
 # form (GitHub annotations have no colours).
 step=""

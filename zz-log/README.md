@@ -33,6 +33,13 @@ Declared via `zz-use` at the top of `run.sh` and resolved on demand
 
 - `ZZ_LOG_STEP` tags every script line with `[step]`; `ZZ_LOG_INDENT` indents it
   (a caller nesting a child raises it by 2). Both are inherited by children.
+- Levels: `i` a step starts, `s` it is done, `n` a decision the tool made for you,
+  `w` degraded but the run continues, `e` the run stops (follow it with `-` hint
+  lines), `d` internals (needs `ZZ_DEBUG`), `-` a detail line, `o` command output.
+- Nest a hint under a message by raising the indent for that one call:
+  `ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2)) zz-log - "Check the ref"`.
+- Any other level string is printed as the line's own prefix (as `json-validate`
+  does); it gets no step tag and no `ZZ_LOG_INDENT`.
 - Level `o` is what a command printed (git, an installer): from the message or
   stdin, dimmed behind a `│` gutter, no pictogram, no step tag.
 - `{Name text}` prints `text` in the `zz-colors` variable `Name` (`{Purple x}`);

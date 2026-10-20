@@ -225,3 +225,12 @@ teardown() {
     [ "$status" -ne 0 ]
     rm -f "$tmp"
 }
+
+@test "zz-persist -q writes without logging the write" {
+    tmp=$(mktemp)
+    run zz-persist -q -f "$tmp" KEY val
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"persisted"* ]]
+    grep -qx 'KEY=val' "$tmp"
+    rm -f "$tmp"
+}

@@ -118,6 +118,33 @@ nest() {
     )
 }
 
+# A detail line one level under the message above it.
+hint() {
+    ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2)) zz-log - "$@"
+}
+
+# Run a command; when nobody can answer a prompt (stdin is not a terminal) its
+# stdout is shown as operation output (zz-log o), apart from our own lines. On a
+# terminal it stays raw: a prompt without a newline must show up at once.
+# Its stderr (including the zz-log lines of a child script) is left alone.
+output() {
+    if [ -t 0 ]; then
+        "$@"
+        return
+    fi
+    _fifo=$(mktemp -u) && mkfifo "$_fifo" || {
+        "$@"
+        return
+    }
+    zz-log o <"$_fifo" &
+    _reader=$!
+    _rc=0
+    "$@" >"$_fifo" || _rc=$?
+    wait "$_reader"
+    rm -f "$_fifo"
+    return "$_rc"
+}
+
 # No workspaces (or forced): hand over to the repo's own entrypoint.
 run_entry() {
     step entry
@@ -130,7 +157,7 @@ run_entry() {
     done
     [ -n "$entry" ] || {
         zz-log e "No workspace or entrypoint found in {U $dir}"
-        zz-log -1 "Tried $repo-setup/run.sh, setup.sh and run.sh"
+        hint "Tried $repo-setup/run.sh, setup.sh and run.sh"
         exit 1
     }
     zz-log i "Handing over to {Purple $entry}"
@@ -166,7 +193,7 @@ apply_state() {
     for n in $(printf '%s' "$2" | tr ',' ' '); do
         exists "$n" || {
             zz-log e "Unknown workspace: {Purple $n}"
-            zz-log -1 "Available: $(printf '%s' "$names" | tr '\n' ' ')"
+            hint "Available: $(printf '%s' "$names" | tr '\n' ' ')"
             exit 1
         }
         state_set "$n" "$1"
@@ -179,24 +206,25 @@ apply_state() {
 run_step() {
     d=$(dir_of "$1")
     b=$(ws "$1" 8)
-    zz-log i "{B $1}: $2 ({U $d/$b})"
+    zz-log i "{B $1}: $2"
     rc=0
-    ZZ_LOG_STEP=$1 nest sh -c 'cd "$1" && if [ -x "$2" ]; then "./$2" $3; else bash "$2" $3; fi' sh "$d" "$b" "$2" || rc=$?
+    ZZ_LOG_STEP=$1 nest output sh -c 'cd "$1" && if [ -x "$2" ]; then "./$2" $3; else bash "$2" $3; fi' sh "$d" "$b" "$2" || rc=$?
     if [ "$rc" -ne 0 ]; then
         zz-log e "{B $1}: $2 failed (exit $rc)"
-        zz-log -1 "Re-run only this step: zz-setup $spec -o $1"
+        hint "Script: {U $d/$b}"
+        hint "Re-run only this step: zz-setup $spec -o $1"
         exit 1
     fi
     zz-log s "{B $1}: $2 done"
     if [ "$2" = up ]; then _remember=up; else _remember=skip; fi
-    nest zz-persist -f "$envfile" "$(state_key "$1")" "$_remember"
+    zz-persist -q -f "$envfile" "$(state_key "$1")" "$_remember"
 }
 
 # --- code
 zz-log i "Setting up {Purple $spec} at {B $ref} in {U $dir}"
 if [ -z "$local" ] && [ -z "$ZZ_SETUP_REF" ] && [ "$ref" = main ] && [ "${spec#*@}" = "$spec" ]; then
     zz-log w "No ref given, using 'main'"
-    zz-log -1 "To pick one: zz-setup $spec@<ref>, or put ZZ_SETUP_REF=<ref> on the sudo line (sudo drops a plain export)"
+    hint "Choose one with $spec@<ref>, or ZZ_SETUP_REF=<ref> placed after sudo"
 fi
 
 # --- fetch: zz-fetch clones or updates the checkout (nothing for a local one).
@@ -207,8 +235,7 @@ else
     zz-log i "Fetching {U $url} at {B $ref}"
     nest zz-fetch -r "$ref" -d "$dir" "$url" || {
         zz-log e "Could not fetch $spec at {B $ref}"
-        zz-log -1 "@ref and ZZ_SETUP_REF are the ref of $spec itself"
-        zz-log -1 "To run another version of these scripts, set ZZ_ORIGIN_REF for zz-use"
+        hint "@ref and ZZ_SETUP_REF set the ref of $spec; ZZ_ORIGIN_REF (for zz-use) sets the scripts' own"
         exit 1
     }
 fi
@@ -250,7 +277,7 @@ help
 )"
 [ "$#" -eq 0 ] || {
     zz-log e "Unknown argument: {Purple $1}"
-    zz-log -1 "zz-setup $spec -h lists the options"
+    hint "zz-setup $spec -h lists the options"
     exit 1
 }
 
@@ -283,7 +310,7 @@ if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
         -f "  (* = default) Number cycles skip -> up -> down; <enter> proceeds, q quits." \
         "$@") || rc=$?
     if [ "$rc" -ne 0 ]; then
-        echo "Aborted, nothing changed."
+        zz-log n "Aborted, nothing changed"
         exit 0
     fi
     for line in $out; do
@@ -323,7 +350,7 @@ if [ "$status_only" -ne 1 ]; then
         for c in $(conflicts_of "$n"); do
             exists "$c" && [ "$(state_get "$c")" = up ] || continue
             zz-log e "{Purple $n} conflicts with {Purple $c}, and both are enabled"
-            zz-log -1 "Skip one of them: -s $c, or -s $n"
+            hint "Skip one of them: -s $c, or -s $n"
             exit 1
         done
     done
@@ -337,7 +364,7 @@ if [ "$force_down" -ne 1 ]; then
             for dep in $(deps_of "$o"); do
                 [ "$dep" = "$n" ] || continue
                 zz-log e "Cannot bring {Purple $n} down: {Purple $o} depends on it and stays enabled"
-                zz-log -1 "Also pass -d $o, or -F"
+                hint "Also pass -d $o, or -F"
                 exit 1
             done
         done
