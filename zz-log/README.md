@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # zz-log
 
 Colored, leveled log line on stderr (i/n/w/e/s/d/-).
@@ -26,6 +28,31 @@ which case it prints like `-` but dimmed.
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand
 (installed if and only if missing) — see `run.sh` for the exact list.
+
+## Layout, operation output, inline colour
+
+- Levels: `i` a step starts, `s` it is done, `n` a decision the tool made for you,
+  `w` degraded but the run continues, `e` the run stops (follow it with `-` lines
+  saying what to do), `d` internals (needs `ZZ_DEBUG`), `-` a detail line, `o` command output.
+- Headline levels (`i n w e s`) start at column 0. A `-` line or `o` output hangs under the
+  headline above it behind a dim tree guide:
+  ```
+  → Fetching https://… at main
+     |  Cloning into /opt/vps
+     │ From https://…
+  ✕ Could not fetch vps at nope
+     |  @ref and ZZ_SETUP_REF set the ref of vps
+  ```
+- `ZZ_LOG_INDENT` is a nesting depth in levels (default 0, not spaces); each level adds a guide.
+  Child scripts inherit it. Most callers never set it: a child's `-` lines already hang under the
+  headline that started it.
+- Level `o` is what a command printed (git, an installer): from the message or stdin, dimmed behind a
+  `│` gutter, no pictogram.
+- Any other level string is printed as the line's own prefix (as `json-validate` does).
+- `{Name text}` prints `text` in the `zz-colors` variable `Name` (`{Purple x}`);
+  a single capital is that style in the line's own colour (`{U path}`). No fork
+  and no `eval` of the message: it runs on shell builtins (about 3× faster).
+  Nested markers are not supported.
 
 ## Tests
 

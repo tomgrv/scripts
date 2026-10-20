@@ -1,7 +1,10 @@
 #!/bin/sh
 # Usage: zz-input [input] [description]
 
+# --- parameters
 input="$1"
+
+# --- run: a file is printed, any other text is echoed, no argument reads stdin.
 
 if [ -n "$input" ]; then
     if [ -f "$input" ]; then

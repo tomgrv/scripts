@@ -76,6 +76,11 @@ variables when there is no terminal (`sudo` drops them: put them on the
 | `ZZ_SETUP_ENV_FILE` | `/etc/<repo>.env` as root, else `<checkout>/.env` |
 | `ZZ_SETUP_PROFILE`  | also export persisted inputs from `/etc/profile.d/<name>.sh` |
 
+## Paths
+
+`ZZ_SETUP_DIR` (checkout parent), `ZZ_ETC_DIR` (default `/etc`, root env file),
+`ZZ_PROFILE_DIR` (default `/etc/profile.d`), `ZZ_BIN_DIR` (bin directory).
+
 ## Tests
 
 ```sh

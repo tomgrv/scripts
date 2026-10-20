@@ -25,21 +25,24 @@
 # Env: ZZ_SETUP_REF (default main; "@<ref>" wins), ZZ_SETUP_DIR (parent of the
 # checkout; default /opt as root, else ~/.local/share), ZZ_SETUP_URL_BASE
 # (default https://github.com), ZZ_SETUP_ENTRY, ZZ_SETUP_ENV_FILE (inputs; default
-# /etc/<repo>.env as root, else <checkout>/.env, read literally, written by
-# zz-persist), ZZ_SETUP_PROFILE (also export persisted inputs from
-# /etc/profile.d/<name>.sh).
+# <ZZ_ETC_DIR, default /etc>/<repo>.env as root, else <checkout>/.env, read
+# literally, written by zz-persist), ZZ_SETUP_PROFILE (also export persisted
+# inputs from <ZZ_PROFILE_DIR, default /etc/profile.d>/<name>.sh).
 
 set -e
 
 . zz-colors
 
-# Repository first (getopts stops there), then everything else untouched in "$@".
+# --- arguments: the repository first (getopts stops there), then everything
+# else untouched in "$@". The workspace options are declared further down,
+# once the checkout says which workspaces exist.
 eval "$(zz-args "Fetch a GitHub org/repo, propose its workspaces and inputs, then run them" "$0" "$@" <<help
 - repo spec <org>/<repo>[@<ref>]: the repository to fetch and run
 # args rest Options for its workspaces (zz-setup <repo> -h), or arguments for its entrypoint
 help
 )"
 
+# --- parameters: validate the repository, derive ref, url, checkout and env file.
 [ -n "$spec" ] || {
     zz-log e "Usage: zz-setup <org>/<repo>[@<ref>] [options] (-h for help)"
     exit 1
@@ -89,30 +92,35 @@ fi
 dir="$parent/$repo"
 [ -z "$local" ] || dir=$local
 
-zz-log i "[zz-setup] repo=$spec ref=$ref dir=$dir"
-if [ -z "$local" ] && [ -z "$ZZ_SETUP_REF" ] && [ "$ref" = main ] && [ "${spec#*@}" = "$spec" ]; then
-    zz-log w "[zz-setup] No ref given, using 'main'. A plain 'export' before 'sudo zz-setup' is dropped by sudo: put it on the sudo line, e.g. 'sudo ZZ_SETUP_REF=... zz-setup'."
+envfile="${ZZ_SETUP_ENV_FILE:-}"
+if [ -z "$envfile" ]; then
+    if [ "$(id -u)" -eq 0 ]; then envfile="${ZZ_ETC_DIR:-/etc}/$repo.env"; else envfile="$dir/.env"; fi
 fi
 
-command -v git >/dev/null 2>&1 || [ -n "$local" ] || zz-install git
+# --- functions
+# Run a command; when nobody can answer a prompt (stdin is not a terminal) its
+# stdout is shown as operation output (zz-log o), apart from our own lines. On a
+# terminal it stays raw: a prompt without a newline must show up at once.
+# Its stderr (including the zz-log lines of a child script) is left alone.
+output() {
+    if [ -t 0 ]; then
+        "$@"
+        return
+    fi
+    _fifo=$(mktemp -u) && mkfifo "$_fifo" || {
+        "$@"
+        return
+    }
+    zz-log o <"$_fifo" &
+    _reader=$!
+    _rc=0
+    "$@" >"$_fifo" || _rc=$?
+    wait "$_reader"
+    rm -f "$_fifo"
+    return "$_rc"
+}
 
-if [ -n "$local" ]; then
-    zz-log i "[zz-setup] Using the local checkout in place."
-elif [ -d "$dir/.git" ]; then
-    zz-log i "[zz-setup] Updating existing checkout..."
-    git -C "$dir" fetch --depth 1 origin -- "$ref"
-    git -C "$dir" checkout -q -B "$ref" FETCH_HEAD
-    git -C "$dir" reset -q --hard FETCH_HEAD
-elif [ -d "$dir" ]; then
-    zz-log i "[zz-setup] $dir exists and is not a git checkout; running it in place."
-else
-    zz-log i "[zz-setup] Cloning $url..."
-    mkdir -p "$parent"
-    git clone -q --depth 1 --branch "$ref" "$url" "$dir"
-fi
-
-
-# --- entrypoint mode: no workspaces (or forced): hand over to the repo.
+# No workspaces (or forced): hand over to the repo's own entrypoint.
 run_entry() {
     entry=
     for cand in "$ZZ_SETUP_ENTRY" "$repo-setup/run.sh" setup.sh run.sh; do
@@ -122,59 +130,26 @@ run_entry() {
         fi
     done
     [ -n "$entry" ] || {
-        zz-log e "[zz-setup] No workspace or entrypoint found in $dir (tried $repo-setup/run.sh, setup.sh, run.sh)."
+        zz-log e "No workspace or entrypoint found in {U $dir}"
+        zz-log - "Tried $repo-setup/run.sh, setup.sh and run.sh"
         exit 1
     }
-    zz-log i "[zz-setup] Running {Purple $entry}..."
+    zz-log i "Handing over to {Purple $entry}"
     cd "$dir"
     exec sh -c '[ -x "$0" ] && exec "$0" "$@" || exec bash "$0" "$@"' "$dir/$entry" "$@"
 }
 
-cd "$dir"
-[ -z "$ZZ_SETUP_ENTRY" ] && [ -f package.json ] || run_entry "$@"
-command -v jq >/dev/null 2>&1 || zz-install jq
-
-# --- discover runnable workspaces: "order<TAB>name<TAB>dir", sorted.
-all=$(jq -r '(.workspaces // []) | (if type == "array" then . else .packages // [] end) | .[]' package.json)
-[ -n "$all" ] || run_entry "$@"
-
-# First bin file of a workspace (bin may be a string or a name -> path map).
-bin_path() { jq -r '.bin | if type == "string" then . else (to_entries[0].value // empty) end' "$1/package.json"; }
-
-cands=
-for w in $all; do
-    [ -f "$w/package.json" ] || continue
-    [ "$(jq -r '(.bin != null) and ((.engines // {}) | has("zz-setup"))' "$w/package.json")" = true ] || continue
-    [ -f "$w/$(bin_path "$w")" ] || continue
-    cands="$cands$w
-"
-done
-list=
-for w in $cands; do
-    list="$list$(jq -r --arg d "$w" '[(.config.order // 1000), (.name | sub("^@[^/]*/"; "")), $d] | @tsv' "$w/package.json")
-"
-done
-list=$(printf '%s' "$list" | sort -n -k1,1)
-[ -n "$list" ] || run_entry "$@"
-names=$(printf '%s\n' "$list" | cut -f2)
-
-dir_of() { printf '%s\n' "$list" | awk -F'\t' -v n="$1" '$2 == n { print $3; exit }'; }
-exists() { [ -n "$(dir_of "$1")" ]; }
-desc_of() { jq -r '.description // empty' "$(dir_of "$1")/package.json"; }
-deps_of() {
-    jq -r '((.dependencies // {}) + (.peerDependencies // {})) | keys[] | sub("^@[^/]*/"; "")' "$(dir_of "$1")/package.json"
-}
-conflicts_of() {
-    jq -r '(.config.conflicts // [])[] | sub("^@[^/]*/"; "")' "$(dir_of "$1")/package.json"
-}
+# Field $2 of workspace $1's row (3 dir, 4 description, 5 default, 6 deps,
+# 7 conflicts, 8 bin).
+ws() { printf '%s\n' "$list" | awk -F"$us" -v n="$1" -v f="$2" '$2 == n { print $f; exit }'; }
+dir_of() { ws "$1" 3; }
+exists() { [ -n "$(ws "$1" 3)" ]; }
+desc_of() { ws "$1" 4; }
+deps_of() { ws "$1" 6 | tr ',' '\n'; }
+conflicts_of() { ws "$1" 7 | tr ',' '\n'; }
 var_of() { printf 'STATE_%s' "$1" | tr -c 'A-Za-z0-9_\n' '_'; }
 state_get() { eval "printf '%s' \"\${$(var_of "$1"):-skip}\""; }
 state_set() { eval "$(var_of "$1")=\$2"; }
-
-envfile="${ZZ_SETUP_ENV_FILE:-}"
-if [ -z "$envfile" ]; then
-    if [ "$(id -u)" -eq 0 ]; then envfile="/etc/$repo.env"; else envfile="$dir/.env"; fi
-fi
 
 # The env file is plain KEY=VALUE (zz-persist's format), read literally and
 # never sourced, so a value can hold spaces/quotes without being executed.
@@ -185,24 +160,79 @@ env_get() { [ ! -f "$envfile" ] || sed -n "s/^$1=//p" "$envfile" | tail -n1; }
 # terminal with no option, so flags and non-interactive runs are unchanged.
 state_key() { printf 'ZZ_%s' "$(var_of "$1")"; }
 
-for n in $names; do
-    if [ "$(jq -r '.config.default // false' "$(dir_of "$n")/package.json")" = true ]; then
-        state_set "$n" up
-    else
-        state_set "$n" skip
-    fi
-done
-
+# Set the state of the comma-separated workspaces $2 to $1 (up|skip|down).
 apply_state() {
     for n in $(printf '%s' "$2" | tr ',' ' '); do
         exists "$n" || {
-            zz-log e "Unknown workspace: $n (available: $(printf '%s' "$names" | tr '\n' ' '))"
+            zz-log e "Unknown workspace: {Purple $n}"
+            zz-log - "Available: $(printf '%s' "$names" | tr '\n' ' ')"
             exit 1
         }
         state_set "$n" "$1"
     done
 }
 
+# --- run: down in reverse order first, then up in order.
+# The workspace's own zz-log lines and its stdout hang under the "running" line.
+run_step() {
+    d=$(dir_of "$1")
+    b=$(ws "$1" 8)
+    zz-log i "{B $1}: $2"
+    rc=0
+    output sh -c 'cd "$1" && if [ -x "$2" ]; then "./$2" $3; else bash "$2" $3; fi' sh "$d" "$b" "$2" || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        zz-log e "{B $1}: $2 failed (exit $rc)"
+        zz-log - "Script: {U $d/$b}"
+        zz-log - "Re-run only this step: zz-setup $spec -o $1"
+        exit 1
+    fi
+    zz-log s "{B $1}: $2 done"
+    if [ "$2" = up ]; then _remember=up; else _remember=skip; fi
+    zz-persist -q -f "$envfile" "$(state_key "$1")" "$_remember"
+}
+
+# --- code
+zz-log i "Setting up {Purple $spec} at {B $ref} in {U $dir}"
+if [ -z "$local" ] && [ -z "$ZZ_SETUP_REF" ] && [ "$ref" = main ] && [ "${spec#*@}" = "$spec" ]; then
+    zz-log w "No ref given, using 'main'"
+    zz-log - "Choose one with $spec@<ref>, or ZZ_SETUP_REF=<ref> placed after sudo"
+fi
+
+# --- fetch: zz-fetch clones or updates the checkout (nothing for a local one).
+if [ -n "$local" ]; then
+    zz-log n "Using the local checkout, nothing fetched"
+else
+    zz-log i "Fetching {U $url} at {B $ref}"
+    zz-fetch -r "$ref" -d "$dir" "$url" || {
+        zz-log e "Could not fetch $spec at {B $ref}"
+        zz-log - "@ref and ZZ_SETUP_REF set the ref of $spec; ZZ_ORIGIN_REF (for zz-use) sets the scripts' own"
+        exit 1
+    }
+fi
+
+# Without workspaces (no package.json, or ZZ_SETUP_ENTRY set) the repo's own
+# installer takes over.
+cd "$dir"
+[ -z "$ZZ_SETUP_ENTRY" ] && [ -f package.json ] || run_entry "$@"
+
+# --- select: zz-workspaces lists the runnable workspaces, one row each:
+# order US name US dir US description US default US deps US conflicts US bin.
+us=$(printf '\037')
+list=$(zz-workspaces)
+[ -n "$list" ] || run_entry "$@"
+names=$(printf '%s\n' "$list" | cut -d"$us" -f2)
+
+# Initial state: the workspaces flagged "default" start enabled.
+for n in $names; do
+    if [ "$(ws "$n" 5)" = true ]; then
+        state_set "$n" up
+    else
+        state_set "$n" skip
+    fi
+done
+
+# --- workspace options: declared here, not with the first zz-args call,
+# because the help and the accepted names depend on the checkout.
 eval "$(zz-args "$spec workspaces: $(printf '%s' "$names" | tr '\n' ' ')" "zz-setup $spec" "$@" <<help
 w names with_list Enable workspaces (space/comma-separated)
 s names skip_list Skip workspaces
@@ -215,7 +245,8 @@ S - status_flag Show each workspace's state and inputs, run nothing
 help
 )"
 [ "$#" -eq 0 ] || {
-    zz-log e "Unknown argument: $1 (zz-setup $spec -h)"
+    zz-log e "Unknown argument: {Purple $1}"
+    zz-log - "zz-setup $spec -h lists the options"
     exit 1
 }
 
@@ -240,7 +271,7 @@ if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
     set --
     for n in $names; do
         mark=" "
-        [ "$(jq -r '.config.default // false' "$(dir_of "$n")/package.json")" = true ] && mark="*"
+        [ "$(ws "$n" 5)" = true ] && mark="*"
         set -- "$@" "$n:$(state_get "$n")=$mark $(printf '%-20s' "$n") $(desc_of "$n")"
     done
     rc=0
@@ -248,7 +279,7 @@ if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
         -f "  (* = default) Number cycles skip -> up -> down; <enter> proceeds, q quits." \
         "$@") || rc=$?
     if [ "$rc" -ne 0 ]; then
-        echo "Aborted, nothing changed."
+        zz-log n "Aborted, nothing changed"
         exit 0
     fi
     for line in $out; do
@@ -270,7 +301,7 @@ while [ "$pass" -lt 5 ]; do
         for dep in $(deps_of "$n"); do
             exists "$dep" || continue
             if [ "$(state_get "$dep")" = skip ]; then
-                zz-log w "[zz-setup] Also enabling '$dep' (required by '$n')."
+                zz-log n "Also enabling {Purple $dep} (required by $n)"
                 state_set "$dep" up
                 changed=1
             fi
@@ -287,7 +318,8 @@ if [ "$status_only" -ne 1 ]; then
         [ "$(state_get "$n")" = up ] || continue
         for c in $(conflicts_of "$n"); do
             exists "$c" && [ "$(state_get "$c")" = up ] || continue
-            zz-log e "[zz-setup] '$n' conflicts with '$c' and both are enabled. Skip one of them: -s $c, or -s $n."
+            zz-log e "{Purple $n} conflicts with {Purple $c}, and both are enabled"
+            zz-log - "Skip one of them: -s $c, or -s $n"
             exit 1
         done
     done
@@ -300,7 +332,8 @@ if [ "$force_down" -ne 1 ]; then
             [ "$o" != "$n" ] && [ "$(state_get "$o")" = up ] || continue
             for dep in $(deps_of "$o"); do
                 [ "$dep" = "$n" ] || continue
-                zz-log e "[zz-setup] Refusing to bring '$n' down: '$o' depends on it and is still enabled. Also pass -d $o, or -F."
+                zz-log e "Cannot bring {Purple $n} down: {Purple $o} depends on it and stays enabled"
+                zz-log - "Also pass -d $o, or -F"
                 exit 1
             done
         done
@@ -310,138 +343,33 @@ fi
 up_names=
 for n in $names; do [ "$(state_get "$n")" = up ] && up_names="$up_names $n"; done
 [ "$status_only" -eq 1 ] || [ -n "$up_names$(for n in $names; do [ "$(state_get "$n")" = down ] && echo "$n"; done)" ] || {
-    zz-log w "[zz-setup] Nothing selected, nothing to do."
+    zz-log n "Nothing selected, nothing to do"
     exit 0
 }
 
-# --- inputs: "VAR<US>description<US>required<US>default<US>name<US>secret"
-# (US = \037; a whitespace separator like tab would collapse empty fields),
-# from "config.inputs" (object keyed by var) and "config.input" (zz-call array).
-inputs_of() {
-    jq -r --arg n "$1" '
-      ((.config.inputs // {}) | to_entries[]
-         | [.key, (.value.description // ""), ((.value.required // false) | tostring), (.value.default // ""), $n, ((.value.secret // false) | tostring)] | join("\u001f")),
-      ((.config.input // [])[]
-         | [.var, (.question // ""), "false", (.default // ""), $n, "false"] | join("\u001f"))' "$(dir_of "$1")/package.json"
-}
-
-us=$(printf '\037')
-all_inputs=
+# --- inputs: zz-vars shows them (-S), or asks, resolves and refuses a
+# missing required one; its export lines are evaluated here so the
+# workspaces inherit the values. Exit 3 means the user aborted.
+set --
 for n in $([ "$status_only" -eq 1 ] && echo "$names" || echo "$up_names"); do
-    all_inputs="$all_inputs$(inputs_of "$n")
-"
+    set -- "$@" "$n=$(dir_of "$n")"
 done
-all_inputs=$(printf '%s' "$all_inputs" | awk -F"$us" 'NF && !seen[$1]++')
-
-# Status view only (menu): the caller's environment, then the env file.
-# The final resolution, defaults and persistence are zz-call's, below.
-while IFS="$us" read -r var _rest; do
-    [ -n "$var" ] || continue
-    if [ -z "$(eval "printf '%s' \"\${$var:-}\"")" ]; then
-        _v=$(env_get "$var")
-        [ -n "$_v" ] && eval "export $var=\$_v"
-    fi
-done <<EXPLICIT
-$all_inputs
-EXPLICIT
-
-input_status() {
-    if [ -n "$(eval "printf '%s' \"\${$1:-}\"")" ]; then
-        echo set
-    elif [ "$2" = true ]; then
-        echo required
-    else
-        echo optional
-    fi
-}
-
 if [ "$status_only" -eq 1 ]; then
     for n in $names; do
         printf '%-6s %-22s %s\n' "$(state_get "$n")" "$n" "$(desc_of "$n")"
     done
-    while IFS="$us" read -r var desc req def owner secret; do
-        [ -n "$var" ] || continue
-        printf '  input %-24s [%s] %s\n' "$var" "$(input_status "$var" "$req")" "$owner"
-    done <<STATUS
-$all_inputs
-STATUS
+    zz-vars -S -f "$envfile" "$@"
     exit 0
 fi
-
-if [ -t 0 ] && [ -n "$all_inputs" ]; then
-    while :; do
-        set --
-        unset_count=0
-        while IFS="$us" read -r var desc req def owner secret; do
-            st=$(input_status "$var" "$req")
-            [ "$st" = set ] || unset_count=$((unset_count + 1))
-            set -- "$@" "$var=$(printf '%-24s' "$var") [$(printf '%-8s' "$st")] $owner${desc:+ - $desc}"
-        done <<EOF
-$all_inputs
-EOF
-        [ "$unset_count" -gt 0 ] || break
-        rc=0
-        choice=$(zz-menu -t "Inputs" \
-            -f "  Number sets that input; <enter> proceeds with what's set, q quits." \
-            "$@") || rc=$?
-        case "$rc" in
-        0) ;;
-        1)
-            echo "Aborted, nothing changed."
-            exit 0
-            ;;
-        *) break ;;
-        esac
-        row=$(printf '%s\n' "$all_inputs" | awk -F"$us" -v v="$choice" '$1 == v { print; exit }')
-        desc=$(printf '%s' "$row" | cut -d"$us" -f2)
-        def=$(printf '%s' "$row" | cut -d"$us" -f4)
-        secret=$(printf '%s' "$row" | cut -d"$us" -f6)
-        # zz-persist asks (masked with -s), shows the stored value and writes
-        # it; the answer is then read back into this run.
-        if [ "$secret" = true ]; then set -- -s; else set --; fi
-        [ -z "$def" ] || set -- "$@" -v "$def"
-        zz-persist -f "$envfile" -i "${choice}${desc:+ ($desc)}" "$@" "$choice"
-        _v=$(env_get "$choice")
-        [ -z "$_v" ] || eval "export $choice=\$_v"
-    done
-fi
-
-# Resolve every declared input with zz-call: the caller's environment (also
-# persisted), then the env file, then the default; nothing is prompted here.
-# A required input still empty aborts before anything runs.
-pkgs=
-for n in $up_names; do pkgs="$pkgs${pkgs:+:}$(dir_of "$n")/package.json"; done
-if [ -n "$pkgs" ]; then
-    eval "$(zz-call -n -e -f "$envfile" ${ZZ_SETUP_PROFILE:+-P "$ZZ_SETUP_PROFILE"} -p "$pkgs")"
-fi
-missing=0
-while IFS="$us" read -r var desc req def owner secret; do
-    [ -n "$var" ] || continue
-    if [ "$(input_status "$var" "$req")" = required ]; then
-        zz-log e "[zz-setup] $var is required by '$owner' but is empty: set it, or skip the workspace with -s $owner."
-        missing=1
-    fi
-done <<EOF
-$all_inputs
-EOF
-[ "$missing" -eq 0 ] || exit 1
-
-# --- run: down in reverse order first, then up in order.
-run_step() {
-    d=$(dir_of "$1")
-    b=$(bin_path "$d")
-    zz-log i "[zz-setup] === Running $1 ($d/$b $2) ==="
+if [ "$#" -gt 0 ]; then
     rc=0
-    (cd "$d" && if [ -x "$b" ]; then "./$b" $2; else bash "$b" $2; fi) || rc=$?
-    if [ "$rc" -ne 0 ]; then
-        zz-log e "[zz-setup] Step '$1' failed (exit $rc). Fix it and re-run just this step with: zz-setup $spec -o $1"
-        exit 1
-    fi
-    zz-log s "[zz-setup] === Done: $1 ($2) ==="
-    if [ "$2" = up ]; then _remember=up; else _remember=skip; fi
-    zz-persist -f "$envfile" "$(state_key "$1")" "$_remember"
-}
+    out=$(zz-vars -f "$envfile" ${ZZ_SETUP_PROFILE:+-P "$ZZ_SETUP_PROFILE"} "$@") || rc=$?
+    [ "$rc" -ne 3 ] || exit 0
+    [ "$rc" -eq 0 ] || exit "$rc"
+    eval "$out"
+fi
 
+# --- run: all "down" steps in reverse order, then all "up" steps in order.
 for n in $(printf '%s\n' "$names" | sed '1!G;h;$!d'); do
     [ "$(state_get "$n")" = down ] && run_step "$n" down
 done

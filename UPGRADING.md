@@ -178,6 +178,7 @@ dispatchers.
 | `normalize-json merge-json validate-json load-json`                      | `json-normalize json-merge json-validate json-load` (+ `json <sub>`)     |
 | `merge-yaml`                                                             | `yaml-merge` (+ `yaml <sub>`)                                            |
 | npm `@tomgrv/scripts-zz_args` …                                          | `@tomgrv/scripts-zz-args` …                                              |
+| `zz-ask <opts> <question>` (removed later)                               | `zz-prompt -c <opts> "<question>"` (same answers, lowercased)            |
 | shims `zz_context zz_dist zz_edit zz_json`                               | `zz-context zz-dist zz-edit zz-json`                                     |
 | pins `tomgrv/actions@v2`, `scripts-ref: v0`                              | `tomgrv/actions@v3`, `scripts-ref: v1`                                   |
 

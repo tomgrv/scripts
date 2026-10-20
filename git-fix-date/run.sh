@@ -135,7 +135,7 @@ fi
 
 
 zz-log w "This will rewrite git history. Make sure you understand the consequences."
-if [ "$(zz-ask "Yn" "Do you want to proceed?")" != "y" ]; then
+if [ "$(zz-prompt -c Yn "Do you want to proceed?")" != "y" ]; then
 	zz-log i "Operation cancelled by user."
 	exit 1
 fi

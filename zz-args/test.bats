@@ -171,3 +171,16 @@ SCRIPT
     [ "$status" -eq 0 ]
     [ "$output" = 'p\tq|r\\s' ]
 }
+
+@test "zz-args rejects an unknown short option but lets a --long argument through" {
+    run sh -c 'zz-args T c "$@" <<h
+- name name Name
+h' sh -z x
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Unknown option: -z"* ]]
+    run sh -c 'zz-args T c "$@" <<h
+- name name Name
+h' sh --version
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"Unknown option"* ]]
+}

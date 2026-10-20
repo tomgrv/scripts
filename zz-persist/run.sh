@@ -1,22 +1,32 @@
 #!/bin/sh
 # zz-persist — upsert a KEY=VALUE pair into an env-style file and/or an
-# /etc/profile.d/<profile>.sh snippet, so the value survives a new shell
-# or a script re-run.
+# <ZZ_PROFILE_DIR>/<profile>.sh snippet (default /etc/profile.d), so the value
+# survives a new shell or a script re-run.
+#   - the env file holds the value literally (read, never sourced);
+#   - the profile snippet is sourced by shells, so a value with anything but
+#     plain characters is single-quoted there and cannot run code;
+#   - a secret (-s) is asked masked (zz-prompt -s), never logged, and written
+#     only to owner-only files (zz-prompt -c offers to chmod 600 on a terminal).
 set -e
 
 . zz-colors
 
-eval $(
+# --- arguments
+eval "$(
     zz-args "Persist a key=value pair durably" $0 "$@" <<-help
         f file      file        Upsert KEY=VALUE into this .env-style file
-        p name      profile     Export KEY=VALUE from /etc/profile.d/<profile>.sh
+        p name      profile     Export KEY=VALUE from <ZZ_PROFILE_DIR>/<profile>.sh
         i question  question    Ask for the value with this prompt (terminal only, else the default is used)
         v default   value_default   Default offered by -i (the stored value, if any, wins)
         s -         secret      The value is a secret: masked prompt, never logged, written only to owner-only files
+        q -         quiet       Do not log the write (internal state)
         - key       key         Variable name
         - value     value       Variable value
 help
-)
+)"
+
+# --- parameters
+profile_dir=${ZZ_PROFILE_DIR:-/etc/profile.d}
 
 if [ -z "$key" ]; then
     zz-log e "Usage: zz-persist [-f file] [-p profile] [-s] [-i question [-v default]] <key> [value]"
@@ -37,17 +47,75 @@ if [ -z "$file" ] && [ -z "$profile" ]; then
     exit 1
 fi
 
-# Read an existing KEY= or export KEY= line's value from a file, if any.
-read_current() {
-    [ ! -f "$1" ] || sed -n "s/^$2//p" "$1" | tail -n1
-}
-
 is_secret=0
 [ -n "$secret" ] && is_secret=1
 
+# --- functions
+
+# Single-quote a value for a sourced file, unless it is made of plain
+# characters (keeps the common `export KEY=value` form).
+shell_quote() {
+    case "$1" in
+    *[!A-Za-z0-9_./:@%+=,-]*) printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")" ;;
+    *) printf '%s' "$1" ;;
+    esac
+}
+
+# Last value of a "prefix" line in a file ($1=file $2=prefix), if any; a
+# single-quoted value (written by shell_quote) is unquoted.
+read_current() {
+    [ ! -f "$1" ] && return 0
+    _v=$(sed -n "s/^$2//p" "$1" | tail -n1)
+    case "$_v" in
+    \'*\') printf '%s' "$_v" | sed "s/^'//;s/'\$//;s/'\\\\''/'/g" ;;
+    *) printf '%s' "$_v" ;;
+    esac
+}
+
+# A secret may only be written into a file that no one but its owner can read.
+is_owner_only_mode() {
+    case "$(stat -c '%a' "$1" 2>/dev/null)" in
+    *00) return 0 ;;
+    *) return 1 ;;
+    esac
+}
+
+# Upsert "<prefix><value>" in a file: the first matching line is replaced,
+# further ones dropped, else the line is appended. awk reads both through the
+# environment so no character in the value is interpreted.
+upsert_line() {
+    _tmp=$(mktemp)
+    P=$2 V=$3 awk '
+        BEGIN { p = ENVIRON["P"]; v = ENVIRON["V"] }
+        index($0, p) == 1 { if (!done) print p v; done = 1; next }
+        { print }
+        END { if (!done) print p v }
+    ' "$1" >"$_tmp"
+    # cat, not mv: keeps the target file's owner and mode.
+    cat "$_tmp" >"$1"
+    rm -f "$_tmp"
+}
+
+# Persist one line to a target. $1=target file $2=line prefix (e.g. "$key=")
+# $3=value as it is written.
+persist_line() {
+    if [ "$is_secret" = 1 ] && ! is_owner_only_mode "$1"; then
+        # On a terminal, offer the fix instead of only refusing.
+        if [ -t 0 ] && [ "$(zz-prompt -c yN "$key: $1 is not owner-only; chmod 600 it?")" = y ]; then
+            chmod 600 "$1"
+        else
+            zz-log w "$key: {U $1} is not owner-only (mode $(stat -c '%a' "$1" 2>/dev/null)); refusing to persist secret, run {Purple chmod 600 $1} first"
+            return
+        fi
+    fi
+    upsert_line "$1" "$2" "$3"
+    [ -n "$quiet" ] || zz-log i "$key persisted to {U $1}"
+}
+
+# --- value: ask when -i, else take the argument
 if [ -n "$question" ]; then
     current=$(read_current "$file" "$key=")
-    [ -z "$current" ] && [ -n "$profile" ] && current=$(read_current "/etc/profile.d/$profile.sh" "export $key=")
+    [ -z "$current" ] && [ -n "$profile" ] && current=$(read_current "$profile_dir/$profile.sh" "export $key=")
 
     default="${current:-$value_default}"
 
@@ -59,73 +127,39 @@ if [ -n "$question" ]; then
         fi
     fi
 
+    # Asked by zz-prompt (masked with -s); off a terminal the default is used.
     if [ -t 0 ]; then
-        prompt="  ${question}"
-        if [ -n "$default" ]; then
-            if [ "$is_secret" = 1 ]; then
-                prompt="${prompt} [***]: "
-            else
-                prompt="${prompt} [${default}]: "
-            fi
-        fi
-        printf '%s' "$prompt"
         if [ "$is_secret" = 1 ]; then
-            stty_orig=$(stty -g 2>/dev/null) || stty_orig=""
-            [ -n "$stty_orig" ] && stty -echo 2>/dev/null
-            read -r answer
-            [ -n "$stty_orig" ] && stty "$stty_orig" 2>/dev/null
-            echo
+            value=$(zz-prompt -s "  ${question}" "$default")
         else
-            read -r answer
+            value=$(zz-prompt "  ${question}" "$default")
         fi
-        value="${answer:-$default}"
     else
         value="$default"
     fi
 fi
 
-escaped_value=$(printf '%s' "${value:-}" | sed -e 's/[\\&|]/\\&/g')
+# One line per pair: a newline would corrupt the file (and, in a profile, run).
+case "${value:-}" in
+*'
+'*)
+    zz-log e "$key: a multi-line value cannot be persisted"
+    exit 1
+    ;;
+esac
 
-# A secret may only be written into a file that no one but its owner can read.
-is_owner_only_mode() {
-    case "$(stat -c '%a' "$1" 2>/dev/null)" in
-    *00) return 0 ;;
-    *) return 1 ;;
-    esac
-}
-
-# Upsert a "prefix<value>" line into a file, refusing to write a secret
-# unless the file is owner-only. $1=target file $2=line prefix (e.g. "$key=")
-persist_line() {
-    target="$1"
-    prefix="$2"
-
-    if [ "$is_secret" = 1 ] && ! is_owner_only_mode "$target"; then
-        zz-log w "$key: {U $target} is not owner-only (mode $(stat -c '%a' "$target" 2>/dev/null)); refusing to persist secret, run {Purple chmod 600 $target} first"
-        return
-    fi
-
-    if grep -q "^$prefix" "$target" 2>/dev/null; then
-        sed -i "s|^$prefix.*|$prefix$escaped_value|" "$target"
-    else
-        echo "$prefix$value" >>"$target"
-    fi
-    zz-log i "$key persisted to {U $target}"
-}
-
-# Files zz-persist creates: the env file is always owner-only (it may hold
-# credentials next to plain settings); a profile.d snippet only for a secret,
-# otherwise every shell must be able to source it.
+# --- env file: always owner-only (it may hold credentials next to plain settings)
 if [ -n "$file" ]; then
     [ -e "$file" ] || (umask 077 && touch "$file")
-    persist_line "$file" "$key="
+    persist_line "$file" "$key=" "${value:-}"
 fi
 
+# --- profile snippet: owner-only for a secret, else every shell must read it
 if [ -n "$profile" ]; then
-    profile_file="/etc/profile.d/$profile.sh"
+    profile_file="$profile_dir/$profile.sh"
     [ "$is_secret" = 1 ] && umask 077
-    if mkdir -p /etc/profile.d 2>/dev/null && touch "$profile_file" 2>/dev/null; then
-        persist_line "$profile_file" "export $key="
+    if mkdir -p "$profile_dir" 2>/dev/null && touch "$profile_file" 2>/dev/null; then
+        persist_line "$profile_file" "export $key=" "$(shell_quote "${value:-}")"
     else
         zz-log w "$key: cannot write {U $profile_file}, skipped"
     fi
