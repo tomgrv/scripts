@@ -11,9 +11,10 @@
 #     behind a "│" gutter, with no pictogram and no step tag. Pipe it:
 #       cmd 2>&1 | zz-log o        (or keep the status: out=$(cmd 2>&1) || rc=$?)
 #
-# Indent: ZZ_LOG_INDENT (spaces) indents every line of a script and of the
-# children it starts. A caller nests by raising it for a command, e.g. a hint
-# under an error: ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2)) zz-log - "Check the ref"
+# Indent: the headline levels (i n w e s) always start at column 0. Detail
+# lines (-) and command output (o) are indented by ZZ_LOG_INDENT (spaces), which
+# a caller raises to nest them under its message or for the children it starts:
+#   ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2)) zz-log - "Check the ref"
 #
 # Custom level: any other string is printed as the line's own prefix, the way
 # json-validate nests its output ("zz-log \"$prefix -\" msg"). The caller owns
@@ -106,7 +107,9 @@ paint() {
     out="$out$rest"
 }
 
-# --- operation output: dimmed, gutter-prefixed, one line at a time.
+# --- level: pictogram, base colour, GitHub Actions annotation.
+gha=""
+
 case $lvl in
 o*)
     {
@@ -116,12 +119,6 @@ o*)
     done
     exit 0
     ;;
-esac
-
-# --- level: pictogram, base colour, GitHub Actions annotation.
-gha=""
-
-case $lvl in
 d*)
     [ -n "${ZZ_DEBUG:-}" ] || exit 0
     picto="{BBlack ·} "
@@ -130,25 +127,30 @@ d*)
 i*)
     picto="{BBlue →} "
     base="White"
+    indent=0
     ;;
 n*)
     picto="{BCyan i} "
     base="Cyan"
+    indent=0
     [ "${GITHUB_ACTIONS:-}" = "true" ] && gha="::notice::"
     ;;
 w*)
     picto="{BYellow !} "
     base="Yellow"
+    indent=0
     [ "${GITHUB_ACTIONS:-}" = "true" ] && gha="::warning::"
     ;;
 e*)
     picto="{BRed ✕} "
     base="Red"
+    indent=0
     [ "${GITHUB_ACTIONS:-}" = "true" ] && gha="::error::"
     ;;
 s*)
     picto="{Green ✔} "
     base="Green"
+    indent=0
     ;;
 -)
     picto="  "
