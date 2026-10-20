@@ -16,6 +16,13 @@ value=$(zz-prompt "Question?" [default])
 Declared via `zz-use` at the top of `run.sh` and resolved on demand
 (installed if and only if missing) — see `run.sh` for the exact list.
 
+## Options
+
+- `-s` secret: masked input, default shown as `***`.
+- `-e` exit 1 when input ends.
+- `-c Yn` accept one of these letters (any case), re-ask on anything else; the
+  uppercase letter is the default. `zz-ask` is a wrapper over `zz-prompt -c`.
+
 ## Tests
 
 ```sh

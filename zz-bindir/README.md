@@ -16,6 +16,11 @@ eval "$(zz-bindir [-t target])"
 Declared via `zz-use` at the top of `run.sh` and resolved on demand
 (installed if and only if missing) — see `run.sh` for the exact list.
 
+## Environment
+
+`ZZ_BIN_DIR` (alias `INSTALL_BIN_DIR`) overrides the first candidate,
+`/usr/local/bin`.
+
 ## Tests
 
 ```sh

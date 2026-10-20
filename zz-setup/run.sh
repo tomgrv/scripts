@@ -25,9 +25,9 @@
 # Env: ZZ_SETUP_REF (default main; "@<ref>" wins), ZZ_SETUP_DIR (parent of the
 # checkout; default /opt as root, else ~/.local/share), ZZ_SETUP_URL_BASE
 # (default https://github.com), ZZ_SETUP_ENTRY, ZZ_SETUP_ENV_FILE (inputs; default
-# /etc/<repo>.env as root, else <checkout>/.env, read literally, written by
-# zz-persist), ZZ_SETUP_PROFILE (also export persisted inputs from
-# /etc/profile.d/<name>.sh).
+# <ZZ_ETC_DIR, default /etc>/<repo>.env as root, else <checkout>/.env, read
+# literally, written by zz-persist), ZZ_SETUP_PROFILE (also export persisted
+# inputs from <ZZ_PROFILE_DIR, default /etc/profile.d>/<name>.sh).
 
 set -e
 
@@ -176,7 +176,7 @@ state_set() { eval "$(var_of "$1")=\$2"; }
 
 envfile="${ZZ_SETUP_ENV_FILE:-}"
 if [ -z "$envfile" ]; then
-    if [ "$(id -u)" -eq 0 ]; then envfile="/etc/$repo.env"; else envfile="$dir/.env"; fi
+    if [ "$(id -u)" -eq 0 ]; then envfile="${ZZ_ETC_DIR:-/etc}/$repo.env"; else envfile="$dir/.env"; fi
 fi
 
 # The env file is plain KEY=VALUE (zz-persist's format), read literally and

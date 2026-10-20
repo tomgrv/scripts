@@ -6,6 +6,8 @@
 # the historical zz_feature -i bin-linking flow; shared by feature-install
 # and zz-use.
 
+# ZZ_BIN_DIR (alias INSTALL_BIN_DIR) overrides the first candidate, /usr/local/bin.
+
 . zz-colors
 
 # --- arguments
@@ -31,7 +33,7 @@ add_candidate() {
     esac
 }
 
-add_candidate "${INSTALL_BIN_DIR:-/usr/local/bin}" 1
+add_candidate "${ZZ_BIN_DIR:-${INSTALL_BIN_DIR:-/usr/local/bin}}" 1
 [ -n "$HOME" ] && add_candidate "$HOME/.local/bin" 1
 
 old_ifs=$IFS

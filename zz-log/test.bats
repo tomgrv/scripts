@@ -160,3 +160,9 @@ teardown() {
     [[ "$output" == *"│ a"* && "$output" == *"│ b"* ]]
     [[ "$output" != *"[fetch]"* ]]
 }
+
+@test "zz-log sourced with ZZ_LOG_LIB defines zz_log without logging or exiting the caller" {
+    run sh -c 'ZZ_LOG_LIB=1; . zz-log; zz_log d hidden; zz_log i "from lib" 2>&1; echo still-here'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"from lib"* && "$output" == *still-here ]]
+}

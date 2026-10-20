@@ -61,3 +61,10 @@ teardown() {
     run bash -c 'zz-prompt "Q?" dflt </dev/null 2>/dev/null'
     [ "$output" = dflt ]
 }
+
+@test "zz-prompt -c accepts a listed letter, defaults on Enter, re-asks on junk" {
+    run bash -c 'printf "x\nN\n" | zz-prompt -c Yn "Go?" 2>/dev/null'
+    [ "$output" = N ]
+    run bash -c 'echo | zz-prompt -c Yn "Go?" 2>/dev/null'
+    [ "$output" = y ]
+}

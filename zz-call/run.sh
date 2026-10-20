@@ -37,7 +37,7 @@
 #   zz-call [-p package.json[:more.json]] [-f envfile] [-P profile] [-n] [-e]
 #           [command [args...]]
 #   -f  env file to read/persist (default: config.file of the first package.json, else .env)
-#   -P  also export persisted values from /etc/profile.d/<profile>.sh
+#   -P  also export persisted values from <ZZ_PROFILE_DIR, default /etc/profile.d>/<profile>.sh
 #   -n  never prompt: a missing var falls back to its default, not persisted
 #   -e  also persist values already set in the environment
 
@@ -49,7 +49,7 @@ eval $(
     zz-args "Resolve a caller's declared env vars (ask+persist if missing), then run a command" $0 "$@" <<-help
         p package   package     package.json file(s) to read, ':'-separated (default: ./package.json)
         f file      envfile     Env file to read and persist to (default: config.file, else .env)
-        P profile   profile     Also export persisted values from /etc/profile.d/<profile>.sh
+        P profile   profile     Also export persisted values from <ZZ_PROFILE_DIR, default /etc/profile.d>/<profile>.sh
         n -         noprompt    Never prompt: missing vars fall back to their default (not persisted)
         e -         persistenv  Also persist values already set in the environment
         # cmd        cmd         Command (and args) to run once every input var is resolved
@@ -104,8 +104,8 @@ _flag() { [ "$1" != true ] || printf '%s' -s; }
 
 _persist_profile() {
     [ -n "$profile" ] || return 0
-    _q=$(printf '%s' "$2" | sed "s/'/'\\\\''/g")
-    zz-persist -p "$profile" $(_flag "$3") "$1" "'$_q'"
+    # zz-persist quotes the value for the sourced snippet.
+    zz-persist -p "$profile" $(_flag "$3") "$1" "$2"
 }
 
 _persist() {

@@ -455,3 +455,9 @@ _sha_config() {
     [ ! -e "$bindir/fake-dl-tool" ]
     rm -rf "$payload" "$cfg" "$bindir"
 }
+
+@test "zz-use -x hands everything after the tool to it untouched, even -f" {
+    run env PATH="$TEST_BIN:/usr/bin:/bin" "$(command -v zz-use)" -x echo -f hi
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"-f hi"* ]]
+}

@@ -205,3 +205,23 @@ teardown() {
     grep -qx 'KEY=dflt' "$d/new.env"
     rm -rf "$d"
 }
+
+@test "zz-persist quotes a risky value in the profile snippet and unquotes it on read-back" {
+    d=$(mktemp -d)
+    run env ZZ_PROFILE_DIR="$d" zz-persist -p zzq KEY 'a b $(id) it'"'"'s'
+    [ "$status" -eq 0 ]
+    [ "$(sh -c ". $d/zzq.sh; printf %s \"\$KEY\"")" = "a b \$(id) it's" ]
+    run env ZZ_PROFILE_DIR="$d" zz-persist -p zzq -i Q KEY </dev/null
+    [[ "$output" == *"it's"* ]]
+    rm -rf "$d"
+}
+
+@test "zz-persist keeps backslashes and & in values and rejects a multi-line value" {
+    tmp=$(mktemp)
+    run zz-persist -f "$tmp" KEY 'a\nb&c|d'
+    [ "$status" -eq 0 ]
+    grep -qF 'KEY=a\nb&c|d' "$tmp"
+    run zz-persist -f "$tmp" KEY "$(printf 'a\nb')"
+    [ "$status" -ne 0 ]
+    rm -f "$tmp"
+}

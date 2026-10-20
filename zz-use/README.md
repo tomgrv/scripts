@@ -39,7 +39,7 @@ bats test.bats
 - installs a functional script individually, not the whole set
 - installs a single zz-* tool individually, not the whole set
 - errors with "Unable to provide required dependency" when a tool can't be resolved
-- `--force` re-installs a zz-* tool even when already on PATH
+- `-f` (alias `--force`) re-installs a zz-* tool even when already on PATH; options are parsed by `zz-args`, after a pre-pass that hoists `-f` and stops at `-x <tool>` (the tool gets the rest verbatim)
 - recognizes `--force` after a tool name, not just as the first arg
 - resolves a functional script's `config/` folder alongside it
 - `-x` installs the target and execs it, passing arguments through

@@ -1,7 +1,8 @@
 #!/bin/sh
 # zz-ask <options> <question...> — interactive single-char confirm.
 # <options> e.g. "Yn" — the uppercase letter is the default. Prints the
-# chosen option (lowercased) to stdout.
+# chosen option (lowercased) to stdout. A wrapper over zz-prompt -c, the
+# shared reader.
 
 . zz-colors
 
@@ -12,24 +13,5 @@ eval "$(zz-args "Interactive single-char confirm" "$0" "$@" <<help
 help
 )"
 
-# --- prompt
-default=$(printf '%s' "$options" | tr -dc 'A-Z' | tr '[:upper:]' '[:lower:]')
-
-echo "${BBlue}#${None} $question ${BBlue}[${options}]${End}" >&2
-
-while true; do
-
-    read -r confirm
-
-    if [ -z "$confirm" ]; then
-        echo "$default"
-        break
-    fi
-
-    if echo "$options" | grep -q -i "$confirm"; then
-        echo "$confirm"
-        break
-    fi
-
-    zz-log w "Please enter a valid option from [${options}] (default: ${default}):"
-done
+# --- ask
+exec zz-prompt -c "$options" "$question"

@@ -53,42 +53,8 @@
 
 set -e
 
-# One left-to-right scan for every option (--force/-f, -x/--exec), so
-# --force is recognized anywhere, not just as literal $1. Errors here use
-# plain stderr, not zz-log: this runs before any tool, zz-log included,
-# is resolved. Non-option args are single-quoted into _before (restored
-# via `eval set --` further down). Everything from -x's <tool> onward is
-# left untouched in "$@", to become the exec'd tool's own argv.
 FORCE=0
 EXEC_TOOL=""
-_before=""
-
-while [ $# -gt 0 ]; do
-    case "$1" in
-    --force | -f)
-        FORCE=1
-        shift
-        ;;
-    -x | --exec)
-        shift
-        EXEC_TOOL="${1:-}"
-        if [ -z "$EXEC_TOOL" ]; then
-            printf '[e] -x/--exec requires a tool name\n' >&2
-            exit 1
-        fi
-        shift
-        break
-        ;;
-    -*)
-        printf '[e] Unknown option: %s\n' "$1" >&2
-        exit 1
-        ;;
-    *)
-        _before="${_before} '$(printf '%s' "$1" | sed "s/'/'\\\\''/g")'"
-        shift
-        ;;
-    esac
-done
 
 # Follow symlinks (an installed "zz-use" on PATH is a symlink to this
 # file) so SCRIPT_DIR/ROOT_DIR resolve to the real checkout.
@@ -620,11 +586,61 @@ _use() {
     done
 }
 
-# -x/--exec: install EXEC_TOOL alongside the dependencies collected into
-# _before, then exec into it, remaining "$@" becoming its argv. Falls
-# through to the plain _use call below when -x wasn't given.
+# --- arguments. A pre-pass keeps what zz-args (getopts) cannot express:
+# -f/--force may sit anywhere (hoisted in front of the tools), and -x/--exec
+# <tool> ends parsing: everything after it is the exec'd tool's own argv
+# (kept quoted in _tail, never parsed). Errors use plain stderr: zz-log may
+# not be resolved yet.
+_opts=""
+_tools=""
+_tail=""
+_quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\''/g")"; }
+while [ $# -gt 0 ]; do
+    case "$1" in
+    -x | --exec)
+        shift
+        EXEC_TOOL="${1:-}"
+        if [ -z "$EXEC_TOOL" ]; then
+            printf '[e] -x/--exec requires a tool name\n' >&2
+            exit 1
+        fi
+        shift
+        for _a in "$@"; do _tail="$_tail $(_quote "$_a")"; done
+        break
+        ;;
+    --force) _opts="$_opts -f" ;;
+    --help) _opts="$_opts -h" ;;
+    --*)
+        printf '[e] Unknown option: %s\n' "$1" >&2
+        exit 1
+        ;;
+    -?) _opts="$_opts $1" ;;
+    *) _tools="$_tools $(_quote "$1")" ;;
+    esac
+    shift
+done
+
+# zz-args (and its zz-colors) must be on PATH: resolve the default source
+# when they are not, as _bindir does for zz-bindir.
+case " $_opts " in *" -f "*) FORCE=1 ;; esac
+command -v zz-args >/dev/null 2>&1 || _resolve_src || exit 1
+
+# Declares the options and collects the tools back onto "$@".
+_parse() {
+    eval "$(zz-args "Install tools on demand, only if missing" "zz-use" "$@" <<help
+f - force_flag Reinstall even when already on PATH
+x tool exec_tool Install <tool> and exec into it with the remaining arguments as its argv
+# tools tools Tools to install: [origin/]<tool>[@ref]
+help
+)" || return 1
+    [ -z "$force_flag" ] || FORCE=1
+    _use "$@" ${EXEC_TOOL:+"$EXEC_TOOL"}
+}
+
+# -x/--exec: install EXEC_TOOL alongside the tools, then exec into it with
+# the saved tail as its argv.
+eval "_parse $_opts $_tools" || exit 1
 if [ -n "$EXEC_TOOL" ]; then
-    eval "_use $_before \"\$EXEC_TOOL\"" || exit 1
     # Same leading-"@" vs trailing-"@ref" split as in _use: an npm-origin
     # exec target (e.g. "@myscope/pkg/tool@1.2.3") must not have its
     # command name mangled by splitting on the scope's own "@".
@@ -639,7 +655,6 @@ if [ -n "$EXEC_TOOL" ]; then
         ;;
     esac
     case "$_exec_name" in */*) _exec_name="${_exec_name##*/}" ;; esac
+    eval "set -- $_tail"
     exec "$_exec_name" "$@"
 fi
-
-eval "_use $_before"

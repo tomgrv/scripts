@@ -27,6 +27,16 @@ which case it prints like `-` but dimmed.
 Declared via `zz-use` at the top of `run.sh` and resolved on demand
 (installed if and only if missing) — see `run.sh` for the exact list.
 
+## Step, indent, operation output, library mode
+
+- `ZZ_LOG_STEP` tags every script line with `[step]`; `ZZ_LOG_INDENT` indents it
+  (a caller nesting a child raises it by 2). Both are inherited by children.
+- Level `o` is what a command printed (git, an installer): from the message or
+  stdin, dimmed behind a `│` gutter, no pictogram, no step tag.
+- Sourced (`ZZ_LOG_LIB=1; . zz-log`) it only defines `zz_log <level> <msg...>`,
+  which logs in the caller's shell with no fork per message. Run as a command
+  it behaves as before.
+
 ## Tests
 
 ```sh
