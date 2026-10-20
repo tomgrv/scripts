@@ -113,8 +113,8 @@ render() {
 
 while true; do
     render
-    printf '%b' "${BBlue}>${End} " >&2
-    read -r choice || exit 1
+    # Asked by zz-prompt; input ending quits like q.
+    choice=$(zz-prompt -e "Choose") || exit 1
 
     case "$choice" in
     "")

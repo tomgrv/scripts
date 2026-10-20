@@ -59,26 +59,13 @@ if [ -n "$question" ]; then
         fi
     fi
 
+    # Asked by zz-prompt (masked with -s); off a terminal the default is used.
     if [ -t 0 ]; then
-        prompt="  ${question}"
-        if [ -n "$default" ]; then
-            if [ "$is_secret" = 1 ]; then
-                prompt="${prompt} [***]: "
-            else
-                prompt="${prompt} [${default}]: "
-            fi
-        fi
-        printf '%s' "$prompt"
         if [ "$is_secret" = 1 ]; then
-            stty_orig=$(stty -g 2>/dev/null) || stty_orig=""
-            [ -n "$stty_orig" ] && stty -echo 2>/dev/null
-            read -r answer
-            [ -n "$stty_orig" ] && stty "$stty_orig" 2>/dev/null
-            echo
+            value=$(zz-prompt -s "  ${question}" "$default")
         else
-            read -r answer
+            value=$(zz-prompt "  ${question}" "$default")
         fi
-        value="${answer:-$default}"
     else
         value="$default"
     fi

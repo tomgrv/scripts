@@ -18,6 +18,12 @@ zz-install git-flow apk=gitflow-avh dnf=gitflow yum=gitflow \
     brew=git-flow-avh pacman=gitflow-avh
 ```
 
+With `-u <url>` it installs a downloaded binary instead, into the directory
+`zz-bindir` resolves: `[-a tar.gz|tgz|tar.xz|zip] [-b binpath] [-v version] [-s sha256]`;
+`{VERSION}`, `{OS}`, `{ARCH}` are expanded in `url`/`binpath`, and `sha256` is a
+hash or a JSON object keyed `<os>_<arch>`. This is what `zz-use` calls for the
+tools it downloads.
+
 `<pkg>` is the default package name; append `<manager>=<name>` pairs where a
 manager names it differently. Managers, tried in order: `apt` (`apt-get`),
 `apk`, `dnf`, `yum`, `brew`, `pacman`, `zypper`, `winget` (Git Bash on Windows, no root needed). Exits 1 when none is found,

@@ -33,6 +33,15 @@ set -e
 
 . zz-colors
 
+# zz-log tags every line with the current step (inherited by the scripts run
+# below) and indents what nested steps print.
+ZZ_LOG_STEP=zz-setup
+export ZZ_LOG_STEP
+step() {
+    ZZ_LOG_STEP="zz-setup:$1"
+    export ZZ_LOG_STEP
+}
+
 # Repository first (getopts stops there), then everything else untouched in "$@".
 eval "$(zz-args "Fetch a GitHub org/repo, propose its workspaces and inputs, then run them" "$0" "$@" <<help
 - repo spec <org>/<repo>[@<ref>]: the repository to fetch and run
@@ -89,31 +98,22 @@ fi
 dir="$parent/$repo"
 [ -z "$local" ] || dir=$local
 
-zz-log i "[zz-setup] repo=$spec ref=$ref dir=$dir"
+zz-log i "repo=$spec ref=$ref dir=$dir"
 if [ -z "$local" ] && [ -z "$ZZ_SETUP_REF" ] && [ "$ref" = main ] && [ "${spec#*@}" = "$spec" ]; then
-    zz-log w "[zz-setup] No ref given, using 'main'. A plain 'export' before 'sudo zz-setup' is dropped by sudo: put it on the sudo line, e.g. 'sudo ZZ_SETUP_REF=... zz-setup'."
+    zz-log w "No ref given, using 'main'. A plain 'export' before 'sudo zz-setup' is dropped by sudo: put it on the sudo line, e.g. 'sudo ZZ_SETUP_REF=... zz-setup'."
 fi
 
-command -v git >/dev/null 2>&1 || [ -n "$local" ] || zz-install git
-
+# --- fetch: zz-fetch clones or updates the checkout (nothing for a local one).
+step fetch
 if [ -n "$local" ]; then
-    zz-log i "[zz-setup] Using the local checkout in place."
-elif [ -d "$dir/.git" ]; then
-    zz-log i "[zz-setup] Updating existing checkout..."
-    git -C "$dir" fetch --depth 1 origin -- "$ref"
-    git -C "$dir" checkout -q -B "$ref" FETCH_HEAD
-    git -C "$dir" reset -q --hard FETCH_HEAD
-elif [ -d "$dir" ]; then
-    zz-log i "[zz-setup] $dir exists and is not a git checkout; running it in place."
+    zz-log i "Using the local checkout in place."
 else
-    zz-log i "[zz-setup] Cloning $url..."
-    mkdir -p "$parent"
-    git clone -q --depth 1 --branch "$ref" "$url" "$dir"
+    zz-fetch -r "$ref" -d "$dir" "$url"
 fi
-
 
 # --- entrypoint mode: no workspaces (or forced): hand over to the repo.
 run_entry() {
+    step entry
     entry=
     for cand in "$ZZ_SETUP_ENTRY" "$repo-setup/run.sh" setup.sh run.sh; do
         if [ -n "$cand" ] && [ -f "$dir/$cand" ]; then
@@ -122,18 +122,21 @@ run_entry() {
         fi
     done
     [ -n "$entry" ] || {
-        zz-log e "[zz-setup] No workspace or entrypoint found in $dir (tried $repo-setup/run.sh, setup.sh, run.sh)."
+        zz-log e "No workspace or entrypoint found in $dir (tried $repo-setup/run.sh, setup.sh, run.sh)."
         exit 1
     }
-    zz-log i "[zz-setup] Running {Purple $entry}..."
+    zz-log i "Running {Purple $entry}..."
     cd "$dir"
     exec sh -c '[ -x "$0" ] && exec "$0" "$@" || exec bash "$0" "$@"' "$dir/$entry" "$@"
 }
 
 cd "$dir"
 [ -z "$ZZ_SETUP_ENTRY" ] && [ -f package.json ] || run_entry "$@"
+# jq reads the workspaces' package.json.
 command -v jq >/dev/null 2>&1 || zz-install jq
 
+# --- select: discover the runnable workspaces and decide which ones run.
+step select
 # --- discover runnable workspaces: "order<TAB>name<TAB>dir", sorted.
 all=$(jq -r '(.workspaces // []) | (if type == "array" then . else .packages // [] end) | .[]' package.json)
 [ -n "$all" ] || run_entry "$@"
@@ -270,7 +273,7 @@ while [ "$pass" -lt 5 ]; do
         for dep in $(deps_of "$n"); do
             exists "$dep" || continue
             if [ "$(state_get "$dep")" = skip ]; then
-                zz-log w "[zz-setup] Also enabling '$dep' (required by '$n')."
+                zz-log w "Also enabling '$dep' (required by '$n')."
                 state_set "$dep" up
                 changed=1
             fi
@@ -287,7 +290,7 @@ if [ "$status_only" -ne 1 ]; then
         [ "$(state_get "$n")" = up ] || continue
         for c in $(conflicts_of "$n"); do
             exists "$c" && [ "$(state_get "$c")" = up ] || continue
-            zz-log e "[zz-setup] '$n' conflicts with '$c' and both are enabled. Skip one of them: -s $c, or -s $n."
+            zz-log e "'$n' conflicts with '$c' and both are enabled. Skip one of them: -s $c, or -s $n."
             exit 1
         done
     done
@@ -300,7 +303,7 @@ if [ "$force_down" -ne 1 ]; then
             [ "$o" != "$n" ] && [ "$(state_get "$o")" = up ] || continue
             for dep in $(deps_of "$o"); do
                 [ "$dep" = "$n" ] || continue
-                zz-log e "[zz-setup] Refusing to bring '$n' down: '$o' depends on it and is still enabled. Also pass -d $o, or -F."
+                zz-log e "Refusing to bring '$n' down: '$o' depends on it and is still enabled. Also pass -d $o, or -F."
                 exit 1
             done
         done
@@ -310,10 +313,12 @@ fi
 up_names=
 for n in $names; do [ "$(state_get "$n")" = up ] && up_names="$up_names $n"; done
 [ "$status_only" -eq 1 ] || [ -n "$up_names$(for n in $names; do [ "$(state_get "$n")" = down ] && echo "$n"; done)" ] || {
-    zz-log w "[zz-setup] Nothing selected, nothing to do."
+    zz-log w "Nothing selected, nothing to do."
     exit 0
 }
 
+# --- inputs: resolve what the selected workspaces declare.
+step inputs
 # --- inputs: "VAR<US>description<US>required<US>default<US>name<US>secret"
 # (US = \037; a whitespace separator like tab would collapse empty fields),
 # from "config.inputs" (object keyed by var) and "config.input" (zz-call array).
@@ -418,7 +423,7 @@ missing=0
 while IFS="$us" read -r var desc req def owner secret; do
     [ -n "$var" ] || continue
     if [ "$(input_status "$var" "$req")" = required ]; then
-        zz-log e "[zz-setup] $var is required by '$owner' but is empty: set it, or skip the workspace with -s $owner."
+        zz-log e "$var is required by '$owner' but is empty: set it, or skip the workspace with -s $owner."
         missing=1
     fi
 done <<EOF
@@ -427,21 +432,29 @@ EOF
 [ "$missing" -eq 0 ] || exit 1
 
 # --- run: down in reverse order first, then up in order.
+# Each workspace runs tagged with its own name and one level deeper, so its
+# zz-log lines nest under the "=== Running" line.
 run_step() {
     d=$(dir_of "$1")
     b=$(bin_path "$d")
-    zz-log i "[zz-setup] === Running $1 ($d/$b $2) ==="
+    zz-log i "=== Running $1 ($d/$b $2) ==="
     rc=0
-    (cd "$d" && if [ -x "$b" ]; then "./$b" $2; else bash "$b" $2; fi) || rc=$?
+    (
+        ZZ_LOG_STEP=$1
+        ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2))
+        export ZZ_LOG_STEP ZZ_LOG_INDENT
+        cd "$d" && if [ -x "$b" ]; then "./$b" $2; else bash "$b" $2; fi
+    ) || rc=$?
     if [ "$rc" -ne 0 ]; then
-        zz-log e "[zz-setup] Step '$1' failed (exit $rc). Fix it and re-run just this step with: zz-setup $spec -o $1"
+        zz-log e "Step '$1' failed (exit $rc). Fix it and re-run just this step with: zz-setup $spec -o $1"
         exit 1
     fi
-    zz-log s "[zz-setup] === Done: $1 ($2) ==="
+    zz-log s "=== Done: $1 ($2) ==="
     if [ "$2" = up ]; then _remember=up; else _remember=skip; fi
     zz-persist -f "$envfile" "$(state_key "$1")" "$_remember"
 }
 
+step run
 for n in $(printf '%s\n' "$names" | sed '1!G;h;$!d'); do
     [ "$(state_get "$n")" = down ] && run_step "$n" down
 done

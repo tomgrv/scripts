@@ -122,7 +122,7 @@ zz-use zz-log jq -x json-validate some-file.json
 - **Core** folders keep the `zz-` prefix — each atomic function is its own
   dedicated script: `zz-use`, `zz-update`, `zz-colors`, `zz-log`, `zz-args`,
   `zz-prompt`, `zz-ask`, `zz-menu`, `zz-input`, `zz-bindir`, `zz-dispatch`, `zz-npx`,
-  `zz-persist`, `zz-call`, `zz-install`, `zz-setup`.
+  `zz-persist`, `zz-call`, `zz-install`, `zz-fetch`, `zz-setup`.
 - **Functional** folders use `<verb>-<topic>` naming: `json-validate`,
   `json-normalize`, `json-merge`, `json-load`, `feature-context`,
   `edit-script`, `distribute-utils`, `feature-install`,
@@ -239,7 +239,8 @@ flowchart TD
 | `zz-npx [-s] <tool>`                                                   | run a local `node_modules/.bin` binary, falling back to `npx`                                                                                         |
 | `zz-persist [-f file] [-p profile] [-s] [-i <question> [-v <default>]] <key> [value]` | upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`; `-i` asks for the value, `-s` marks it secret (masked, owner-only targets only) |
 | `zz-call [-p package.json] [command...]`                               | resolve a caller's declared env vars (`config.input`/`config.output` in `package.json`; ask + persist if missing), then run a command                 |
-| `zz-install <pkg> [<manager>=<name>...]`                               | install a system package via apt/apk/dnf/yum/brew/pacman/zypper/winget, with per-manager name overrides                                               |
+| `zz-install [-u url ...] <name> [<manager>=<name>...]`                 | install a system package via apt/apk/dnf/yum/brew/pacman/zypper/winget (per-manager name overrides), or with `-u` a downloaded binary into the `zz-bindir` dir |
+| `zz-fetch [-r ref] -d <dir> <url>`                                     | shallow clone or fast-forward a git repository into a directory                                                                                         |
 | `zz-setup <org>/<repo>[@<ref>] [args...]`                              | clone/update a GitHub repo, propose its runnable workspaces, offer their declared inputs, then run them (else its setup entrypoint) |
 
 ## Functional scripts

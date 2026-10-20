@@ -160,42 +160,12 @@ _have() {
     return 1
 }
 
-# Run a command as root: directly, through sudo, or fail.
-_as_root() {
-    if [ "$(id -u)" = "0" ]; then
-        "$@"
-    elif command -v sudo >/dev/null 2>&1; then
-        sudo "$@"
-    else
-        zz-log e "{Purple $1} requires root/sudo, neither available"
-        return 1
-    fi
-}
-
-# Install a system package with whichever package manager exists. The
-# apt index is refreshed at most once per run.
-_APT_UPDATED=0
+# Install a system package through zz-install (it picks the package manager
+# and escalates through sudo). Resolves the default source first when
+# zz-install isn't on PATH yet, like _bindir does.
 _pkg_install() {
-    _pkg="$1"
-    if command -v apt-get >/dev/null 2>&1; then
-        zz-log i "Installing {Purple $_pkg} via apt-get..."
-        if [ "$_APT_UPDATED" -eq 0 ]; then
-            _as_root apt-get update -qq || return 1
-            _APT_UPDATED=1
-        fi
-        _as_root apt-get install -y -qq "$_pkg"
-    elif command -v apk >/dev/null 2>&1; then
-        zz-log i "Installing {Purple $_pkg} via apk..."
-        _as_root apk add --no-cache -q "$_pkg"
-    elif command -v dnf >/dev/null 2>&1; then
-        zz-log i "Installing {Purple $_pkg} via dnf..."
-        _as_root dnf install -y -q "$_pkg"
-    elif command -v brew >/dev/null 2>&1; then
-        zz-log i "Installing {Purple $_pkg} via brew..."
-        brew install -q "$_pkg"
-    else
-        return 1
-    fi
+    command -v zz-install >/dev/null 2>&1 || _resolve_src || return 1
+    zz-install "$1"
 }
 
 # jq is needed to read zz-use.json and npm registry metadata: install it
@@ -205,24 +175,6 @@ _ensure_jq() {
     command -v jq >/dev/null 2>&1 && return 0
     _pkg_install jq >/dev/null 2>&1 || true
     command -v jq >/dev/null 2>&1
-}
-
-# Verify <file> against an expected sha256 (no-op when none is given).
-_verify_sha256() {
-    _vs_file="$1" _vs_sum="$2"
-    [ -n "$_vs_sum" ] || return 0
-    if command -v sha256sum >/dev/null 2>&1; then
-        _vs_got=$(sha256sum "$_vs_file" | cut -d' ' -f1)
-    elif command -v shasum >/dev/null 2>&1; then
-        _vs_got=$(shasum -a 256 "$_vs_file" | cut -d' ' -f1)
-    else
-        zz-log e "No sha256sum/shasum available to verify {U $_vs_file}"
-        return 1
-    fi
-    [ "$_vs_got" = "$_vs_sum" ] || {
-        zz-log e "Checksum mismatch for {U $_vs_file}: expected $_vs_sum, got $_vs_got"
-        return 1
-    }
 }
 
 # True if <ref> names something that never moves: a version tag
@@ -504,57 +456,6 @@ _install_repo_script() {
     zz-log s "Installed {Purple ${_name}} to {U ${_dir}/${_name}}"
 }
 
-# Expand {VERSION}/{OS}/{ARCH} in a zz-use.json url/binpath template ({OS}:
-# uname -s, lowercased; {ARCH}: uname -m, mapped to amd64/arm64).
-_platform() {
-    _os=$(uname -s | tr '[:upper:]' '[:lower:]')
-    case "$(uname -m)" in
-    x86_64 | amd64) _arch=amd64 ;;
-    aarch64 | arm64) _arch=arm64 ;;
-    *) _arch=$(uname -m) ;;
-    esac
-}
-_expand() {
-    _platform
-    printf '%s' "$1" | sed \
-        -e "s/{VERSION}/${2:-}/g" \
-        -e "s/{OS}/${_os}/g" \
-        -e "s/{ARCH}/${_arch}/g"
-}
-
-# Download <url_tpl> to a file (never piped: sh has no pipefail), verify
-# its optional sha256, then extract and install the binary.
-_download_install() {
-    _tool="$1" _url_tpl="$2" _archive="$3" _binpath_tpl="$4" _version="$5" _sha="$6"
-
-    _url=$(_expand "$_url_tpl" "$_version")
-    _binpath=$(_expand "${_binpath_tpl:-$_tool}" "$_version")
-
-    zz-log i "Downloading {Purple $_tool} from {U $_url}..."
-    _tmp=$(mktemp -d)
-    _add_tmp "$_tmp"
-    mkdir -p "$_tmp/x"
-    curl -fsSL "$_url" -o "$_tmp/dl" || { zz-log e "Download of {U $_url} failed"; return 1; }
-    _verify_sha256 "$_tmp/dl" "$_sha" || return 1
-
-    case "$_archive" in
-    tar.gz | tgz) tar -xzf "$_tmp/dl" -C "$_tmp/x" || return 1 ;;
-    tar.xz) tar -xJf "$_tmp/dl" -C "$_tmp/x" || return 1 ;;
-    zip) unzip -q "$_tmp/dl" -d "$_tmp/x" || return 1 ;;
-    raw | "" | *)
-        mv "$_tmp/dl" "$_tmp/x/$_tool"
-        _binpath="$_tool"
-        ;;
-    esac
-
-    [ -f "$_tmp/x/$_binpath" ] || { zz-log e "Downloaded archive for {Purple $_tool} has no {U $_binpath}"; return 1; }
-
-    _bindir || { zz-log e "No writable bin directory found for {Purple ${_tool}}"; return 1; }
-    chmod +x "$_tmp/x/$_binpath"
-    cp "$_tmp/x/$_binpath" "$_ZZ_BINDIR/$_tool"
-    zz-log s "Installed {Purple $_tool} to {U $_ZZ_BINDIR/$_tool}"
-}
-
 # The activator itself: resolve every requested tool, one at a time.
 # "[org/repo/]<tool>[@ref]" pulls that tool from a specific repo and/or
 # pins it to a tag/branch/commit instead of ZZ_ORIGIN/ZZ_ORIGIN_REF.
@@ -689,15 +590,18 @@ _use() {
             if [ -n "$apt_pkg" ]; then
                 _pkg_install "$apt_pkg" || zz-log w "Package install of {Purple $apt_pkg} failed"
             elif [ -n "$url" ]; then
-                _platform
-                archive=$(printf '%s' "$entry" | jq -r '.archive // empty')
-                binpath=$(printf '%s' "$entry" | jq -r '.binpath // empty')
-                version=$(printf '%s' "$entry" | jq -r '.version // empty')
-                # sha256: one hash, or an object keyed "<os>_<arch>".
-                sha=$(printf '%s' "$entry" | jq -r --arg k "${_os}_${_arch}" \
-                    '.sha256 // empty | if type == "object" then .[$k] // empty else . end')
-                _download_install "$tool" "$url" "$archive" "$binpath" "$version" "$sha" \
-                    || zz-log w "Download install of {Purple $tool} failed"
+                # zz-install downloads, verifies and installs the binary
+                # (sha256: one hash, or an object keyed "<os>_<arch>").
+                set -- -u "$url"
+                for _f in archive:a binpath:b version:v; do
+                    _val=$(printf '%s' "$entry" | jq -r ".${_f%:*} // empty")
+                    [ -z "$_val" ] || set -- "$@" "-${_f#*:}" "$_val"
+                done
+                _val=$(printf '%s' "$entry" | jq -r '.sha256 // empty | if type == "object" then tojson else . end')
+                [ -z "$_val" ] || set -- "$@" -s "$_val"
+                zz-install "$@" "$tool" || zz-log w "Download install of {Purple $tool} failed"
+                # zz-install ran in a child: put the bin dir on our PATH for _have.
+                _bindir || true
             fi
         elif _install_repo_script "$tool" "$origin" "$ref"; then
             _peers_pending=1

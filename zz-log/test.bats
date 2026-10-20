@@ -149,3 +149,14 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" == *'select(.path | test("(^|/)src/")) $HOME `id`'* ]]
 }
+
+@test "zz-log tags script lines with ZZ_LOG_STEP and indents by ZZ_LOG_INDENT" {
+    run bash -c 'ZZ_LOG_STEP=fetch ZZ_LOG_INDENT=4 zz-log i "hi" 2>&1'
+    [[ "$output" == "    "*"[fetch] hi"* ]]
+}
+
+@test "zz-log o dims stdin lines behind a gutter, without step tag" {
+    run bash -c 'printf "a\nb\n" | ZZ_LOG_STEP=fetch zz-log o 2>&1'
+    [[ "$output" == *"│ a"* && "$output" == *"│ b"* ]]
+    [[ "$output" != *"[fetch]"* ]]
+}

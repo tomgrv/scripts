@@ -49,3 +49,15 @@ teardown() {
     run bash -c 'echo "typed" | zz-prompt "Question?" "fallback" 2>/dev/null'
     [ "$(echo "$output" | wc -l)" -eq 1 ]
 }
+
+@test "zz-prompt -s hides the default" {
+    run bash -c 'echo "" | zz-prompt -s "Secret?" "hunter2" 2>&1 1>/dev/null'
+    [[ "$output" == *"[***]"* && "$output" != *hunter2* ]]
+}
+
+@test "zz-prompt -e fails when input ends, plain call still answers the default" {
+    run bash -c 'zz-prompt -e "Q?" dflt </dev/null 2>/dev/null'
+    [ "$status" -eq 1 ]
+    run bash -c 'zz-prompt "Q?" dflt </dev/null 2>/dev/null'
+    [ "$output" = dflt ]
+}
