@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz-args",
-  "version": "1.0.0",
+  "version": "4.3.0",
   "description": "Parse $@ per a heredoc spec, print eval-able var=value assignments",
   "bin": {
     "zz-args": "run.sh"

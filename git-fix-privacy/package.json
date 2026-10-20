@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-privacy",
-  "version": "1.0.0",
+  "version": "4.3.0",
   "description": "Fix privacy in history",
   "bin": {
     "git-fix-privacy": "run.sh"
