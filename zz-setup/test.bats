@@ -328,10 +328,10 @@ make_conflict_remote() {
     [[ "$output" == *"│ b:up"* ]]
 }
 
-@test "zz-setup hint lines sit one level (2 spaces) under their error" {
+@test "zz-setup hint lines sit one level under their error, behind a tree guide" {
     make_workspace_remote
     run zz-setup acme/ws -w nope </dev/null
     [ "$status" -ne 0 ]
     plain=$(printf '%s\n' "$output" | sed 's/\x1b\[[0-9;]*m//g')
-    [[ "$plain" == *$'\n''    Available: '* ]]
+    [[ "$plain" == *"|  Available: "* ]]
 }

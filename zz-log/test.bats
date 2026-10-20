@@ -150,11 +150,11 @@ teardown() {
     [[ "$output" == *'select(.path | test("(^|/)src/")) $HOME `id`'* ]]
 }
 
-@test "zz-log tags script lines with ZZ_LOG_STEP; headline levels ignore ZZ_LOG_INDENT" {
-    run bash -c 'unset GITHUB_ACTIONS; ZZ_LOG_STEP=fetch ZZ_LOG_INDENT=4 zz-log w "hi" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
-    [ "$output" = "! [fetch] hi" ]
-    run bash -c 'ZZ_LOG_STEP=fetch zz-log i "hi" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
-    [ "$output" = "→ [fetch] hi" ]
+@test "zz-log headline levels start at column 0, whatever ZZ_LOG_INDENT is" {
+    run bash -c 'unset GITHUB_ACTIONS; ZZ_LOG_INDENT=4 zz-log w "hi" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "! hi" ]
+    run bash -c 'ZZ_LOG_INDENT=4 zz-log i "hi" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "→ hi" ]
 }
 
 @test "zz-log o dims stdin lines behind a gutter, without step tag" {
@@ -179,14 +179,10 @@ teardown() {
     [[ "$output" != *"[fetch]"* ]]
 }
 
-@test "zz-log - is a plain detail line indented by ZZ_LOG_INDENT, without pictogram or step tag" {
-    run bash -c 'ZZ_LOG_STEP=s ZZ_LOG_INDENT=4 zz-log - "detail" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
-    [ "$output" = "      detail" ]
+@test "zz-log - is a plain detail line behind tree guides, one more guide per indent level" {
+    run bash -c 'zz-log - "detail" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "   |  detail" ]
+    run bash -c 'ZZ_LOG_INDENT=2 zz-log - "detail" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [[ "$output" == "   |   |"*"  detail" && ${#output} -gt 11 ]]
 }
 
-@test "zz-log adds no step tag to a message that already starts with its own [tag]" {
-    run bash -c 'ZZ_LOG_STEP=vps-system zz-log i "[vps-setup] Running apt-get update" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
-    [ "$output" = "→ [vps-setup] Running apt-get update" ]
-    run bash -c 'ZZ_LOG_STEP=vps-system zz-log i "Running apt-get update" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
-    [ "$output" = "→ [vps-system] Running apt-get update" ]
-}

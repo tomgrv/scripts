@@ -188,5 +188,5 @@ if [ -n "$gha" ]; then
     printf '%s%s%s\n' "$gha" "$step" "$plain" >&2
 else
     paint "$picto$steptag$*" "$base"
-    printf '%*s%b%s\n' "$prefix" "" "$out" "$End" >&2
+    printf '%s%b%s\n' "$prefix" "$out" "$End" >&2
 fi
