@@ -27,10 +27,10 @@ teardown() {
     [ "$output" = "n" ]
 }
 
-@test "zz-ask echoes back a valid answer's own case (no lowercasing of typed input)" {
+@test "zz-ask lowercases a valid answer, so callers can compare with y/n" {
     run bash -c 'echo "N" | zz-ask "Yn" "Continue?" 2>/dev/null'
     [ "$status" -eq 0 ]
-    [ "$output" = "N" ]
+    [ "$output" = "n" ]
 }
 
 @test "zz-ask re-prompts on an invalid option before accepting a valid one" {

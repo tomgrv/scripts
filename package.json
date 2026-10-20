@@ -171,6 +171,8 @@
     "zz-call",
     "zz-install",
     "zz-fetch",
+    "zz-workspaces",
+    "zz-inputs",
     "zz-setup",
     "json",
     "json-load",

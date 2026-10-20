@@ -13,10 +13,12 @@
     "@tomgrv/scripts-zz-call": "*",
     "@tomgrv/scripts-zz-colors": "*",
     "@tomgrv/scripts-zz-fetch": "*",
+    "@tomgrv/scripts-zz-inputs": "*",
     "@tomgrv/scripts-zz-install": "*",
     "@tomgrv/scripts-zz-log": "*",
     "@tomgrv/scripts-zz-menu": "*",
-    "@tomgrv/scripts-zz-persist": "*"
+    "@tomgrv/scripts-zz-persist": "*",
+    "@tomgrv/scripts-zz-workspaces": "*"
   },
   "private": true
 }

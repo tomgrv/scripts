@@ -6,8 +6,7 @@
 #   -s  secret: the answer is not echoed and the default is shown as [***]
 #   -e  fail (status 1) when input ends instead of answering with the default
 #   -c  choices, e.g. Yn: accept one of these letters (any case), re-ask on
-#       anything else; the uppercase letter is the default (printed lowercased),
-#       a typed letter is printed as typed
+#       anything else; the answer is always printed lowercased
 
 . zz-colors
 
@@ -65,7 +64,10 @@ while :; do
     }
     lower=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')
     case $(printf '%s' "$choices" | tr '[:upper:]' '[:lower:]') in
-    *"$lower"*) break ;;
+    *"$lower"*)
+        value=$lower
+        break
+        ;;
     esac
     zz-log w "Please enter a valid option from [${choices}] (default: ${default}):"
 done

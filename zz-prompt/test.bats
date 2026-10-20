@@ -64,7 +64,7 @@ teardown() {
 
 @test "zz-prompt -c accepts a listed letter, defaults on Enter, re-asks on junk" {
     run bash -c 'printf "x\nN\n" | zz-prompt -c Yn "Go?" 2>/dev/null'
-    [ "$output" = N ]
+    [ "$output" = n ]
     run bash -c 'echo | zz-prompt -c Yn "Go?" 2>/dev/null'
     [ "$output" = y ]
 }

@@ -132,44 +132,21 @@ run_entry() {
 
 cd "$dir"
 [ -z "$ZZ_SETUP_ENTRY" ] && [ -f package.json ] || run_entry "$@"
-# jq reads the workspaces' package.json.
-command -v jq >/dev/null 2>&1 || zz-install jq
-
-# --- select: discover the runnable workspaces and decide which ones run.
-step select
-# --- discover runnable workspaces: "order<TAB>name<TAB>dir", sorted.
-all=$(jq -r '(.workspaces // []) | (if type == "array" then . else .packages // [] end) | .[]' package.json)
-[ -n "$all" ] || run_entry "$@"
-
-# First bin file of a workspace (bin may be a string or a name -> path map).
-bin_path() { jq -r '.bin | if type == "string" then . else (to_entries[0].value // empty) end' "$1/package.json"; }
-
-cands=
-for w in $all; do
-    [ -f "$w/package.json" ] || continue
-    [ "$(jq -r '(.bin != null) and ((.engines // {}) | has("zz-setup"))' "$w/package.json")" = true ] || continue
-    [ -f "$w/$(bin_path "$w")" ] || continue
-    cands="$cands$w
-"
-done
-list=
-for w in $cands; do
-    list="$list$(jq -r --arg d "$w" '[(.config.order // 1000), (.name | sub("^@[^/]*/"; "")), $d] | @tsv' "$w/package.json")
-"
-done
-list=$(printf '%s' "$list" | sort -n -k1,1)
+# --- select: zz-workspaces lists the runnable workspaces, one row each:
+# order US name US dir US description US default US deps US conflicts US bin.
+us=$(printf '\037')
+list=$(zz-workspaces)
 [ -n "$list" ] || run_entry "$@"
-names=$(printf '%s\n' "$list" | cut -f2)
+names=$(printf '%s\n' "$list" | cut -d"$us" -f2)
 
-dir_of() { printf '%s\n' "$list" | awk -F'\t' -v n="$1" '$2 == n { print $3; exit }'; }
-exists() { [ -n "$(dir_of "$1")" ]; }
-desc_of() { jq -r '.description // empty' "$(dir_of "$1")/package.json"; }
-deps_of() {
-    jq -r '((.dependencies // {}) + (.peerDependencies // {})) | keys[] | sub("^@[^/]*/"; "")' "$(dir_of "$1")/package.json"
-}
-conflicts_of() {
-    jq -r '(.config.conflicts // [])[] | sub("^@[^/]*/"; "")' "$(dir_of "$1")/package.json"
-}
+# Field $2 of workspace $1's row (3 dir, 4 description, 5 default, 6 deps,
+# 7 conflicts, 8 bin).
+ws() { printf '%s\n' "$list" | awk -F"$us" -v n="$1" -v f="$2" '$2 == n { print $f; exit }'; }
+dir_of() { ws "$1" 3; }
+exists() { [ -n "$(ws "$1" 3)" ]; }
+desc_of() { ws "$1" 4; }
+deps_of() { ws "$1" 6 | tr ',' '\n'; }
+conflicts_of() { ws "$1" 7 | tr ',' '\n'; }
 var_of() { printf 'STATE_%s' "$1" | tr -c 'A-Za-z0-9_\n' '_'; }
 state_get() { eval "printf '%s' \"\${$(var_of "$1"):-skip}\""; }
 state_set() { eval "$(var_of "$1")=\$2"; }
@@ -189,7 +166,7 @@ env_get() { [ ! -f "$envfile" ] || sed -n "s/^$1=//p" "$envfile" | tail -n1; }
 state_key() { printf 'ZZ_%s' "$(var_of "$1")"; }
 
 for n in $names; do
-    if [ "$(jq -r '.config.default // false' "$(dir_of "$n")/package.json")" = true ]; then
+    if [ "$(ws "$n" 5)" = true ]; then
         state_set "$n" up
     else
         state_set "$n" skip
@@ -243,7 +220,7 @@ if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
     set --
     for n in $names; do
         mark=" "
-        [ "$(jq -r '.config.default // false' "$(dir_of "$n")/package.json")" = true ] && mark="*"
+        [ "$(ws "$n" 5)" = true ] && mark="*"
         set -- "$@" "$n:$(state_get "$n")=$mark $(printf '%-20s' "$n") $(desc_of "$n")"
     done
     rc=0
@@ -317,126 +294,35 @@ for n in $names; do [ "$(state_get "$n")" = up ] && up_names="$up_names $n"; don
     exit 0
 }
 
-# --- inputs: resolve what the selected workspaces declare.
+# --- inputs: zz-inputs shows them (-S), or asks, resolves and refuses a
+# missing required one; its export lines are evaluated here so the
+# workspaces inherit the values. Exit 3 means the user aborted.
 step inputs
-# --- inputs: "VAR<US>description<US>required<US>default<US>name<US>secret"
-# (US = \037; a whitespace separator like tab would collapse empty fields),
-# from "config.inputs" (object keyed by var) and "config.input" (zz-call array).
-inputs_of() {
-    jq -r --arg n "$1" '
-      ((.config.inputs // {}) | to_entries[]
-         | [.key, (.value.description // ""), ((.value.required // false) | tostring), (.value.default // ""), $n, ((.value.secret // false) | tostring)] | join("\u001f")),
-      ((.config.input // [])[]
-         | [.var, (.question // ""), "false", (.default // ""), $n, "false"] | join("\u001f"))' "$(dir_of "$1")/package.json"
-}
-
-us=$(printf '\037')
-all_inputs=
+set --
 for n in $([ "$status_only" -eq 1 ] && echo "$names" || echo "$up_names"); do
-    all_inputs="$all_inputs$(inputs_of "$n")
-"
+    set -- "$@" "$n=$(dir_of "$n")"
 done
-all_inputs=$(printf '%s' "$all_inputs" | awk -F"$us" 'NF && !seen[$1]++')
-
-# Status view only (menu): the caller's environment, then the env file.
-# The final resolution, defaults and persistence are zz-call's, below.
-while IFS="$us" read -r var _rest; do
-    [ -n "$var" ] || continue
-    if [ -z "$(eval "printf '%s' \"\${$var:-}\"")" ]; then
-        _v=$(env_get "$var")
-        [ -n "$_v" ] && eval "export $var=\$_v"
-    fi
-done <<EXPLICIT
-$all_inputs
-EXPLICIT
-
-input_status() {
-    if [ -n "$(eval "printf '%s' \"\${$1:-}\"")" ]; then
-        echo set
-    elif [ "$2" = true ]; then
-        echo required
-    else
-        echo optional
-    fi
-}
-
 if [ "$status_only" -eq 1 ]; then
     for n in $names; do
         printf '%-6s %-22s %s\n' "$(state_get "$n")" "$n" "$(desc_of "$n")"
     done
-    while IFS="$us" read -r var desc req def owner secret; do
-        [ -n "$var" ] || continue
-        printf '  input %-24s [%s] %s\n' "$var" "$(input_status "$var" "$req")" "$owner"
-    done <<STATUS
-$all_inputs
-STATUS
+    zz-inputs -S -f "$envfile" "$@"
     exit 0
 fi
-
-if [ -t 0 ] && [ -n "$all_inputs" ]; then
-    while :; do
-        set --
-        unset_count=0
-        while IFS="$us" read -r var desc req def owner secret; do
-            st=$(input_status "$var" "$req")
-            [ "$st" = set ] || unset_count=$((unset_count + 1))
-            set -- "$@" "$var=$(printf '%-24s' "$var") [$(printf '%-8s' "$st")] $owner${desc:+ - $desc}"
-        done <<EOF
-$all_inputs
-EOF
-        [ "$unset_count" -gt 0 ] || break
-        rc=0
-        choice=$(zz-menu -t "Inputs" \
-            -f "  Number sets that input; <enter> proceeds with what's set, q quits." \
-            "$@") || rc=$?
-        case "$rc" in
-        0) ;;
-        1)
-            echo "Aborted, nothing changed."
-            exit 0
-            ;;
-        *) break ;;
-        esac
-        row=$(printf '%s\n' "$all_inputs" | awk -F"$us" -v v="$choice" '$1 == v { print; exit }')
-        desc=$(printf '%s' "$row" | cut -d"$us" -f2)
-        def=$(printf '%s' "$row" | cut -d"$us" -f4)
-        secret=$(printf '%s' "$row" | cut -d"$us" -f6)
-        # zz-persist asks (masked with -s), shows the stored value and writes
-        # it; the answer is then read back into this run.
-        if [ "$secret" = true ]; then set -- -s; else set --; fi
-        [ -z "$def" ] || set -- "$@" -v "$def"
-        zz-persist -f "$envfile" -i "${choice}${desc:+ ($desc)}" "$@" "$choice"
-        _v=$(env_get "$choice")
-        [ -z "$_v" ] || eval "export $choice=\$_v"
-    done
+if [ "$#" -gt 0 ]; then
+    rc=0
+    out=$(zz-inputs -f "$envfile" ${ZZ_SETUP_PROFILE:+-P "$ZZ_SETUP_PROFILE"} "$@") || rc=$?
+    [ "$rc" -ne 3 ] || exit 0
+    [ "$rc" -eq 0 ] || exit "$rc"
+    eval "$out"
 fi
-
-# Resolve every declared input with zz-call: the caller's environment (also
-# persisted), then the env file, then the default; nothing is prompted here.
-# A required input still empty aborts before anything runs.
-pkgs=
-for n in $up_names; do pkgs="$pkgs${pkgs:+:}$(dir_of "$n")/package.json"; done
-if [ -n "$pkgs" ]; then
-    eval "$(zz-call -n -e -f "$envfile" ${ZZ_SETUP_PROFILE:+-P "$ZZ_SETUP_PROFILE"} -p "$pkgs")"
-fi
-missing=0
-while IFS="$us" read -r var desc req def owner secret; do
-    [ -n "$var" ] || continue
-    if [ "$(input_status "$var" "$req")" = required ]; then
-        zz-log e "$var is required by '$owner' but is empty: set it, or skip the workspace with -s $owner."
-        missing=1
-    fi
-done <<EOF
-$all_inputs
-EOF
-[ "$missing" -eq 0 ] || exit 1
 
 # --- run: down in reverse order first, then up in order.
 # Each workspace runs tagged with its own name and one level deeper, so its
 # zz-log lines nest under the "=== Running" line.
 run_step() {
     d=$(dir_of "$1")
-    b=$(bin_path "$d")
+    b=$(ws "$1" 8)
     zz-log i "=== Running $1 ($d/$b $2) ==="
     rc=0
     (
