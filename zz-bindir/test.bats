@@ -57,6 +57,7 @@ teardown() {
         bin=$(command -v "$tool") && ln -s "$bin" "$toolbox/$tool"
     done
     ln -s "$TEST_BIN/zz-colors" "$toolbox/zz-colors"
+    ln -s "$TEST_BIN/zz-args" "$toolbox/zz-args"
     blockfile=$(mktemp)
     chattr +i "$toolbox" 2>/dev/null || skip "chattr immutable attribute unsupported on this filesystem"
     run env INSTALL_BIN_DIR="$blockfile/bin" HOME="$nohome" \
@@ -90,6 +91,7 @@ teardown() {
         bin=$(command -v "$tool") && ln -s "$bin" "$toolbox/$tool"
     done
     ln -s "$TEST_BIN/zz-colors" "$toolbox/zz-colors"
+    ln -s "$TEST_BIN/zz-args" "$toolbox/zz-args"
     blockfile=$(mktemp)
     nohome=$(mktemp)
     chattr +i "$toolbox" 2>/dev/null || skip "chattr immutable attribute unsupported on this filesystem"

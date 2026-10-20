@@ -5,11 +5,17 @@
 
 . zz-colors
 
-default=$(printf '%s' "$1" | tr -dc 'A-Z' | tr '[:upper:]' '[:lower:]')
-options=$1
-shift
+# --- arguments
+eval "$(zz-args "Interactive single-char confirm" "$0" "$@" <<help
+- options options Choices, the uppercase letter is the default (e.g. Yn)
++ question question Question to ask
+help
+)"
 
-echo "${BBlue}#${None} $* ${BBlue}[${options}]${End}" >&2
+# --- prompt
+default=$(printf '%s' "$options" | tr -dc 'A-Z' | tr '[:upper:]' '[:lower:]')
+
+echo "${BBlue}#${None} $question ${BBlue}[${options}]${End}" >&2
 
 while true; do
 

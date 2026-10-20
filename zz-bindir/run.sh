@@ -8,13 +8,13 @@
 
 . zz-colors
 
-target=""
-while getopts :t: opt "$@"; do
-    case "$opt" in
-    t) target="$OPTARG" ;;
-    esac
-done
+# --- arguments
+eval "$(zz-args "Resolve a writable bin directory on PATH" "$0" "$@" <<help
+t target target Extra directory whose bin/ is a candidate (created if needed)
+help
+)"
 
+# --- candidates: INSTALL_BIN_DIR, ~/.local/bin, then PATH entries, then <target>/bin.
 candidates=""
 creatable=""
 
