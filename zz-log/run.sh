@@ -11,10 +11,10 @@
 #     behind a "│" gutter, with no pictogram and no step tag. Pipe it:
 #       cmd 2>&1 | zz-log o        (or keep the status: out=$(cmd 2>&1) || rc=$?)
 #
-# Depth: "-N" (N an integer: -1, -2, ...) is the plain level, nested N levels
+# Depth: ":N" (N an integer: :1, :2, ...) is the plain level, nested N levels
 # (2 spaces each) under the message above it, on top of the depth ZZ_LOG_INDENT
-# gives it. "-" alone is depth 0. Typical use: a hint under an error:
-#   zz-log e "Could not fetch x"; zz-log -1 "Check the ref"
+# gives it. ":" alone is depth 0. Typical use: a hint under an error:
+#   zz-log e "Could not fetch x"; zz-log :1 "Check the ref"
 #
 # Custom level: any other string is printed as the line's own prefix, the way
 # json-validate nests its output ("zz-log \"$prefix -\" msg"). The caller owns
@@ -47,20 +47,6 @@
 
 # --- arguments
 lvl="$1" && shift
-
-# "-N" is the plain level N levels deep.
-depth=0
-case "$lvl" in
--[0-9]*)
-    case "${lvl#-}" in
-    *[!0-9]*) ;;
-    *)
-        depth=${lvl#-}
-        lvl=-
-        ;;
-    esac
-    ;;
-esac
 
 # --- parameters
 # Drop leading zeros of the depth: $((08)) would be read as octal.
@@ -124,7 +110,9 @@ paint() {
     out="$out$rest"
 }
 
-# --- operation output: dimmed, gutter-prefixed, one line at a time.
+# --- level: pictogram, base colour, GitHub Actions annotation.
+gha=""
+
 case $lvl in
 o*)
     {
@@ -134,12 +122,6 @@ o*)
     done
     exit 0
     ;;
-esac
-
-# --- level: pictogram, base colour, GitHub Actions annotation.
-gha=""
-
-case $lvl in
 d*)
     [ -n "${ZZ_DEBUG:-}" ] || exit 0
     picto="{BBlack ·} "
@@ -148,25 +130,30 @@ d*)
 i*)
     picto="{BBlue →} "
     base="White"
+    indent=0
     ;;
 n*)
     picto="{BCyan i} "
     base="Cyan"
+    indent=0
     [ "${GITHUB_ACTIONS:-}" = "true" ] && gha="::notice::"
     ;;
 w*)
     picto="{BYellow !} "
     base="Yellow"
+    indent=0
     [ "${GITHUB_ACTIONS:-}" = "true" ] && gha="::warning::"
     ;;
 e*)
     picto="{BRed ✕} "
     base="Red"
+    indent=0
     [ "${GITHUB_ACTIONS:-}" = "true" ] && gha="::error::"
     ;;
 s*)
     picto="{Green ✔} "
     base="Green"
+    indent=0
     ;;
 -)
     picto="  "
