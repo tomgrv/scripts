@@ -42,7 +42,6 @@
         "zz-log",
         "zz-args",
         "zz-prompt",
-        "zz-ask",
         "zz-menu",
         "zz-input",
         "zz-bindir",

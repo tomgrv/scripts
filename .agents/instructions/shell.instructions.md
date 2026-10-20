@@ -25,7 +25,7 @@ A script whose later arguments depend on earlier work (a second `zz-args` call a
 
 ### Reuse before writing
 
-Prompt with `zz-prompt` / `zz-ask` (secrets: `zz-prompt -s`, persisted with `zz-persist -s`), install with `zz-install`, pick a bin dir with `zz-bindir`, fetch repos with `zz-fetch`, choose with `zz-menu`.
+Prompt with `zz-prompt` (confirmations: `zz-prompt -c Yn "Q?"`; secrets: `zz-prompt -s`, persisted with `zz-persist -s`), install with `zz-install`, pick a bin dir with `zz-bindir`, fetch repos with `zz-fetch`, choose with `zz-menu`.
 
 ### Logging
 

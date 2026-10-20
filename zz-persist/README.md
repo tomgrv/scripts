@@ -48,7 +48,7 @@ holds the value literally; a profile snippet is sourced by shells, so a value
 with anything but plain characters is single-quoted there. Values are upserted
 through `awk` (no character is interpreted) and a multi-line value is refused.
 On a terminal, a secret aimed at a file that is not owner-only offers `chmod 600`
-through `zz-ask`.
+through `zz-prompt -c`.
 
 ## Tests
 

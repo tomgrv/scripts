@@ -21,7 +21,7 @@ Declared via `zz-use` at the top of `run.sh` and resolved on demand
 - `-s` secret: masked input, default shown as `***`.
 - `-e` exit 1 when input ends.
 - `-c Yn` accept one of these letters (any case), re-ask on anything else; the
-  uppercase letter is the default. `zz-ask` is a wrapper over `zz-prompt -c`.
+  uppercase letter is the default. It replaces the former `zz-ask`: `zz-prompt -c Yn "Continue?"`.
 
 ## Tests
 

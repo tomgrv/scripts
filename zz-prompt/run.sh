@@ -1,6 +1,6 @@
 #!/bin/sh
 # zz-prompt [-s] [-e] [-c choices] <question> [default] — interactive input,
-# the one reader behind zz-ask, zz-menu and zz-persist.
+# the one reader behind zz-menu, zz-persist and the git-fix-* confirmations.
 # The prompt is written to stderr so stdout carries only the entered value
 # (or the default when the user just presses Enter). POSIX read (dash-safe).
 #   -s  secret: the answer is not echoed and the default is shown as [***]

@@ -11,7 +11,6 @@
   "peerDependencies": {
     "@tomgrv/scripts-zz-args": "*",
     "@tomgrv/scripts-zz-colors": "*",
-    "@tomgrv/scripts-zz-ask": "*",
     "@tomgrv/scripts-zz-log": "*",
     "@tomgrv/scripts-zz-prompt": "*"
   },

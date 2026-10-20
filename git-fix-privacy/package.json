@@ -10,8 +10,8 @@
   },
   "peerDependencies": {
     "@tomgrv/scripts-zz-args": "*",
-    "@tomgrv/scripts-zz-ask": "*",
-    "@tomgrv/scripts-zz-log": "*"
+    "@tomgrv/scripts-zz-log": "*",
+    "@tomgrv/scripts-zz-prompt": "*"
   },
   "private": true
 }

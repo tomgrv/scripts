@@ -6,7 +6,7 @@
 #   - the profile snippet is sourced by shells, so a value with anything but
 #     plain characters is single-quoted there and cannot run code;
 #   - a secret (-s) is asked masked (zz-prompt -s), never logged, and written
-#     only to owner-only files (zz-ask offers to chmod 600 on a terminal).
+#     only to owner-only files (zz-prompt -c offers to chmod 600 on a terminal).
 set -e
 
 . zz-colors
@@ -101,7 +101,7 @@ upsert_line() {
 persist_line() {
     if [ "$is_secret" = 1 ] && ! is_owner_only_mode "$1"; then
         # On a terminal, offer the fix instead of only refusing.
-        if [ -t 0 ] && [ "$(zz-ask yN "$key: $1 is not owner-only; chmod 600 it?")" = y ]; then
+        if [ -t 0 ] && [ "$(zz-prompt -c yN "$key: $1 is not owner-only; chmod 600 it?")" = y ]; then
             chmod 600 "$1"
         else
             zz-log w "$key: {U $1} is not owner-only (mode $(stat -c '%a' "$1" 2>/dev/null)); refusing to persist secret, run {Purple chmod 600 $1} first"

@@ -121,7 +121,7 @@ zz-use zz-log jq -x json-validate some-file.json
 
 - **Core** folders keep the `zz-` prefix — each atomic function is its own
   dedicated script: `zz-use`, `zz-update`, `zz-colors`, `zz-log`, `zz-args`,
-  `zz-prompt`, `zz-ask`, `zz-menu`, `zz-input`, `zz-bindir`, `zz-dispatch`, `zz-npx`,
+  `zz-prompt`, `zz-menu`, `zz-input`, `zz-bindir`, `zz-dispatch`, `zz-npx`,
   `zz-persist`, `zz-call`, `zz-install`, `zz-fetch`, `zz-workspaces`, `zz-vars`, `zz-setup`.
 - **Functional** folders use `<verb>-<topic>` naming: `json-validate`,
   `json-normalize`, `json-merge`, `json-load`, `feature-context`,
@@ -231,7 +231,6 @@ flowchart TD
 | `zz-log <lvl> <msg...>`                                                               | colored, leveled log line on stderr (`i`/`w`/`e`/`s`/`-`)                                                                                                      |
 | `zz-args <title> <caller> <<-help ...`                                                | parse `$@` per a spec; `eval $(zz-args ...)` to bind the vars                                                                                                  |
 | `zz-prompt <question> [default]`                                                      | interactive free-form input                                                                                                                                    |
-| `zz-ask <options> <question...>`                                                      | interactive single-char confirm                                                                                                                                |
 | `zz-menu [-t title] [-d key] [-f footer] [-c states] <key=label>...`                  | interactive numbered menu; prints the chosen key (or, with `-c`, each item's cycled `key=state`)                                                               |
 | `zz-input [file]`                                                                     | read from arg (literal or file) or stdin                                                                                                                       |
 | `zz-bindir [-t target]`                                                               | resolve/create a writable bin dir; `eval $(zz-bindir ...)` to bind `$dir` and extend `PATH`                                                                    |

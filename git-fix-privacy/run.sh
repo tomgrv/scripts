@@ -19,7 +19,7 @@ if [ -z "$old" ]; then
 	zz-log w "Old email is not specified, it will be taken from the last commit"
 	old=$(git log -1 --pretty=format:'%ae')
 
-	[ "$(zz-ask Yn "Do you want to proceed with this <$old> as old email?")" = "y" ] || exit 1
+	[ "$(zz-prompt -c Yn "Do you want to proceed with this <$old> as old email?")" = "y" ] || exit 1
 fi
 
 if [ -z "$new" ]; then

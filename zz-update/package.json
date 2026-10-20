@@ -10,7 +10,6 @@
   },
   "peerDependencies": {
     "@tomgrv/scripts-zz-args": "*",
-    "@tomgrv/scripts-zz-ask": "*",
     "@tomgrv/scripts-zz-bindir": "*",
     "@tomgrv/scripts-zz-call": "*",
     "@tomgrv/scripts-zz-colors": "*",

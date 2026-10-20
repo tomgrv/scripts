@@ -68,3 +68,44 @@ teardown() {
     run bash -c 'echo | zz-prompt -c Yn "Go?" 2>/dev/null'
     [ "$output" = y ]
 }
+
+@test "zz-prompt -c prints the default option on empty input" {
+    run bash -c 'echo "" | zz-prompt -c Yn "Continue?" 2>/dev/null'
+    [ "$status" -eq 0 ]
+    [ "$output" = "y" ]
+}
+
+@test "zz-prompt -c prints a valid non-default option" {
+    run bash -c 'echo "n" | zz-prompt -c Yn "Continue?" 2>/dev/null'
+    [ "$status" -eq 0 ]
+    [ "$output" = "n" ]
+}
+
+@test "zz-prompt -c lowercases a valid answer, so callers can compare with y/n" {
+    run bash -c 'echo "N" | zz-prompt -c Yn "Continue?" 2>/dev/null'
+    [ "$status" -eq 0 ]
+    [ "$output" = "n" ]
+}
+
+@test "zz-prompt -c re-prompts on an invalid option before accepting a valid one" {
+    run bash -c 'printf "x\nn\n" | zz-prompt -c Yn "Continue?" 2>/dev/null'
+    [ "$status" -eq 0 ]
+    [ "$output" = "n" ]
+}
+
+@test "zz-prompt -c writes the question and options prompt to stderr" {
+    run bash -c 'echo "" | zz-prompt -c Yn "Continue?" 2>&1 1>/dev/null'
+    [[ "$output" == *"Continue?"* ]]
+    [[ "$output" == *"[Yn]"* ]]
+}
+
+@test "zz-prompt -c default option is derived from the uppercase letter, not necessarily first char" {
+    run bash -c 'echo "" | zz-prompt -c nY "Proceed?" 2>/dev/null'
+    [ "$status" -eq 0 ]
+    [ "$output" = "y" ]
+}
+
+@test "zz-prompt -c re-prompts with a warning message on invalid input" {
+    run bash -c 'printf "z\ny\n" | zz-prompt -c Yn "Continue?" 2>&1 1>/dev/null'
+    [[ "$output" == *"valid option"* ]]
+}
