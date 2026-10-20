@@ -92,37 +92,12 @@ fi
 dir="$parent/$repo"
 [ -z "$local" ] || dir=$local
 
-# zz-log tags every line with the current step, inherited by the scripts run below.
-ZZ_LOG_STEP=setup
-export ZZ_LOG_STEP
-
 envfile="${ZZ_SETUP_ENV_FILE:-}"
 if [ -z "$envfile" ]; then
     if [ "$(id -u)" -eq 0 ]; then envfile="${ZZ_ETC_DIR:-/etc}/$repo.env"; else envfile="$dir/.env"; fi
 fi
 
 # --- functions
-# Name the current step; zz-log tags this script's lines and its children's.
-step() {
-    ZZ_LOG_STEP=$1
-    export ZZ_LOG_STEP
-}
-
-# Run a command one level deeper (its zz-log lines are indented under ours,
-# the step tag is inherited). Used for every child script.
-nest() {
-    (
-        ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2))
-        export ZZ_LOG_INDENT
-        "$@"
-    )
-}
-
-# A detail line one level under the message above it.
-hint() {
-    ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2)) zz-log - "$@"
-}
-
 # Run a command; when nobody can answer a prompt (stdin is not a terminal) its
 # stdout is shown as operation output (zz-log o), apart from our own lines. On a
 # terminal it stays raw: a prompt without a newline must show up at once.
@@ -147,7 +122,6 @@ output() {
 
 # No workspaces (or forced): hand over to the repo's own entrypoint.
 run_entry() {
-    step entry
     entry=
     for cand in "$ZZ_SETUP_ENTRY" "$repo-setup/run.sh" setup.sh run.sh; do
         if [ -n "$cand" ] && [ -f "$dir/$cand" ]; then
@@ -157,13 +131,11 @@ run_entry() {
     done
     [ -n "$entry" ] || {
         zz-log e "No workspace or entrypoint found in {U $dir}"
-        hint "Tried $repo-setup/run.sh, setup.sh and run.sh"
+        zz-log - "Tried $repo-setup/run.sh, setup.sh and run.sh"
         exit 1
     }
     zz-log i "Handing over to {Purple $entry}"
     cd "$dir"
-    ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2))
-    export ZZ_LOG_INDENT
     exec sh -c '[ -x "$0" ] && exec "$0" "$@" || exec bash "$0" "$@"' "$dir/$entry" "$@"
 }
 
@@ -193,7 +165,7 @@ apply_state() {
     for n in $(printf '%s' "$2" | tr ',' ' '); do
         exists "$n" || {
             zz-log e "Unknown workspace: {Purple $n}"
-            hint "Available: $(printf '%s' "$names" | tr '\n' ' ')"
+            zz-log - "Available: $(printf '%s' "$names" | tr '\n' ' ')"
             exit 1
         }
         state_set "$n" "$1"
@@ -201,18 +173,17 @@ apply_state() {
 }
 
 # --- run: down in reverse order first, then up in order.
-# Each workspace runs tagged with its own name, one level deeper, so its zz-log
-# lines nest under the "running" line.
+# The workspace's own zz-log lines and its stdout hang under the "running" line.
 run_step() {
     d=$(dir_of "$1")
     b=$(ws "$1" 8)
     zz-log i "{B $1}: $2"
     rc=0
-    ZZ_LOG_STEP=$1 nest output sh -c 'cd "$1" && if [ -x "$2" ]; then "./$2" $3; else bash "$2" $3; fi' sh "$d" "$b" "$2" || rc=$?
+    output sh -c 'cd "$1" && if [ -x "$2" ]; then "./$2" $3; else bash "$2" $3; fi' sh "$d" "$b" "$2" || rc=$?
     if [ "$rc" -ne 0 ]; then
         zz-log e "{B $1}: $2 failed (exit $rc)"
-        hint "Script: {U $d/$b}"
-        hint "Re-run only this step: zz-setup $spec -o $1"
+        zz-log - "Script: {U $d/$b}"
+        zz-log - "Re-run only this step: zz-setup $spec -o $1"
         exit 1
     fi
     zz-log s "{B $1}: $2 done"
@@ -224,18 +195,17 @@ run_step() {
 zz-log i "Setting up {Purple $spec} at {B $ref} in {U $dir}"
 if [ -z "$local" ] && [ -z "$ZZ_SETUP_REF" ] && [ "$ref" = main ] && [ "${spec#*@}" = "$spec" ]; then
     zz-log w "No ref given, using 'main'"
-    hint "Choose one with $spec@<ref>, or ZZ_SETUP_REF=<ref> placed after sudo"
+    zz-log - "Choose one with $spec@<ref>, or ZZ_SETUP_REF=<ref> placed after sudo"
 fi
 
 # --- fetch: zz-fetch clones or updates the checkout (nothing for a local one).
-step fetch
 if [ -n "$local" ]; then
     zz-log n "Using the local checkout, nothing fetched"
 else
     zz-log i "Fetching {U $url} at {B $ref}"
-    nest zz-fetch -r "$ref" -d "$dir" "$url" || {
+    zz-fetch -r "$ref" -d "$dir" "$url" || {
         zz-log e "Could not fetch $spec at {B $ref}"
-        hint "@ref and ZZ_SETUP_REF set the ref of $spec; ZZ_ORIGIN_REF (for zz-use) sets the scripts' own"
+        zz-log - "@ref and ZZ_SETUP_REF set the ref of $spec; ZZ_ORIGIN_REF (for zz-use) sets the scripts' own"
         exit 1
     }
 fi
@@ -247,7 +217,6 @@ cd "$dir"
 
 # --- select: zz-workspaces lists the runnable workspaces, one row each:
 # order US name US dir US description US default US deps US conflicts US bin.
-step select
 us=$(printf '\037')
 list=$(zz-workspaces)
 [ -n "$list" ] || run_entry "$@"
@@ -277,7 +246,7 @@ help
 )"
 [ "$#" -eq 0 ] || {
     zz-log e "Unknown argument: {Purple $1}"
-    hint "zz-setup $spec -h lists the options"
+    zz-log - "zz-setup $spec -h lists the options"
     exit 1
 }
 
@@ -350,7 +319,7 @@ if [ "$status_only" -ne 1 ]; then
         for c in $(conflicts_of "$n"); do
             exists "$c" && [ "$(state_get "$c")" = up ] || continue
             zz-log e "{Purple $n} conflicts with {Purple $c}, and both are enabled"
-            hint "Skip one of them: -s $c, or -s $n"
+            zz-log - "Skip one of them: -s $c, or -s $n"
             exit 1
         done
     done
@@ -364,7 +333,7 @@ if [ "$force_down" -ne 1 ]; then
             for dep in $(deps_of "$o"); do
                 [ "$dep" = "$n" ] || continue
                 zz-log e "Cannot bring {Purple $n} down: {Purple $o} depends on it and stays enabled"
-                hint "Also pass -d $o, or -F"
+                zz-log - "Also pass -d $o, or -F"
                 exit 1
             done
         done
@@ -381,7 +350,6 @@ for n in $names; do [ "$(state_get "$n")" = up ] && up_names="$up_names $n"; don
 # --- inputs: zz-vars shows them (-S), or asks, resolves and refuses a
 # missing required one; its export lines are evaluated here so the
 # workspaces inherit the values. Exit 3 means the user aborted.
-step inputs
 set --
 for n in $([ "$status_only" -eq 1 ] && echo "$names" || echo "$up_names"); do
     set -- "$@" "$n=$(dir_of "$n")"
@@ -402,7 +370,6 @@ if [ "$#" -gt 0 ]; then
 fi
 
 # --- run: all "down" steps in reverse order, then all "up" steps in order.
-step run
 for n in $(printf '%s\n' "$names" | sed '1!G;h;$!d'); do
     [ "$(state_get "$n")" = down ] && run_step "$n" down
 done

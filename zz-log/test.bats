@@ -179,10 +179,24 @@ teardown() {
     [[ "$output" != *"[fetch]"* ]]
 }
 
-@test "zz-log - is a plain detail line behind tree guides, one more guide per indent level" {
+@test "zz-log - is a detail line behind one tree guide, one more per ZZ_LOG_INDENT level" {
     run bash -c 'zz-log - "detail" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
     [ "$output" = "   |  detail" ]
+    run bash -c 'ZZ_LOG_INDENT=1 zz-log - "detail" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "   |   |  detail" ]
     run bash -c 'ZZ_LOG_INDENT=2 zz-log - "detail" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
-    [[ "$output" == "   |   |"*"  detail" && ${#output} -gt 11 ]]
+    [ "$output" = "   |   |   |  detail" ]
+}
+
+@test "zz-log o output hangs under its headline on the same scale as - lines" {
+    run bash -c 'echo line | zz-log o 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "   │ line" ]
+    run bash -c 'echo line | ZZ_LOG_INDENT=1 zz-log o 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "   |   │ line" ]
+}
+
+@test "zz-log ignores a ZZ_LOG_INDENT that is not an integer" {
+    run bash -c 'ZZ_LOG_INDENT=x zz-log - "d" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "   |  d" ]
 }
 

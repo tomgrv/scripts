@@ -4,20 +4,21 @@
 # d(ebug) is silent unless ZZ_DEBUG is set.
 #
 # Script log vs operation output:
-#   - a script's own messages (i n w e s d -) get the level pictogram and, when
-#     ZZ_LOG_STEP is set, a "[step]" tag naming the current step;
+#   - a script's own messages (i n w e s d -) get the level pictogram (none for -);
 #   - o(utput) is what a command it ran printed (git, an installer...): each
 #     line, taken from the message or from stdin when none is given, is dimmed
-#     behind a "│" gutter, with no pictogram and no step tag. Pipe it:
+#     behind a "│" gutter, with no pictogram. Pipe it:
 #       cmd 2>&1 | zz-log o        (or keep the status: out=$(cmd 2>&1) || rc=$?)
 #
-# Indent: the headline levels (i n w e s) always start at column 0. Detail
-# lines (-) and command output (o) are indented by ZZ_LOG_INDENT (spaces), which
-# a caller raises to nest them under its message or for the children it starts.
+# Layout: the headline levels (i n w e s) start at column 0. A detail line (-) or
+# command output (o) hangs under the headline above it behind one dim tree guide
+# ("   |"). ZZ_LOG_INDENT is a nesting depth (0 by default, in levels, not
+# spaces): each level adds a guide, so a caller that wants a block deeper than
+# its own headline raises it by 1 for that block.
 #
 # Custom level: any other string is printed as the line's own prefix, the way
 # json-validate nests its output ("zz-log \"$prefix -\" msg"). The caller owns
-# that prefix, so neither the step tag nor ZZ_LOG_INDENT is added to it.
+# that prefix, so ZZ_LOG_INDENT is not applied to it.
 #
 # Levels, by what the reader needs to know:
 #   i  a step starts ("Fetching ...", "Installing ...")
@@ -35,9 +36,7 @@
 # colour comes back after the text. Backslash escapes in the message (\n, \t)
 # are interpreted.
 #
-# Env: ZZ_LOG_STEP (current step label, exported by the caller so its children
-# inherit it), ZZ_LOG_INDENT (spaces to indent every line; a caller nesting a
-# child script raises it by 2 for that child).
+# Env: ZZ_LOG_INDENT (nesting depth, see Layout), inherited by child scripts.
 #
 # Everything but the GitHub Actions branch runs on shell builtins: no fork,
 # no eval of the message.
@@ -48,18 +47,18 @@
 lvl="$1" && shift
 
 # --- parameters
-indent=${ZZ_LOG_INDENT:-0}
-case "$indent" in *[!0-9]*) indent=0 ;; esac
+depth=${ZZ_LOG_INDENT:-0}
+case "$depth" in *[!0-9]*) depth=0 ;; esac
 
-prefix=""
-if test -z "$indent"; then
-    indent=0
-else
-    indent=$(expr $indent + 1)
-    for i in $(seq 1 $indent); do
-        prefix="$prefix   |"
-    done
-fi
+# One dim guide per level above the line; a detail line adds its own.
+guides=""
+n=0
+while [ "$n" -lt "$depth" ]; do
+    guides="$guides   |"
+    n=$((n + 1))
+done
+[ -z "$guides" ] || guides="$BBlack$guides$End"
+prefix="$guides$BBlack   |$End"
 
 # --- functions
 
@@ -116,7 +115,7 @@ o*)
     {
         if [ "$#" -gt 0 ]; then printf '%s\n' "$*"; else cat; fi
     } | while IFS= read -r line || [ -n "$line" ]; do
-        printf '%*s%s│ %s%s\n' "$indent" "" "$BBlack" "$line" "$End" >&2
+        printf '%s   %s│ %s%s\n' "$guides" "$BBlack" "$line" "$End" >&2
     done
     exit 0
     ;;
@@ -156,14 +155,10 @@ s*)
     ;;
 -)
     picto="  "
-    step=""
-    steptag=""
     base="White"
     ;;
 *)
     picto="$lvl "
-    step=""
-    steptag=""
     prefix=""
     base="White"
     ;;
@@ -185,8 +180,8 @@ if [ -n "$gha" ]; then
             { gsub(/%/, "%25"); gsub(/\r/, "%0D"); printf "%s%s", (NR > 1 ? "%0A" : ""), $0 }
         '
     )
-    printf '%s%s%s\n' "$gha" "$step" "$plain" >&2
+    printf '%s%s\n' "$gha" "$plain" >&2
 else
-    paint "$picto$steptag$*" "$base"
+    paint "$picto$*" "$base"
     printf '%s%b%s\n' "$prefix" "$out" "$End" >&2
 fi

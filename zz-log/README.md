@@ -29,19 +29,26 @@ which case it prints like `-` but dimmed.
 Declared via `zz-use` at the top of `run.sh` and resolved on demand
 (installed if and only if missing) — see `run.sh` for the exact list.
 
-## Step, indent, operation output, inline colour
+## Layout, operation output, inline colour
 
-- `ZZ_LOG_STEP` tags every script line with `[step]`; `ZZ_LOG_INDENT` indents it
-  (a caller nesting a child raises it by 2). Both are inherited by children.
 - Levels: `i` a step starts, `s` it is done, `n` a decision the tool made for you,
-  `w` degraded but the run continues, `e` the run stops (follow it with `-` hint
-  lines), `d` internals (needs `ZZ_DEBUG`), `-` a detail line, `o` command output.
-- Nest a hint under a message by raising the indent for that one call:
-  `ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2)) zz-log - "Check the ref"`.
-- Any other level string is printed as the line's own prefix (as `json-validate`
-  does); it gets no step tag and no `ZZ_LOG_INDENT`.
-- Level `o` is what a command printed (git, an installer): from the message or
-  stdin, dimmed behind a `│` gutter, no pictogram, no step tag.
+  `w` degraded but the run continues, `e` the run stops (follow it with `-` lines
+  saying what to do), `d` internals (needs `ZZ_DEBUG`), `-` a detail line, `o` command output.
+- Headline levels (`i n w e s`) start at column 0. A `-` line or `o` output hangs under the
+  headline above it behind a dim tree guide:
+  ```
+  → Fetching https://… at main
+     |  Cloning into /opt/vps
+     │ From https://…
+  ✕ Could not fetch vps at nope
+     |  @ref and ZZ_SETUP_REF set the ref of vps
+  ```
+- `ZZ_LOG_INDENT` is a nesting depth in levels (default 0, not spaces); each level adds a guide.
+  Child scripts inherit it. Most callers never set it: a child's `-` lines already hang under the
+  headline that started it.
+- Level `o` is what a command printed (git, an installer): from the message or stdin, dimmed behind a
+  `│` gutter, no pictogram.
+- Any other level string is printed as the line's own prefix (as `json-validate` does).
 - `{Name text}` prints `text` in the `zz-colors` variable `Name` (`{Purple x}`);
   a single capital is that style in the line's own colour (`{U path}`). No fork
   and no `eval` of the message: it runs on shell builtins (about 3× faster).

@@ -129,26 +129,12 @@ _have() {
     return 1
 }
 
-# A detail line one level under the message above it.
-_hint() {
-    ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2)) zz-log - "$@"
-}
-
-# Run a command one level deeper: its zz-log lines are indented under ours.
-_nest() {
-    (
-        ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2))
-        export ZZ_LOG_INDENT
-        "$@"
-    )
-}
-
 # Install a system package through zz-install (it picks the package manager
 # and escalates through sudo). Resolves the default source first when
 # zz-install isn't on PATH yet, like _bindir does.
 _pkg_install() {
     command -v zz-install >/dev/null 2>&1 || _resolve_src || return 1
-    _nest zz-install "$1"
+    zz-install "$1"
 }
 
 # jq is needed to read zz-use.json and npm registry metadata: install it
@@ -208,10 +194,10 @@ _fetch_archive() {
             mv "$_tmp/x" "$_cache_dir"
         elif _cache_warm "$_cache_dir"; then
             zz-log w "Could not refresh ${_desc}"
-            _hint "Using the stale cache at {U ${_cache_dir}}"
+            zz-log - "Using the stale cache at {U ${_cache_dir}}"
         else
             zz-log e "Could not retrieve ${_desc}"
-            _hint "The download failed, or it holds no <name>/run.sh script"
+            zz-log - "The download failed, or it holds no <name>/run.sh script"
             return 1
         fi
     else
@@ -237,11 +223,11 @@ _resolve_npm() {
         if [ -z "$_tarball" ]; then
             _cache_warm "$_cache_dir" || {
                 zz-log e "Could not resolve the npm tarball for {Purple ${_req_origin}@${_npm_ref}}"
-                _hint "Looked it up at {U ${_meta_url}}"
+                zz-log - "Looked it up at {U ${_meta_url}}"
                 return 1
             }
             zz-log w "Could not refresh {Purple ${_req_origin}@${_npm_ref}}"
-            _hint "Using the stale cache"
+            zz-log - "Using the stale cache"
         fi
     fi
     _fetch_archive "$_cache_dir" "$_tarball" "npm package ({B ${_req_origin}@${_npm_ref}})"
@@ -595,7 +581,7 @@ _use() {
                 done
                 _val=$(printf '%s' "$entry" | jq -r '.sha256 // empty | if type == "object" then tojson else . end')
                 [ -z "$_val" ] || set -- "$@" -s "$_val"
-                _nest zz-install "$@" "$tool" || zz-log w "Could not download {Purple $tool}"
+                zz-install "$@" "$tool" || zz-log w "Could not download {Purple $tool}"
                 # zz-install ran in a child: put the bin dir on our PATH for _have.
                 _bindir || true
             fi
@@ -607,7 +593,7 @@ _use() {
 
         if ! _have "$tool"; then
             zz-log e "Cannot provide {Purple $tool}"
-            _hint "It is not installed, and no source could install it"
+            zz-log - "It is not installed, and no source could install it"
             return 1
         fi
 
