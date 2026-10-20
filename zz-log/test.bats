@@ -151,8 +151,19 @@ teardown() {
 }
 
 @test "zz-log tags script lines with ZZ_LOG_STEP; headline levels ignore ZZ_LOG_INDENT" {
-    run bash -c 'ZZ_LOG_STEP=fetch ZZ_LOG_INDENT=4 zz-log i "hi" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    run bash -c 'ZZ_LOG_STEP=fetch ZZ_LOG_INDENT=4 zz-log w "hi" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "! [fetch] hi" ]
+    run bash -c 'ZZ_LOG_STEP=fetch zz-log i "hi" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
     [ "$output" = "→ [fetch] hi" ]
+}
+
+@test "zz-log inside a step shows progress (i) and done (s) as detail lines, keeps w and e" {
+    run bash -c 'ZZ_LOG_STEP=x ZZ_LOG_INDENT=2 zz-log i "working" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "    working" ]
+    run bash -c 'ZZ_LOG_INDENT=2 zz-log s "done" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "    done" ]
+    run bash -c 'ZZ_LOG_INDENT=2 zz-log e "bad" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "✕ bad" ]
 }
 
 @test "zz-log o dims stdin lines behind a gutter, without step tag" {
@@ -180,4 +191,11 @@ teardown() {
 @test "zz-log - is a plain detail line indented by ZZ_LOG_INDENT, without pictogram or step tag" {
     run bash -c 'ZZ_LOG_STEP=s ZZ_LOG_INDENT=4 zz-log - "detail" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
     [ "$output" = "      detail" ]
+}
+
+@test "zz-log adds no step tag to a message that already starts with its own [tag]" {
+    run bash -c 'ZZ_LOG_STEP=vps-system zz-log i "[vps-setup] Running apt-get update" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "→ [vps-setup] Running apt-get update" ]
+    run bash -c 'ZZ_LOG_STEP=vps-system zz-log i "Running apt-get update" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "→ [vps-system] Running apt-get update" ]
 }

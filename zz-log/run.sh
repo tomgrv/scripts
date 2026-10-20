@@ -11,9 +11,11 @@
 #     behind a "│" gutter, with no pictogram and no step tag. Pipe it:
 #       cmd 2>&1 | zz-log o        (or keep the status: out=$(cmd 2>&1) || rc=$?)
 #
-# Indent: the headline levels (i n w e s) always start at column 0. Detail
-# lines (-) and command output (o) are indented by ZZ_LOG_INDENT (spaces), which
-# a caller raises to nest them under its message or for the children it starts:
+# Indent: the headline levels (i n w e s) start at column 0. Detail lines (-)
+# and command output (o) are indented by ZZ_LOG_INDENT (spaces), which a caller
+# raises to nest them under its message or for the children it starts. In such a
+# nested script (ZZ_LOG_INDENT > 0) progress (i) and done (s) are shown as detail
+# lines, so only the step's own headline carries a pictogram; w, e and n keep it.
 #   ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2)) zz-log - "Check the ref"
 #
 # Custom level: any other string is printed as the line's own prefix, the way
@@ -110,6 +112,15 @@ paint() {
 # --- level: pictogram, base colour, GitHub Actions annotation.
 gha=""
 
+# Inside a step (ZZ_LOG_INDENT > 0), what a script reports as progress (i) or as
+# done (s) is a detail line under the step's own headline: the plain level.
+# Warnings, errors and notices keep their pictogram wherever they come from.
+if [ "$indent" -gt 0 ]; then
+    case $lvl in
+    i* | s*) lvl=- ;;
+    esac
+fi
+
 case $lvl in
 o*)
     {
@@ -185,6 +196,10 @@ if [ -n "$gha" ]; then
     )
     printf '%s%s%s\n' "$gha" "$step" "$plain" >&2
 else
+    # A message that carries its own "[tag]" needs no second one.
+    case "$*" in
+    "["*"]"*) steptag="" ;;
+    esac
     paint "$picto$steptag$*" "$base"
     printf '%*s%b%s\n' "$indent" "" "$out" "$End" >&2
 fi

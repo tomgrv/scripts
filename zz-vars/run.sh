@@ -89,6 +89,7 @@ STATUS
 fi
 
 # --- ask: on a terminal, let the user set the inputs still unset.
+saved=""
 if [ -t 0 ] && [ -n "$all_inputs" ]; then
     while :; do
         set --
@@ -121,10 +122,13 @@ ROWS
         # it; the answer is then read back into this run.
         if [ "$secret" = true ]; then set -- -s; else set --; fi
         [ -z "$def" ] || set -- "$@" -v "$def"
-        zz-persist -f "$envfile" -i "${choice}${desc:+ ($desc)}" "$@" "$choice"
+        zz-persist -q -f "$envfile" -i "${choice}${desc:+ ($desc)}" "$@" "$choice"
+        saved=1
         _v=$(env_get "$choice")
         [ -z "$_v" ] || eval "export $choice=\$_v"
     done
+    # One line for all of them, instead of one "persisted" line per input.
+    [ -z "$saved" ] || zz-log i "Inputs saved in {U $envfile}"
 fi
 
 # --- resolve with zz-call, then refuse a required input that is still empty.
