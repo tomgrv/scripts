@@ -129,12 +129,21 @@ _have() {
     return 1
 }
 
+# Run a command one level deeper: its zz-log lines are indented under ours.
+_nest() {
+    (
+        ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2))
+        export ZZ_LOG_INDENT
+        "$@"
+    )
+}
+
 # Install a system package through zz-install (it picks the package manager
 # and escalates through sudo). Resolves the default source first when
 # zz-install isn't on PATH yet, like _bindir does.
 _pkg_install() {
     command -v zz-install >/dev/null 2>&1 || _resolve_src || return 1
-    zz-install "$1"
+    _nest zz-install "$1"
 }
 
 # jq is needed to read zz-use.json and npm registry metadata: install it
@@ -181,7 +190,7 @@ _cache_fresh() {
 _fetch_archive() {
     _cache_dir="$1" _url="$2" _desc="$3"
     if [ -n "$_url" ]; then
-        zz-log i "Retrieving ${_desc} from {U ${_url}}..."
+        zz-log i "Retrieving ${_desc} from {U ${_url}}"
         _tmp="${_cache_dir}.tmp.$$"
         _add_tmp "$_tmp"
         rm -rf "$_tmp"
@@ -193,9 +202,11 @@ _fetch_archive() {
             rm -rf "$_cache_dir"
             mv "$_tmp/x" "$_cache_dir"
         elif _cache_warm "$_cache_dir"; then
-            zz-log w "Could not refresh ${_desc}; using stale cache at {U ${_cache_dir}}"
+            zz-log w "Could not refresh ${_desc}"
+            zz-log -1 "Using the stale cache at {U ${_cache_dir}}"
         else
-            zz-log e "Could not retrieve ${_desc} (download failed or no <name>/run.sh scripts)"
+            zz-log e "Could not retrieve ${_desc}"
+            zz-log -1 "The download failed, or it holds no <name>/run.sh script"
             return 1
         fi
     else
@@ -219,8 +230,13 @@ _resolve_npm() {
         _meta_url="https://registry.npmjs.org/${_npm_origin_enc}/${_npm_ref}"
         _tarball=$(curl -fsSL "$_meta_url" 2>/dev/null | jq -r '.dist.tarball // empty' 2>/dev/null) || _tarball=""
         if [ -z "$_tarball" ]; then
-            _cache_warm "$_cache_dir" || { zz-log e "Could not resolve npm tarball for {Purple ${_req_origin}@${_npm_ref}} from {U ${_meta_url}}"; return 1; }
-            zz-log w "Could not refresh {Purple ${_req_origin}@${_npm_ref}}; using stale cache"
+            _cache_warm "$_cache_dir" || {
+                zz-log e "Could not resolve the npm tarball for {Purple ${_req_origin}@${_npm_ref}}"
+                zz-log -1 "Looked it up at {U ${_meta_url}}"
+                return 1
+            }
+            zz-log w "Could not refresh {Purple ${_req_origin}@${_npm_ref}}"
+            zz-log -1 "Using the stale cache"
         fi
     fi
     _fetch_archive "$_cache_dir" "$_tarball" "npm package ({B ${_req_origin}@${_npm_ref}})"
@@ -411,7 +427,13 @@ _install_repo_script() {
     _resolve_src "$_origin" "$_ref" || return 1
     _dir="$_ZZ_BINDIR"
 
-    zz-log i "Installing {Purple ${_name}} from {U ${_SRC}/${_name}} to {U ${_dir}}..."
+    # Say where it comes from: org/repo@ref, or the path for a local origin.
+    case "$_origin" in
+    ./* | ../* | /* | \$*) _from="$_origin" ;;
+    *) _from="${_origin}@${_ref:-$ZZ_ORIGIN_REF}" ;;
+    esac
+    zz-log i "Installing {Purple ${_name}} from {B ${_from}}"
+    zz-log d "Source {U ${_SRC}/${_name}}, target {U ${_dir}}"
     # Write to a temp file and `mv` into place rather than `cp` over the
     # target directly: <_name> can be zz-use itself (e.g. under
     # zz-update), and an in-place cp can truncate a script the shell is
@@ -502,7 +524,7 @@ _use() {
                 _g_names="${_g_names} $(basename "$_gd")"
             done
             if [ -z "$_g_names" ]; then
-                zz-log w "No scripts match {Purple ${tool}} in {U ${_SRC}}"
+                zz-log w "No script matches {Purple ${tool}} in {U ${_SRC}}"
                 continue
             fi
             for _g_name in $_g_names; do
@@ -557,7 +579,7 @@ _use() {
             url=$(printf '%s' "$entry" | jq -r '.url // empty')
 
             if [ -n "$apt_pkg" ]; then
-                _pkg_install "$apt_pkg" || zz-log w "Package install of {Purple $apt_pkg} failed"
+                _pkg_install "$apt_pkg" || zz-log w "Could not install {Purple $apt_pkg} as a package"
             elif [ -n "$url" ]; then
                 # zz-install downloads, verifies and installs the binary
                 # (sha256: one hash, or an object keyed "<os>_<arch>").
@@ -568,7 +590,7 @@ _use() {
                 done
                 _val=$(printf '%s' "$entry" | jq -r '.sha256 // empty | if type == "object" then tojson else . end')
                 [ -z "$_val" ] || set -- "$@" -s "$_val"
-                zz-install "$@" "$tool" || zz-log w "Download install of {Purple $tool} failed"
+                _nest zz-install "$@" "$tool" || zz-log w "Could not download {Purple $tool}"
                 # zz-install ran in a child: put the bin dir on our PATH for _have.
                 _bindir || true
             fi
@@ -579,7 +601,8 @@ _use() {
         fi
 
         if ! _have "$tool"; then
-            zz-log e "Unable to provide required dependency: {Purple $tool}"
+            zz-log e "Cannot provide {Purple $tool}"
+            zz-log -1 "It is not installed, and no source could install it"
             return 1
         fi
 

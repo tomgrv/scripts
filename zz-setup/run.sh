@@ -92,9 +92,8 @@ fi
 dir="$parent/$repo"
 [ -z "$local" ] || dir=$local
 
-# zz-log tags every line with the current step (inherited by the scripts run
-# below) and indents what nested steps print.
-ZZ_LOG_STEP=zz-setup
+# zz-log tags every line with the current step, inherited by the scripts run below.
+ZZ_LOG_STEP=setup
 export ZZ_LOG_STEP
 
 envfile="${ZZ_SETUP_ENV_FILE:-}"
@@ -103,9 +102,20 @@ if [ -z "$envfile" ]; then
 fi
 
 # --- functions
+# Name the current step; zz-log tags this script's lines and its children's.
 step() {
-    ZZ_LOG_STEP="zz-setup:$1"
+    ZZ_LOG_STEP=$1
     export ZZ_LOG_STEP
+}
+
+# Run a command one level deeper (its zz-log lines are indented under ours,
+# the step tag is inherited). Used for every child script.
+nest() {
+    (
+        ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2))
+        export ZZ_LOG_INDENT
+        "$@"
+    )
 }
 
 # No workspaces (or forced): hand over to the repo's own entrypoint.
@@ -119,11 +129,14 @@ run_entry() {
         fi
     done
     [ -n "$entry" ] || {
-        zz-log e "No workspace or entrypoint found in $dir (tried $repo-setup/run.sh, setup.sh, run.sh)."
+        zz-log e "No workspace or entrypoint found in {U $dir}"
+        zz-log -1 "Tried $repo-setup/run.sh, setup.sh and run.sh"
         exit 1
     }
-    zz-log i "Running {Purple $entry}..."
+    zz-log i "Handing over to {Purple $entry}"
     cd "$dir"
+    ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2))
+    export ZZ_LOG_INDENT
     exec sh -c '[ -x "$0" ] && exec "$0" "$@" || exec bash "$0" "$@"' "$dir/$entry" "$@"
 }
 
@@ -152,7 +165,8 @@ state_key() { printf 'ZZ_%s' "$(var_of "$1")"; }
 apply_state() {
     for n in $(printf '%s' "$2" | tr ',' ' '); do
         exists "$n" || {
-            zz-log e "Unknown workspace: $n (available: $(printf '%s' "$names" | tr '\n' ' '))"
+            zz-log e "Unknown workspace: {Purple $n}"
+            zz-log -1 "Available: $(printf '%s' "$names" | tr '\n' ' ')"
             exit 1
         }
         state_set "$n" "$1"
@@ -160,41 +174,41 @@ apply_state() {
 }
 
 # --- run: down in reverse order first, then up in order.
-# Each workspace runs tagged with its own name and one level deeper, so its
-# zz-log lines nest under the "=== Running" line.
+# Each workspace runs tagged with its own name, one level deeper, so its zz-log
+# lines nest under the "running" line.
 run_step() {
     d=$(dir_of "$1")
     b=$(ws "$1" 8)
-    zz-log i "=== Running $1 ($d/$b $2) ==="
+    zz-log i "{B $1}: $2 ({U $d/$b})"
     rc=0
-    (
-        ZZ_LOG_STEP=$1
-        ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2))
-        export ZZ_LOG_STEP ZZ_LOG_INDENT
-        cd "$d" && if [ -x "$b" ]; then "./$b" $2; else bash "$b" $2; fi
-    ) || rc=$?
+    ZZ_LOG_STEP=$1 nest sh -c 'cd "$1" && if [ -x "$2" ]; then "./$2" $3; else bash "$2" $3; fi' sh "$d" "$b" "$2" || rc=$?
     if [ "$rc" -ne 0 ]; then
-        zz-log e "Step '$1' failed (exit $rc). Fix it and re-run just this step with: zz-setup $spec -o $1"
+        zz-log e "{B $1}: $2 failed (exit $rc)"
+        zz-log -1 "Re-run only this step: zz-setup $spec -o $1"
         exit 1
     fi
-    zz-log s "=== Done: $1 ($2) ==="
+    zz-log s "{B $1}: $2 done"
     if [ "$2" = up ]; then _remember=up; else _remember=skip; fi
-    zz-persist -f "$envfile" "$(state_key "$1")" "$_remember"
+    nest zz-persist -f "$envfile" "$(state_key "$1")" "$_remember"
 }
 
 # --- code
-zz-log i "repo=$spec ref=$ref dir=$dir"
+zz-log i "Setting up {Purple $spec} at {B $ref} in {U $dir}"
 if [ -z "$local" ] && [ -z "$ZZ_SETUP_REF" ] && [ "$ref" = main ] && [ "${spec#*@}" = "$spec" ]; then
-    zz-log w "No ref given, using 'main'. A plain 'export' before 'sudo zz-setup' is dropped by sudo: put it on the sudo line, e.g. 'sudo ZZ_SETUP_REF=... zz-setup'."
+    zz-log w "No ref given, using 'main'"
+    zz-log -1 "To pick one: zz-setup $spec@<ref>, or put ZZ_SETUP_REF=<ref> on the sudo line (sudo drops a plain export)"
 fi
 
 # --- fetch: zz-fetch clones or updates the checkout (nothing for a local one).
 step fetch
 if [ -n "$local" ]; then
-    zz-log i "Using the local checkout in place."
+    zz-log n "Using the local checkout, nothing fetched"
 else
-    zz-fetch -r "$ref" -d "$dir" "$url" || {
-        zz-log e "Could not fetch $spec at '$ref'. ZZ_SETUP_REF (or @ref) is the ref of $spec itself; to run another version of these scripts, set ZZ_ORIGIN_REF for zz-use instead."
+    zz-log i "Fetching {U $url} at {B $ref}"
+    nest zz-fetch -r "$ref" -d "$dir" "$url" || {
+        zz-log e "Could not fetch $spec at {B $ref}"
+        zz-log -1 "@ref and ZZ_SETUP_REF are the ref of $spec itself"
+        zz-log -1 "To run another version of these scripts, set ZZ_ORIGIN_REF for zz-use"
         exit 1
     }
 fi
@@ -206,6 +220,7 @@ cd "$dir"
 
 # --- select: zz-workspaces lists the runnable workspaces, one row each:
 # order US name US dir US description US default US deps US conflicts US bin.
+step select
 us=$(printf '\037')
 list=$(zz-workspaces)
 [ -n "$list" ] || run_entry "$@"
@@ -234,7 +249,8 @@ S - status_flag Show each workspace's state and inputs, run nothing
 help
 )"
 [ "$#" -eq 0 ] || {
-    zz-log e "Unknown argument: $1 (zz-setup $spec -h)"
+    zz-log e "Unknown argument: {Purple $1}"
+    zz-log -1 "zz-setup $spec -h lists the options"
     exit 1
 }
 
@@ -289,7 +305,7 @@ while [ "$pass" -lt 5 ]; do
         for dep in $(deps_of "$n"); do
             exists "$dep" || continue
             if [ "$(state_get "$dep")" = skip ]; then
-                zz-log w "Also enabling '$dep' (required by '$n')."
+                zz-log n "Also enabling {Purple $dep} (required by $n)"
                 state_set "$dep" up
                 changed=1
             fi
@@ -306,7 +322,8 @@ if [ "$status_only" -ne 1 ]; then
         [ "$(state_get "$n")" = up ] || continue
         for c in $(conflicts_of "$n"); do
             exists "$c" && [ "$(state_get "$c")" = up ] || continue
-            zz-log e "'$n' conflicts with '$c' and both are enabled. Skip one of them: -s $c, or -s $n."
+            zz-log e "{Purple $n} conflicts with {Purple $c}, and both are enabled"
+            zz-log -1 "Skip one of them: -s $c, or -s $n"
             exit 1
         done
     done
@@ -319,7 +336,8 @@ if [ "$force_down" -ne 1 ]; then
             [ "$o" != "$n" ] && [ "$(state_get "$o")" = up ] || continue
             for dep in $(deps_of "$o"); do
                 [ "$dep" = "$n" ] || continue
-                zz-log e "Refusing to bring '$n' down: '$o' depends on it and is still enabled. Also pass -d $o, or -F."
+                zz-log e "Cannot bring {Purple $n} down: {Purple $o} depends on it and stays enabled"
+                zz-log -1 "Also pass -d $o, or -F"
                 exit 1
             done
         done
@@ -329,7 +347,7 @@ fi
 up_names=
 for n in $names; do [ "$(state_get "$n")" = up ] && up_names="$up_names $n"; done
 [ "$status_only" -eq 1 ] || [ -n "$up_names$(for n in $names; do [ "$(state_get "$n")" = down ] && echo "$n"; done)" ] || {
-    zz-log w "Nothing selected, nothing to do."
+    zz-log n "Nothing selected, nothing to do"
     exit 0
 }
 

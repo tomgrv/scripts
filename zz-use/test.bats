@@ -81,7 +81,7 @@ teardown() {
     zz_use_bin=$(command -v zz-use)
     run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" "totally-bogus-glob-*"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"No scripts match"* ]]
+    [[ "$output" == *"No script matches"* ]]
     rm -rf "$bindir"
 }
 
@@ -90,7 +90,7 @@ teardown() {
     zz_use_bin=$(command -v zz-use)
     run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" totally-bogus-tool-xyz
     [ "$status" -ne 0 ]
-    [[ "$output" == *"Unable to provide required dependency"* ]]
+    [[ "$output" == *"Cannot provide"* ]]
     rm -rf "$bindir"
 }
 
@@ -173,6 +173,9 @@ EOF
     [ "$status" -eq 0 ]
     [ -x "$bindir/some-tool" ]
     [[ "$("$bindir/some-tool")" == "from-local-repo" ]]
+    # The log names the origin: here the local path, not an org/repo@ref.
+    [[ "$output" == *"from"*"./$(basename "$local_repo")"* ]]
+    [[ "$output" != *"@main"* ]]
     rm -rf "$local_repo" "$bindir"
 }
 

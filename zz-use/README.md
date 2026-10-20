@@ -26,6 +26,14 @@ Environment: `ZZ_CACHE_TTL` (minutes, default 1440, `0` = never) sets
 when a cached archive for a mutable ref (branch, npm `latest`) is
 refetched; tags and commit shas never expire.
 
+## Where an install came from
+
+Each install logs `Installing <tool> from <org/repo>@<ref> (<source path>) to <bin dir>` and
+`Installed <tool> (<org/repo>@<ref>) to <path>`. The ref is the pinned one, else
+`ZZ_ORIGIN_REF` (default `main`); a local origin shows its path instead. Pin a branch of the
+scripts with `ZZ_ORIGIN_REF=<branch> zz-use -f ...`; it is not `ZZ_SETUP_REF`, which is the ref of
+the repository `zz-setup` sets up.
+
 ## Tests
 
 ```sh

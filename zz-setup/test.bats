@@ -96,7 +96,7 @@ make_workspace_remote() {
     make_workspace_remote
     run zz-setup acme/ws -o b
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Also enabling 'a'"* ]]
+    [[ "$output" == *"Also enabling"*"a"*"required by"* ]]
     [[ "$output" == *"a:up:bar"* ]]
     [[ "$output" == *"b:up"* ]]
     [[ "$output" != *"lib"*"Running"* ]]
@@ -125,12 +125,12 @@ make_conflict_remote() {
     make_conflict_remote
     run zz-setup acme/cf -w p,q
     [ "$status" -eq 1 ]
-    [[ "$output" == *"'p' conflicts with 'q'"* ]]
+    [[ "$output" == *"p"*"conflicts with"*"q"*"both are enabled"* ]]
     [[ "$output" != *"p:up"* ]]
     run zz-setup acme/cf -w p,r
     [ "$status" -eq 1 ]
-    [[ "$output" == *"Also enabling 'q'"* ]]
-    [[ "$output" == *"'p' conflicts with 'q'"* ]]
+    [[ "$output" == *"Also enabling"*"q"*"required by"* ]]
+    [[ "$output" == *"p"*"conflicts with"*"q"*"both are enabled"* ]]
 }
 
 @test "zz-setup allows a conflicting pair when only one is up (the other skipped or coming down)" {
@@ -185,7 +185,7 @@ make_conflict_remote() {
     [[ "$output" == *"a:up"* && "$output" == *"b:up"* ]]
     run zz-setup acme/ws bogus
     [ "$status" -eq 1 ]
-    [[ "$output" == *"Unknown argument: bogus"* ]]
+    [[ "$output" == *"Unknown argument:"*"bogus"* ]]
 }
 
 @test "zz-setup --status reports states and input status, and runs nothing" {
@@ -278,7 +278,7 @@ make_conflict_remote() {
     make_workspace_remote
     run zz-setup "$WORK/ws" -w a
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Using the local checkout in place"* ]]
+    [[ "$output" == *"Using the local checkout"* ]]
     [[ "$output" == *"a:up:bar"* ]]
     [ ! -d "$WORK/dir/ws" ]
 }

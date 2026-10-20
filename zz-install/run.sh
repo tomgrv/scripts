@@ -62,11 +62,20 @@ as_root() {
     fi
 }
 
+# Run a command, forwarding what it prints as operation output (zz-log o);
+# keeps its status.
+op() {
+    _rc=0
+    _out=$("$@" 2>&1) || _rc=$?
+    [ -z "$_out" ] || printf '%s\n' "$_out" | zz-log o
+    return "$_rc"
+}
+
 # Refresh the apt index unless it was refreshed within the last hour, so
 # installing several tools in a row updates once.
 apt_update() {
     find /var/lib/apt/lists -maxdepth 1 -type f -mmin -60 2>/dev/null | grep -q . && return 0
-    as_root apt-get update -qq
+    op as_root apt-get update -qq
 }
 
 # Install the system package through the first manager found.
@@ -78,22 +87,22 @@ install_package() {
         command -v "$bin" >/dev/null 2>&1 || continue
 
         name=$(name_for "$key" "$@")
-        zz-log i "Installing {Purple $name} via $key..."
+        zz-log i "Installing {Purple $name} via {B $key}"
 
         case "$key" in
-        apt) apt_update && as_root apt-get install -y -qq "$name" ;;
-        apk) as_root apk add --no-cache -q "$name" ;;
-        dnf) as_root dnf install -y -q "$name" ;;
-        yum) as_root yum install -y -q "$name" ;;
-        brew) brew install -q "$name" ;;
-        pacman) as_root pacman -S --noconfirm --needed "$name" ;;
-        zypper) as_root zypper --non-interactive --quiet install "$name" ;;
-        winget) winget install -s winget -e --name "$name" ;;
+        apt) apt_update && op as_root apt-get install -y -qq "$name" ;;
+        apk) op as_root apk add --no-cache -q "$name" ;;
+        dnf) op as_root dnf install -y -q "$name" ;;
+        yum) op as_root yum install -y -q "$name" ;;
+        brew) op brew install -q "$name" ;;
+        pacman) op as_root pacman -S --noconfirm --needed "$name" ;;
+        zypper) op as_root zypper --non-interactive --quiet install "$name" ;;
+        winget) op winget install -s winget -e --name "$name" ;;
         esac
         return $?
     done
 
-    zz-log e "No supported package manager found to install {Purple $pkg}."
+    zz-log e "No supported package manager found to install {Purple $pkg}"
     return 1
 }
 
@@ -139,7 +148,7 @@ install_download() {
     _url=$(expand "$url")
     _binpath=$(expand "${binpath:-$pkg}")
 
-    zz-log i "Downloading {Purple $pkg} from {U $_url}..."
+    zz-log i "Downloading {Purple $pkg} from {U $_url}"
     _tmp=$(mktemp -d)
     trap 'rm -rf "$_tmp"' EXIT
     mkdir -p "$_tmp/x"
