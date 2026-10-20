@@ -50,14 +50,16 @@ lvl="$1" && shift
 # --- parameters
 indent=${ZZ_LOG_INDENT:-0}
 case "$indent" in *[!0-9]*) indent=0 ;; esac
-# The step tag is dimmed so it recedes behind the message; step is its plain
-# form (GitHub annotations have no colours).
-step=""
-steptag=""
-[ -z "${ZZ_LOG_STEP:-}" ] || {
-    step="[$ZZ_LOG_STEP] "
-    steptag="{BBlack [$ZZ_LOG_STEP]} "
-}
+
+prefix=""
+if test -z "$indent"; then
+    indent=0
+else
+    indent=$(expr $indent + 1)
+    for i in $(seq 1 $indent); do
+        prefix="$prefix   |"
+    done
+fi
 
 # --- functions
 
@@ -122,34 +124,35 @@ d*)
     [ -n "${ZZ_DEBUG:-}" ] || exit 0
     picto="{BBlack ·} "
     base="BBlack"
+    prefix=""
     ;;
 i*)
     picto="{BBlue →} "
     base="White"
-    indent=0
+    prefix=""
     ;;
 n*)
     picto="{BCyan i} "
     base="Cyan"
-    indent=0
+    prefix=""
     [ "${GITHUB_ACTIONS:-}" = "true" ] && gha="::notice::"
     ;;
 w*)
     picto="{BYellow !} "
     base="Yellow"
-    indent=0
+    prefix=""
     [ "${GITHUB_ACTIONS:-}" = "true" ] && gha="::warning::"
     ;;
 e*)
     picto="{BRed ✕} "
     base="Red"
-    indent=0
+    prefix=""
     [ "${GITHUB_ACTIONS:-}" = "true" ] && gha="::error::"
     ;;
 s*)
     picto="{Green ✔} "
     base="Green"
-    indent=0
+    prefix=""
     ;;
 -)
     picto="  "
@@ -161,7 +164,7 @@ s*)
     picto="$lvl "
     step=""
     steptag=""
-    indent=0
+    prefix=""
     base="White"
     ;;
 esac
@@ -184,10 +187,6 @@ if [ -n "$gha" ]; then
     )
     printf '%s%s%s\n' "$gha" "$step" "$plain" >&2
 else
-    # A message that carries its own "[tag]" needs no second one.
-    case "$*" in
-    "["*"]"*) steptag="" ;;
-    esac
     paint "$picto$steptag$*" "$base"
-    printf '%*s%b%s\n' "$indent" "" "$out" "$End" >&2
+    printf '%*s%b%s\n' "$prefix" "" "$out" "$End" >&2
 fi
