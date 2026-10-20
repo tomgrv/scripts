@@ -159,7 +159,7 @@ teardown() {
 
 @test "zz-log o dims stdin lines behind a gutter, without step tag" {
     run bash -c 'printf "a\nb\n" | ZZ_LOG_STEP=fetch zz-log o 2>&1'
-    [[ "$output" == *"│ a"* && "$output" == *"│ b"* ]]
+    [[ "$output" == *"│  a"* && "$output" == *"│  b"* ]]
     [[ "$output" != *"[fetch]"* ]]
 }
 
@@ -190,13 +190,12 @@ teardown() {
 
 @test "zz-log o output hangs under its headline on the same scale as - lines" {
     run bash -c 'echo line | zz-log o 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
-    [ "$output" = "   │ line" ]
+    [ "$output" = "   │  line" ]
     run bash -c 'echo line | ZZ_LOG_INDENT=1 zz-log o 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
-    [ "$output" = "   |   │ line" ]
+    [ "$output" = "   |   │  line" ]
 }
 
 @test "zz-log ignores a ZZ_LOG_INDENT that is not an integer" {
     run bash -c 'ZZ_LOG_INDENT=x zz-log - "d" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
     [ "$output" = "   |  d" ]
 }
-

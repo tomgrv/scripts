@@ -115,7 +115,7 @@ o*)
     {
         if [ "$#" -gt 0 ]; then printf '%s\n' "$*"; else cat; fi
     } | while IFS= read -r line || [ -n "$line" ]; do
-        printf '%s   %s│ %s%s\n' "$guides" "$BBlack" "$line" "$End" >&2
+        printf '%s   %s│  %s%s\n' "$guides" "$BBlack" "$line" "$End" >&2
     done
     exit 0
     ;;

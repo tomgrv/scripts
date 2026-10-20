@@ -325,7 +325,7 @@ make_conflict_remote() {
     make_workspace_remote
     run zz-setup acme/ws -o b </dev/null
     [ "$status" -eq 0 ]
-    [[ "$output" == *"│ b:up"* ]]
+    [[ "$output" == *"│  b:up"* ]]
 }
 
 @test "zz-setup hint lines sit one level under their error, behind a tree guide" {
