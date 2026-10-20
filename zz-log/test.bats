@@ -161,8 +161,12 @@ teardown() {
     [[ "$output" != *"[fetch]"* ]]
 }
 
-@test "zz-log sourced with ZZ_LOG_LIB defines zz_log without logging or exiting the caller" {
-    run sh -c 'ZZ_LOG_LIB=1; . zz-log; zz_log d hidden; zz_log i "from lib" 2>&1; echo still-here'
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"from lib"* && "$output" == *still-here ]]
+@test "zz-log leaves a brace that is not a colour marker alone" {
+    run bash -c 'zz-log i "{\"a\": 1} {Red x} {" 2>&1'
+    [[ "$output" == *"{\"a\": 1}"* && "$output" == *"x"* && "$output" == *"{"* ]]
+}
+
+@test "zz-log prints a command substitution in the message instead of running it" {
+    run bash -c 'zz-log i "\$(echo pwned)" 2>&1'
+    [[ "$output" == *'$(echo pwned)'* ]]
 }

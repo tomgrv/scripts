@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # zz-log
 
 Colored, leveled log line on stderr (i/n/w/e/s/d/-).
@@ -27,15 +29,16 @@ which case it prints like `-` but dimmed.
 Declared via `zz-use` at the top of `run.sh` and resolved on demand
 (installed if and only if missing) — see `run.sh` for the exact list.
 
-## Step, indent, operation output, library mode
+## Step, indent, operation output, inline colour
 
 - `ZZ_LOG_STEP` tags every script line with `[step]`; `ZZ_LOG_INDENT` indents it
   (a caller nesting a child raises it by 2). Both are inherited by children.
 - Level `o` is what a command printed (git, an installer): from the message or
   stdin, dimmed behind a `│` gutter, no pictogram, no step tag.
-- Sourced (`ZZ_LOG_LIB=1; . zz-log`) it only defines `zz_log <level> <msg...>`,
-  which logs in the caller's shell with no fork per message. Run as a command
-  it behaves as before.
+- `{Name text}` prints `text` in the `zz-colors` variable `Name` (`{Purple x}`);
+  a single capital is that style in the line's own colour (`{U path}`). No fork
+  and no `eval` of the message: it runs on shell builtins (about 3× faster).
+  Nested markers are not supported.
 
 ## Tests
 
