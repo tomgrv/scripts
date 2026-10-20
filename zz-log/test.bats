@@ -151,7 +151,7 @@ teardown() {
 }
 
 @test "zz-log tags script lines with ZZ_LOG_STEP; headline levels ignore ZZ_LOG_INDENT" {
-    run bash -c 'ZZ_LOG_STEP=fetch ZZ_LOG_INDENT=4 zz-log w "hi" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    run bash -c 'unset GITHUB_ACTIONS; ZZ_LOG_STEP=fetch ZZ_LOG_INDENT=4 zz-log w "hi" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
     [ "$output" = "! [fetch] hi" ]
     run bash -c 'ZZ_LOG_STEP=fetch zz-log i "hi" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
     [ "$output" = "→ [fetch] hi" ]
@@ -162,7 +162,7 @@ teardown() {
     [ "$output" = "    working" ]
     run bash -c 'ZZ_LOG_INDENT=2 zz-log s "done" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
     [ "$output" = "    done" ]
-    run bash -c 'ZZ_LOG_INDENT=2 zz-log e "bad" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    run bash -c 'unset GITHUB_ACTIONS; ZZ_LOG_INDENT=2 zz-log e "bad" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
     [ "$output" = "✕ bad" ]
 }
 
