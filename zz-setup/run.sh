@@ -33,22 +33,16 @@ set -e
 
 . zz-colors
 
-# zz-log tags every line with the current step (inherited by the scripts run
-# below) and indents what nested steps print.
-ZZ_LOG_STEP=zz-setup
-export ZZ_LOG_STEP
-step() {
-    ZZ_LOG_STEP="zz-setup:$1"
-    export ZZ_LOG_STEP
-}
-
-# Repository first (getopts stops there), then everything else untouched in "$@".
+# --- arguments: the repository first (getopts stops there), then everything
+# else untouched in "$@". The workspace options are declared further down,
+# once the checkout says which workspaces exist.
 eval "$(zz-args "Fetch a GitHub org/repo, propose its workspaces and inputs, then run them" "$0" "$@" <<help
 - repo spec <org>/<repo>[@<ref>]: the repository to fetch and run
 # args rest Options for its workspaces (zz-setup <repo> -h), or arguments for its entrypoint
 help
 )"
 
+# --- parameters: validate the repository, derive ref, url, checkout and env file.
 [ -n "$spec" ] || {
     zz-log e "Usage: zz-setup <org>/<repo>[@<ref>] [options] (-h for help)"
     exit 1
@@ -98,20 +92,23 @@ fi
 dir="$parent/$repo"
 [ -z "$local" ] || dir=$local
 
-zz-log i "repo=$spec ref=$ref dir=$dir"
-if [ -z "$local" ] && [ -z "$ZZ_SETUP_REF" ] && [ "$ref" = main ] && [ "${spec#*@}" = "$spec" ]; then
-    zz-log w "No ref given, using 'main'. A plain 'export' before 'sudo zz-setup' is dropped by sudo: put it on the sudo line, e.g. 'sudo ZZ_SETUP_REF=... zz-setup'."
+# zz-log tags every line with the current step (inherited by the scripts run
+# below) and indents what nested steps print.
+ZZ_LOG_STEP=zz-setup
+export ZZ_LOG_STEP
+
+envfile="${ZZ_SETUP_ENV_FILE:-}"
+if [ -z "$envfile" ]; then
+    if [ "$(id -u)" -eq 0 ]; then envfile="${ZZ_ETC_DIR:-/etc}/$repo.env"; else envfile="$dir/.env"; fi
 fi
 
-# --- fetch: zz-fetch clones or updates the checkout (nothing for a local one).
-step fetch
-if [ -n "$local" ]; then
-    zz-log i "Using the local checkout in place."
-else
-    zz-fetch -r "$ref" -d "$dir" "$url"
-fi
+# --- functions
+step() {
+    ZZ_LOG_STEP="zz-setup:$1"
+    export ZZ_LOG_STEP
+}
 
-# --- entrypoint mode: no workspaces (or forced): hand over to the repo.
+# No workspaces (or forced): hand over to the repo's own entrypoint.
 run_entry() {
     step entry
     entry=
@@ -130,15 +127,6 @@ run_entry() {
     exec sh -c '[ -x "$0" ] && exec "$0" "$@" || exec bash "$0" "$@"' "$dir/$entry" "$@"
 }
 
-cd "$dir"
-[ -z "$ZZ_SETUP_ENTRY" ] && [ -f package.json ] || run_entry "$@"
-# --- select: zz-workspaces lists the runnable workspaces, one row each:
-# order US name US dir US description US default US deps US conflicts US bin.
-us=$(printf '\037')
-list=$(zz-workspaces)
-[ -n "$list" ] || run_entry "$@"
-names=$(printf '%s\n' "$list" | cut -d"$us" -f2)
-
 # Field $2 of workspace $1's row (3 dir, 4 description, 5 default, 6 deps,
 # 7 conflicts, 8 bin).
 ws() { printf '%s\n' "$list" | awk -F"$us" -v n="$1" -v f="$2" '$2 == n { print $f; exit }'; }
@@ -151,11 +139,6 @@ var_of() { printf 'STATE_%s' "$1" | tr -c 'A-Za-z0-9_\n' '_'; }
 state_get() { eval "printf '%s' \"\${$(var_of "$1"):-skip}\""; }
 state_set() { eval "$(var_of "$1")=\$2"; }
 
-envfile="${ZZ_SETUP_ENV_FILE:-}"
-if [ -z "$envfile" ]; then
-    if [ "$(id -u)" -eq 0 ]; then envfile="${ZZ_ETC_DIR:-/etc}/$repo.env"; else envfile="$dir/.env"; fi
-fi
-
 # The env file is plain KEY=VALUE (zz-persist's format), read literally and
 # never sourced, so a value can hold spaces/quotes without being executed.
 env_get() { [ ! -f "$envfile" ] || sed -n "s/^$1=//p" "$envfile" | tail -n1; }
@@ -165,14 +148,7 @@ env_get() { [ ! -f "$envfile" ] || sed -n "s/^$1=//p" "$envfile" | tail -n1; }
 # terminal with no option, so flags and non-interactive runs are unchanged.
 state_key() { printf 'ZZ_%s' "$(var_of "$1")"; }
 
-for n in $names; do
-    if [ "$(ws "$n" 5)" = true ]; then
-        state_set "$n" up
-    else
-        state_set "$n" skip
-    fi
-done
-
+# Set the state of the comma-separated workspaces $2 to $1 (up|skip|down).
 apply_state() {
     for n in $(printf '%s' "$2" | tr ',' ' '); do
         exists "$n" || {
@@ -183,6 +159,66 @@ apply_state() {
     done
 }
 
+# --- run: down in reverse order first, then up in order.
+# Each workspace runs tagged with its own name and one level deeper, so its
+# zz-log lines nest under the "=== Running" line.
+run_step() {
+    d=$(dir_of "$1")
+    b=$(ws "$1" 8)
+    zz-log i "=== Running $1 ($d/$b $2) ==="
+    rc=0
+    (
+        ZZ_LOG_STEP=$1
+        ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2))
+        export ZZ_LOG_STEP ZZ_LOG_INDENT
+        cd "$d" && if [ -x "$b" ]; then "./$b" $2; else bash "$b" $2; fi
+    ) || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        zz-log e "Step '$1' failed (exit $rc). Fix it and re-run just this step with: zz-setup $spec -o $1"
+        exit 1
+    fi
+    zz-log s "=== Done: $1 ($2) ==="
+    if [ "$2" = up ]; then _remember=up; else _remember=skip; fi
+    zz-persist -f "$envfile" "$(state_key "$1")" "$_remember"
+}
+
+# --- code
+zz-log i "repo=$spec ref=$ref dir=$dir"
+if [ -z "$local" ] && [ -z "$ZZ_SETUP_REF" ] && [ "$ref" = main ] && [ "${spec#*@}" = "$spec" ]; then
+    zz-log w "No ref given, using 'main'. A plain 'export' before 'sudo zz-setup' is dropped by sudo: put it on the sudo line, e.g. 'sudo ZZ_SETUP_REF=... zz-setup'."
+fi
+
+# --- fetch: zz-fetch clones or updates the checkout (nothing for a local one).
+step fetch
+if [ -n "$local" ]; then
+    zz-log i "Using the local checkout in place."
+else
+    zz-fetch -r "$ref" -d "$dir" "$url"
+fi
+
+# Without workspaces (no package.json, or ZZ_SETUP_ENTRY set) the repo's own
+# installer takes over.
+cd "$dir"
+[ -z "$ZZ_SETUP_ENTRY" ] && [ -f package.json ] || run_entry "$@"
+
+# --- select: zz-workspaces lists the runnable workspaces, one row each:
+# order US name US dir US description US default US deps US conflicts US bin.
+us=$(printf '\037')
+list=$(zz-workspaces)
+[ -n "$list" ] || run_entry "$@"
+names=$(printf '%s\n' "$list" | cut -d"$us" -f2)
+
+# Initial state: the workspaces flagged "default" start enabled.
+for n in $names; do
+    if [ "$(ws "$n" 5)" = true ]; then
+        state_set "$n" up
+    else
+        state_set "$n" skip
+    fi
+done
+
+# --- workspace options: declared here, not with the first zz-args call,
+# because the help and the accepted names depend on the checkout.
 eval "$(zz-args "$spec workspaces: $(printf '%s' "$names" | tr '\n' ' ')" "zz-setup $spec" "$@" <<help
 w names with_list Enable workspaces (space/comma-separated)
 s names skip_list Skip workspaces
@@ -294,7 +330,7 @@ for n in $names; do [ "$(state_get "$n")" = up ] && up_names="$up_names $n"; don
     exit 0
 }
 
-# --- inputs: zz-inputs shows them (-S), or asks, resolves and refuses a
+# --- inputs: zz-vars shows them (-S), or asks, resolves and refuses a
 # missing required one; its export lines are evaluated here so the
 # workspaces inherit the values. Exit 3 means the user aborted.
 step inputs
@@ -306,40 +342,18 @@ if [ "$status_only" -eq 1 ]; then
     for n in $names; do
         printf '%-6s %-22s %s\n' "$(state_get "$n")" "$n" "$(desc_of "$n")"
     done
-    zz-inputs -S -f "$envfile" "$@"
+    zz-vars -S -f "$envfile" "$@"
     exit 0
 fi
 if [ "$#" -gt 0 ]; then
     rc=0
-    out=$(zz-inputs -f "$envfile" ${ZZ_SETUP_PROFILE:+-P "$ZZ_SETUP_PROFILE"} "$@") || rc=$?
+    out=$(zz-vars -f "$envfile" ${ZZ_SETUP_PROFILE:+-P "$ZZ_SETUP_PROFILE"} "$@") || rc=$?
     [ "$rc" -ne 3 ] || exit 0
     [ "$rc" -eq 0 ] || exit "$rc"
     eval "$out"
 fi
 
-# --- run: down in reverse order first, then up in order.
-# Each workspace runs tagged with its own name and one level deeper, so its
-# zz-log lines nest under the "=== Running" line.
-run_step() {
-    d=$(dir_of "$1")
-    b=$(ws "$1" 8)
-    zz-log i "=== Running $1 ($d/$b $2) ==="
-    rc=0
-    (
-        ZZ_LOG_STEP=$1
-        ZZ_LOG_INDENT=$((${ZZ_LOG_INDENT:-0} + 2))
-        export ZZ_LOG_STEP ZZ_LOG_INDENT
-        cd "$d" && if [ -x "$b" ]; then "./$b" $2; else bash "$b" $2; fi
-    ) || rc=$?
-    if [ "$rc" -ne 0 ]; then
-        zz-log e "Step '$1' failed (exit $rc). Fix it and re-run just this step with: zz-setup $spec -o $1"
-        exit 1
-    fi
-    zz-log s "=== Done: $1 ($2) ==="
-    if [ "$2" = up ]; then _remember=up; else _remember=skip; fi
-    zz-persist -f "$envfile" "$(state_key "$1")" "$_remember"
-}
-
+# --- run: all "down" steps in reverse order, then all "up" steps in order.
 step run
 for n in $(printf '%s\n' "$names" | sed '1!G;h;$!d'); do
     [ "$(state_get "$n")" = down ] && run_step "$n" down

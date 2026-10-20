@@ -17,6 +17,8 @@ help
 )"
 
 # --- candidates: INSTALL_BIN_DIR, ~/.local/bin, then PATH entries, then <target>/bin.
+# --- functions
+# Register $1 as a candidate; $2=1 when it may be created.
 candidates=""
 creatable=""
 
@@ -33,6 +35,7 @@ add_candidate() {
     esac
 }
 
+# --- candidates
 add_candidate "${ZZ_BIN_DIR:-${INSTALL_BIN_DIR:-/usr/local/bin}}" 1
 [ -n "$HOME" ] && add_candidate "$HOME/.local/bin" 1
 
@@ -47,6 +50,7 @@ done
 IFS=$old_ifs
 [ -n "$target" ] && add_candidate "$target/bin" 1
 
+# --- pick the first writable candidate, else create one
 link_dir=""
 old_ifs=$IFS
 IFS=':'
@@ -74,6 +78,7 @@ if [ -z "$link_dir" ]; then
     exit 1
 fi
 
+# --- output: PATH extension (when needed) and the chosen dir, for the caller to eval
 case ":$PATH:" in
 *":$link_dir:"*) ;;
 *) echo "export PATH='$link_dir':\$PATH" ;;

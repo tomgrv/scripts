@@ -1,5 +1,5 @@
 #!/bin/sh
-# zz-inputs [-S] -f <envfile> [-P profile] <name>=<dir>... — the inputs the
+# zz-vars [-S] -f <envfile> [-P profile] <name>=<dir>... — the inputs the
 # given workspaces declare in their package.json ("config.inputs", keyed by
 # variable, and "config.input", the zz-call array).
 #   -S  status only: print each input as set / required / optional, run nothing
@@ -23,7 +23,7 @@ help
 
 # --- parameters
 [ -n "$envfile" ] || {
-    zz-log e "Usage: zz-inputs [-S] -f <envfile> [-P profile] <name>=<dir>..."
+    zz-log e "Usage: zz-vars [-S] -f <envfile> [-P profile] <name>=<dir>..."
     exit 1
 }
 us=$(printf '\037')

@@ -122,7 +122,7 @@ zz-use zz-log jq -x json-validate some-file.json
 - **Core** folders keep the `zz-` prefix — each atomic function is its own
   dedicated script: `zz-use`, `zz-update`, `zz-colors`, `zz-log`, `zz-args`,
   `zz-prompt`, `zz-ask`, `zz-menu`, `zz-input`, `zz-bindir`, `zz-dispatch`, `zz-npx`,
-  `zz-persist`, `zz-call`, `zz-install`, `zz-fetch`, `zz-workspaces`, `zz-inputs`, `zz-setup`.
+  `zz-persist`, `zz-call`, `zz-install`, `zz-fetch`, `zz-workspaces`, `zz-vars`, `zz-setup`.
 - **Functional** folders use `<verb>-<topic>` naming: `json-validate`,
   `json-normalize`, `json-merge`, `json-load`, `feature-context`,
   `edit-script`, `distribute-utils`, `feature-install`,
@@ -222,44 +222,44 @@ flowchart TD
 
 ## Core `zz-*` scripts
 
-| Script                                                                 | Purpose                                                                                                                                               |
-| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `zz <name> [args...]`                                                  | front door: runs `zz-<name>` if installed, else `zz-use -x <name>` (install on demand, then run) |
-| `zz-use <tool>[@ref]`                                                  | the activator: resolve/install a dependency, if and only if missing (see below)                                                                       |
-| `zz-update`                                                            | force a fresh download of the zz-* bundle, bypassing the local cache                                                                                  |
-| `zz-colors`                                                            | ANSI color vars (`$Red` `$Green` ... `$End`); source it: `. zz-colors`                                                                                |
-| `zz-log <lvl> <msg...>`                                                | colored, leveled log line on stderr (`i`/`w`/`e`/`s`/`-`)                                                                                             |
-| `zz-args <title> <caller> <<-help ...`                                 | parse `$@` per a spec; `eval $(zz-args ...)` to bind the vars                                                                                         |
-| `zz-prompt <question> [default]`                                       | interactive free-form input                                                                                                                           |
-| `zz-ask <options> <question...>`                                       | interactive single-char confirm                                                                                                                       |
-| `zz-menu [-t title] [-d key] [-f footer] [-c states] <key=label>...`   | interactive numbered menu; prints the chosen key (or, with `-c`, each item's cycled `key=state`)                                                      |
-| `zz-input [file]`                                                      | read from arg (literal or file) or stdin                                                                                                              |
-| `zz-bindir [-t target]`                                                | resolve/create a writable bin dir; `eval $(zz-bindir ...)` to bind `$dir` and extend `PATH`                                                           |
-| `zz-dispatch <caller> <subcmd>`                                        | dispatch an underscore-prefixed caller to a sibling `<name>-<subcmd>` script                                                                          |
-| `zz-npx [-s] <tool>`                                                   | run a local `node_modules/.bin` binary, falling back to `npx`                                                                                         |
-| `zz-persist [-f file] [-p profile] [-s] [-i <question> [-v <default>]] <key> [value]` | upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`; `-i` asks for the value, `-s` marks it secret (masked, owner-only targets only) |
-| `zz-call [-p package.json] [command...]`                               | resolve a caller's declared env vars (`config.input`/`config.output` in `package.json`; ask + persist if missing), then run a command                 |
-| `zz-install [-u url ...] <name> [<manager>=<name>...]`                 | install a system package via apt/apk/dnf/yum/brew/pacman/zypper/winget (per-manager name overrides), or with `-u` a downloaded binary into the `zz-bindir` dir |
-| `zz-fetch [-r ref] -d <dir> <url>`                                     | shallow clone or fast-forward a git repository into a directory                                                                                         |
-| `zz-workspaces [<dir>]`                                                | list a package's runnable workspaces (bin + `engines.zz-setup`), sorted, one row each                                                                    |
-| `zz-inputs [-S] -f <envfile> <name>=<dir>...`                          | show, ask and resolve the inputs workspaces declare; prints `export` lines                                                                               |
-| `zz-setup <org>/<repo>[@<ref>] [args...]`                              | clone/update a GitHub repo, propose its runnable workspaces, offer their declared inputs, then run them (else its setup entrypoint) |
+| Script                                                                                | Purpose                                                                                                                                                        |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `zz <name> [args...]`                                                                 | front door: runs `zz-<name>` if installed, else `zz-use -x <name>` (install on demand, then run)                                                               |
+| `zz-use <tool>[@ref]`                                                                 | the activator: resolve/install a dependency, if and only if missing (see below)                                                                                |
+| `zz-update`                                                                           | force a fresh download of the zz-* bundle, bypassing the local cache                                                                                           |
+| `zz-colors`                                                                           | ANSI color vars (`$Red` `$Green` ... `$End`); source it: `. zz-colors`                                                                                         |
+| `zz-log <lvl> <msg...>`                                                               | colored, leveled log line on stderr (`i`/`w`/`e`/`s`/`-`)                                                                                                      |
+| `zz-args <title> <caller> <<-help ...`                                                | parse `$@` per a spec; `eval $(zz-args ...)` to bind the vars                                                                                                  |
+| `zz-prompt <question> [default]`                                                      | interactive free-form input                                                                                                                                    |
+| `zz-ask <options> <question...>`                                                      | interactive single-char confirm                                                                                                                                |
+| `zz-menu [-t title] [-d key] [-f footer] [-c states] <key=label>...`                  | interactive numbered menu; prints the chosen key (or, with `-c`, each item's cycled `key=state`)                                                               |
+| `zz-input [file]`                                                                     | read from arg (literal or file) or stdin                                                                                                                       |
+| `zz-bindir [-t target]`                                                               | resolve/create a writable bin dir; `eval $(zz-bindir ...)` to bind `$dir` and extend `PATH`                                                                    |
+| `zz-dispatch <caller> <subcmd>`                                                       | dispatch an underscore-prefixed caller to a sibling `<name>-<subcmd>` script                                                                                   |
+| `zz-npx [-s] <tool>`                                                                  | run a local `node_modules/.bin` binary, falling back to `npx`                                                                                                  |
+| `zz-persist [-f file] [-p profile] [-s] [-i <question> [-v <default>]] <key> [value]` | upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`; `-i` asks for the value, `-s` marks it secret (masked, owner-only targets only)            |
+| `zz-call [-p package.json] [command...]`                                              | resolve a caller's declared env vars (`config.input`/`config.output` in `package.json`; ask + persist if missing), then run a command                          |
+| `zz-install [-u url ...] <name> [<manager>=<name>...]`                                | install a system package via apt/apk/dnf/yum/brew/pacman/zypper/winget (per-manager name overrides), or with `-u` a downloaded binary into the `zz-bindir` dir |
+| `zz-fetch [-r ref] -d <dir> <url>`                                                    | shallow clone or fast-forward a git repository into a directory                                                                                                |
+| `zz-workspaces [<dir>]`                                                               | list a package's runnable workspaces (bin + `engines.zz-setup`), sorted, one row each                                                                          |
+| `zz-vars [-S] -f <envfile> <name>=<dir>...`                                           | show, ask and resolve the inputs workspaces declare; prints `export` lines                                                                                     |
+| `zz-setup <org>/<repo>[@<ref>] [args...]`                                             | clone/update a GitHub repo, propose its runnable workspaces, offer their declared inputs, then run them (else its setup entrypoint)                            |
 
 ## Functional scripts
 
-| Script              | Purpose                                                                |
-| ------------------- | ---------------------------------------------------------------------- |
+| Script              | Purpose                                                                    |
+| ------------------- | -------------------------------------------------------------------------- |
 | `json`              | dispatch to `json-<subcommand>` (`load`, `validate`, `normalize`, `merge`) |
-| `json-load`         | load JSON from a file/URL, tag it with `$id`                           |
-| `json-validate`     | validate JSON against a (local/inferred/remote) JSON Schema            |
-| `json-normalize`    | sort JSON keys per schema + alphabetically, optional in-place write    |
-| `json-merge`        | recursively merge one JSON file into another (arrays deduped, unioned) |
+| `json-load`         | load JSON from a file/URL, tag it with `$id`                               |
+| `json-validate`     | validate JSON against a (local/inferred/remote) JSON Schema                |
+| `json-normalize`    | sort JSON keys per schema + alphabetically, optional in-place write        |
+| `json-merge`        | recursively merge one JSON file into another (arrays deduped, unioned)     |
 | `feature`           | dispatch to `feature-<subcommand>` (`install`, `configure`, `context`)     |
-| `feature-context`   | resolve a feature's source/target dirs from the calling script         |
-| `edit-script`       | copy an installed script locally and open it for editing               |
-| `distribute-utils`  | copy `zz-*`/utility scripts into a project's local scripts directory   |
-| `feature-install`   | copy a feature's stubs/config/bin into a target, run `install-*.sh`    |
-| `feature-configure` | deploy a feature's stubs into the cwd (merging), run `configure-*.sh`  |
+| `feature-context`   | resolve a feature's source/target dirs from the calling script             |
+| `edit-script`       | copy an installed script locally and open it for editing                   |
+| `distribute-utils`  | copy `zz-*`/utility scripts into a project's local scripts directory       |
+| `feature-install`   | copy a feature's stubs/config/bin into a target, run `install-*.sh`        |
+| `feature-configure` | deploy a feature's stubs into the cwd (merging), run `configure-*.sh`      |
 
 See each folder's own `README.md` for its usage line.
 

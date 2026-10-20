@@ -9,19 +9,22 @@
 
 . zz-colors
 
-eval $(
+# --- arguments
+eval "$(
 	zz-args "Run a local npm binary, falling back to npx" $0 "$@" <<-help
 		s   -    withscripts  Allow npx's on-the-fly install to run lifecycle scripts
 		-   tool tool         Package binary to run
 		#   args args         Arguments passed through to <tool>
 	help
-)
+)"
 
+# --- parameters
 if [ -z "$tool" ]; then
     zz-log e "Usage: zz-npx [-s] <tool> [args...]"
     exit 1
 fi
 
+# --- run: the local binary first, else npx (scripts off unless -s).
 bin="${INIT_CWD:-$PWD}/node_modules/.bin/$tool"
 
 if [ -x "$bin" ]; then

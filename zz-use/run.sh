@@ -53,6 +53,7 @@
 
 set -e
 
+# --- parameters: options, source and cache settings.
 FORCE=0
 EXEC_TOOL=""
 
@@ -77,6 +78,8 @@ ZZ_CACHE_DIR="${ZZ_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zz_scripts}"
 # or npm's "latest") is refetched; 0 = never expire. Immutable refs (a
 # version tag or commit sha) never expire.
 ZZ_CACHE_TTL="${ZZ_CACHE_TTL:-1440}"
+
+# --- functions: resolve a source, install scripts and tools, then _use.
 
 # Every temp dir this script creates is cleaned up through this single
 # mechanism instead of each having its own EXIT trap (which would clobber

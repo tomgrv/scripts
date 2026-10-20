@@ -1,0 +1,21 @@
+{
+    "name": "@tomgrv/scripts-zz-vars",
+    "version": "1.0.0",
+    "description": "Show, ask and resolve the inputs declared by workspaces",
+    "bin": {
+        "zz-vars": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "@tomgrv/scripts-zz-args": "*",
+        "@tomgrv/scripts-zz-call": "*",
+        "@tomgrv/scripts-zz-colors": "*",
+        "@tomgrv/scripts-zz-install": "*",
+        "@tomgrv/scripts-zz-log": "*",
+        "@tomgrv/scripts-zz-menu": "*",
+        "@tomgrv/scripts-zz-persist": "*"
+    },
+    "private": true
+}

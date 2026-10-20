@@ -21,6 +21,7 @@
 
 . zz-colors
 
+# --- arguments
 # Quoted eval: unquoted, field splitting would squeeze runs of spaces inside
 # the values (item labels are often column-aligned).
 eval "$(
@@ -33,30 +34,14 @@ eval "$(
 	help
 )"
 
+# --- parameters
 count=$#
 if [ "$count" -lt 1 ]; then
     zz-log e "zz-menu: no menu items given."
     exit 1
 fi
 
-# Split every item into _k<N> (key), _l<N> (label) and, in cycle mode, _s<N>
-# (state) - POSIX sh has no arrays, so they live in eval'd variables.
-i=1
-for item in "$@"; do
-    case "$item" in
-    *=*) left=${item%%=*} label=${item#*=} ;;
-    *) left=$item label=$item ;;
-    esac
-    state=""
-    if [ -n "$cycle" ]; then
-        case "$left" in
-        *:*) state=${left#*:} left=${left%%:*} ;;
-        *) state=${cycle%%,*} ;;
-        esac
-    fi
-    eval "_k$i=\$left _l$i=\$label _s$i=\$state"
-    i=$((i + 1))
-done
+# --- functions
 
 # Next state after $1 in the comma-separated cycle (first one when $1 is
 # the last or unknown).
@@ -76,17 +61,7 @@ next_state() {
     printf '%s' "$_first"
 }
 
-# Widest state, so the [state] column lines up.
-width=0
-if [ -n "$cycle" ]; then
-    _old_ifs=$IFS
-    IFS=,
-    for _s in $cycle; do
-        [ "${#_s}" -gt "$width" ] && width=${#_s}
-    done
-    IFS=$_old_ifs
-fi
-
+# Draw the menu (title, items with their state, hint line) on stderr.
 render() {
     [ -n "$title" ] && printf '%b%s%b\n' "${BBlue}==== " "$title" " ====${End}" >&2
     i=1
@@ -111,6 +86,39 @@ render() {
     fi
 }
 
+# --- items
+
+# Split every item into _k<N> (key), _l<N> (label) and, in cycle mode, _s<N>
+# (state) - POSIX sh has no arrays, so they live in eval'd variables.
+i=1
+for item in "$@"; do
+    case "$item" in
+    *=*) left=${item%%=*} label=${item#*=} ;;
+    *) left=$item label=$item ;;
+    esac
+    state=""
+    if [ -n "$cycle" ]; then
+        case "$left" in
+        *:*) state=${left#*:} left=${left%%:*} ;;
+        *) state=${cycle%%,*} ;;
+        esac
+    fi
+    eval "_k$i=\$left _l$i=\$label _s$i=\$state"
+    i=$((i + 1))
+done
+
+# Widest state, so the [state] column lines up.
+width=0
+if [ -n "$cycle" ]; then
+    _old_ifs=$IFS
+    IFS=,
+    for _s in $cycle; do
+        [ "${#_s}" -gt "$width" ] && width=${#_s}
+    done
+    IFS=$_old_ifs
+fi
+
+# --- menu loop: draw, read a choice, then pick, cycle or finish.
 while true; do
     render
     # Asked by zz-prompt; input ending quits like q.
