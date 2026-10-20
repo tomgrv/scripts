@@ -314,3 +314,9 @@ make_conflict_remote() {
     [[ "$output" == *"a:up:bar"* ]]
     [[ "$output" != *"b:up"* ]]
 }
+
+@test "zz-setup explains which ref variable applies when the fetch fails" {
+    run zz-setup acme/tool@nope
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"ZZ_ORIGIN_REF"* ]]
+}

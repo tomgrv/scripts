@@ -193,7 +193,10 @@ step fetch
 if [ -n "$local" ]; then
     zz-log i "Using the local checkout in place."
 else
-    zz-fetch -r "$ref" -d "$dir" "$url"
+    zz-fetch -r "$ref" -d "$dir" "$url" || {
+        zz-log e "Could not fetch $spec at '$ref'. ZZ_SETUP_REF (or @ref) is the ref of $spec itself; to run another version of these scripts, set ZZ_ORIGIN_REF for zz-use instead."
+        exit 1
+    }
 fi
 
 # Without workspaces (no package.json, or ZZ_SETUP_ENTRY set) the repo's own

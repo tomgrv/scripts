@@ -105,7 +105,10 @@ while getopts :$argnames value "$@"; do
     fi
 done
 
-if [ -n "$bad" ] && [ "$bad" != h ] && [ "$bad" != "@" ]; then
+# A "--long" argument reads as the unknown option "-": it keeps passing through
+# as a positional (callers such as bump-version rely on it); an unknown short
+# option is an error.
+if [ -n "$bad" ] && [ "$bad" != h ] && [ "$bad" != "@" ] && [ "$bad" != "-" ]; then
 
     zz-log e "Unknown option: -$bad (-h for help)"
     echo "exit 1"
