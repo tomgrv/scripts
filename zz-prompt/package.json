@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz-prompt",
-  "version": "1.0.0",
+  "version": "4.3.0",
   "description": "Interactive free-form input with an optional default",
   "bin": {
     "zz-prompt": "run.sh"
