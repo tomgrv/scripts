@@ -9,15 +9,24 @@ set -e
 
 . zz-colors
 
-eval $(
+# --- arguments
+eval "$(
      zz-args "Dispatch Utility" $0 "$@" <<- help
 		-   caller caller     Caller script path
         -   subcmd subcmd     Target script to execute
         d   debug  debug      Enable debug mode
         #   params params     Remaining arguments passed to the target script
 	help
-)
+)"
 
+# --- parameters: the counterpart is <caller dir>/<name>-<subcommand>.
+caller_basename=$(basename "${caller}")
+caller_dir=$(dirname "${caller}")
+
+name=${caller_basename#_}
+name=${name%.*}
+
+# --- functions
 usage() {
     zz-log i "Usage: ${name} <subcommand> [args...]" >&2
     if [ -d "${caller_dir}" ]; then
@@ -29,12 +38,7 @@ usage() {
     fi
 }
 
-caller_basename=$(basename "${caller}")
-caller_dir=$(dirname "${caller}")
-
-name=${caller_basename#_}
-name=${name%.*}
-
+# --- dispatch: run the counterpart as an executable, or through sh, else list the choices.
 if [ -z "${subcmd}" ]; then
     zz-log e "No subcommand provided." && usage $caller
     exit 1

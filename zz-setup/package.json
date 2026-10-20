@@ -1,21 +1,24 @@
 {
-  "name": "@tomgrv/scripts-zz-setup",
-  "version": "4.2.0",
-  "description": "Fetch a GitHub org/repo, propose its workspaces and their inputs, then run them, like vps-setup",
-  "bin": {
-    "zz-setup": "run.sh"
-  },
-  "scripts": {
-    "test": "bats test.bats"
-  },
-  "peerDependencies": {
-    "@tomgrv/scripts-zz-args": "*",
-    "@tomgrv/scripts-zz-call": "*",
-    "@tomgrv/scripts-zz-colors": "*",
-    "@tomgrv/scripts-zz-install": "*",
-    "@tomgrv/scripts-zz-log": "*",
-    "@tomgrv/scripts-zz-menu": "*",
-    "@tomgrv/scripts-zz-persist": "*"
-  },
-  "private": true
+    "name": "@tomgrv/scripts-zz-setup",
+    "version": "4.2.0",
+    "description": "Fetch a GitHub org/repo, propose its workspaces and their inputs, then run them, like vps-setup",
+    "bin": {
+        "zz-setup": "run.sh"
+    },
+    "scripts": {
+        "test": "bats test.bats"
+    },
+    "peerDependencies": {
+        "@tomgrv/scripts-zz-args": "*",
+        "@tomgrv/scripts-zz-call": "*",
+        "@tomgrv/scripts-zz-colors": "*",
+        "@tomgrv/scripts-zz-fetch": "*",
+        "@tomgrv/scripts-zz-install": "*",
+        "@tomgrv/scripts-zz-log": "*",
+        "@tomgrv/scripts-zz-menu": "*",
+        "@tomgrv/scripts-zz-persist": "*",
+        "@tomgrv/scripts-zz-vars": "*",
+        "@tomgrv/scripts-zz-workspaces": "*"
+    },
+    "private": true
 }

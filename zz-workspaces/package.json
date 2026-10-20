@@ -1,15 +1,17 @@
 {
-  "name": "@tomgrv/scripts-zz-ask",
+  "name": "@tomgrv/scripts-zz-workspaces",
   "version": "1.0.0",
-  "description": "Interactive single-character confirm/choice prompt",
+  "description": "List the runnable workspaces of a package",
   "bin": {
-    "zz-ask": "run.sh"
+    "zz-workspaces": "run.sh"
   },
   "scripts": {
     "test": "bats test.bats"
   },
   "peerDependencies": {
+    "@tomgrv/scripts-zz-args": "*",
     "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-install": "*",
     "@tomgrv/scripts-zz-log": "*"
   },
   "private": true

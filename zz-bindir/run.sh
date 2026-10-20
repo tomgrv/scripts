@@ -6,15 +6,19 @@
 # the historical zz_feature -i bin-linking flow; shared by feature-install
 # and zz-use.
 
+# ZZ_BIN_DIR (alias INSTALL_BIN_DIR) overrides the first candidate, /usr/local/bin.
+
 . zz-colors
 
-target=""
-while getopts :t: opt "$@"; do
-    case "$opt" in
-    t) target="$OPTARG" ;;
-    esac
-done
+# --- arguments
+eval "$(zz-args "Resolve a writable bin directory on PATH" "$0" "$@" <<help
+t target target Extra directory whose bin/ is a candidate (created if needed)
+help
+)"
 
+# --- candidates: INSTALL_BIN_DIR, ~/.local/bin, then PATH entries, then <target>/bin.
+# --- functions
+# Register $1 as a candidate; $2=1 when it may be created.
 candidates=""
 creatable=""
 
@@ -31,7 +35,8 @@ add_candidate() {
     esac
 }
 
-add_candidate "${INSTALL_BIN_DIR:-/usr/local/bin}" 1
+# --- candidates
+add_candidate "${ZZ_BIN_DIR:-${INSTALL_BIN_DIR:-/usr/local/bin}}" 1
 [ -n "$HOME" ] && add_candidate "$HOME/.local/bin" 1
 
 old_ifs=$IFS
@@ -45,6 +50,7 @@ done
 IFS=$old_ifs
 [ -n "$target" ] && add_candidate "$target/bin" 1
 
+# --- pick the first writable candidate, else create one
 link_dir=""
 old_ifs=$IFS
 IFS=':'
@@ -72,6 +78,7 @@ if [ -z "$link_dir" ]; then
     exit 1
 fi
 
+# --- output: PATH extension (when needed) and the chosen dir, for the caller to eval
 case ":$PATH:" in
 *":$link_dir:"*) ;;
 *) echo "export PATH='$link_dir':\$PATH" ;;

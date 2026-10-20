@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # zz-persist
 
 Upsert a `KEY=VALUE` pair into an env file and/or `/etc/profile.d`.
@@ -12,13 +14,14 @@ zz-persist [-f file] [-p profile] [-s] <key> <value>
 zz-persist [-f file] [-p profile] [-s] -i "question" [-v default] <key>
 ```
 
-| Option | Meaning |
-| ------ | ------- |
-| `-f file` | upsert `KEY=VALUE` into this env-style file |
-| `-p profile` | upsert `export KEY=VALUE` into `/etc/profile.d/<profile>.sh` |
+| Option        | Meaning                                                                |
+| ------------- | ---------------------------------------------------------------------- |
+| `-f file`     | upsert `KEY=VALUE` into this env-style file                            |
+| `-p profile`  | upsert `export KEY=VALUE` into `/etc/profile.d/<profile>.sh`           |
 | `-i question` | ask for the value (terminal only; otherwise the default is used as-is) |
-| `-v default` | default offered by `-i`; a value already stored for the key wins |
-| `-s` | the value is a secret (see below) |
+| `-v default`  | default offered by `-i`; a value already stored for the key wins       |
+| `-s`          | the value is a secret (see below)                                      |
+| `-q`          | do not log the write (for internal state)                              |
 
 At least one of `-f`/`-p` is required. Both are idempotent: running twice
 replaces the existing entry instead of duplicating it.
@@ -37,6 +40,15 @@ shell must be able to source it.
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand
 (installed if and only if missing) — see `run.sh` for the exact list.
+
+## Environment
+
+`ZZ_PROFILE_DIR` (default `/etc/profile.d`) is where `-p` writes. The env file
+holds the value literally; a profile snippet is sourced by shells, so a value
+with anything but plain characters is single-quoted there. Values are upserted
+through `awk` (no character is interpreted) and a multi-line value is refused.
+On a terminal, a secret aimed at a file that is not owner-only offers `chmod 600`
+through `zz-prompt -c`.
 
 ## Tests
 

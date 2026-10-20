@@ -88,8 +88,11 @@ done
 # function-local: reset it so a value inherited from the environment can't
 # make getopts start mid-way through "$@")
 OPTIND=1
+bad=""
 while getopts :$argnames value "$@"; do
     if [ "$value" = "?" ]; then
+        # Unknown option; $OPTARG holds its letter (h/@ are handled below).
+        bad=$OPTARG
         break
     fi
 
@@ -102,7 +105,16 @@ while getopts :$argnames value "$@"; do
     fi
 done
 
-if [ "$OPTARG" = "h" ] || [ "$OPTARG" = "help" ]; then
+# A "--long" argument reads as the unknown option "-": it keeps passing through
+# as a positional (callers such as bump-version rely on it); an unknown short
+# option is an error.
+if [ -n "$bad" ] && [ "$bad" != h ] && [ "$bad" != "@" ] && [ "$bad" != "-" ]; then
+
+    zz-log e "Unknown option: -$bad (-h for help)"
+    echo "exit 1"
+    exit 1
+
+elif [ "$bad" = "h" ]; then
 
     (
         echo "${End}"
@@ -115,7 +127,7 @@ if [ "$OPTARG" = "h" ] || [ "$OPTARG" = "help" ]; then
     echo "exit 1"
     exit 1
 
-elif [ "$OPTARG" = "@" ]; then
+elif [ "$bad" = "@" ]; then
     echo "Stop processing arguments !${End}" >&2
 else
     shift $(expr "$OPTIND" - 1)

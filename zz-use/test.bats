@@ -70,7 +70,7 @@ teardown() {
     zz_use_bin=$(command -v zz-use)
     run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" "zz-*"
     [ "$status" -eq 0 ]
-    for tool in zz-use zz-colors zz-log zz-args zz-prompt zz-ask zz-menu zz-input zz-bindir zz-dispatch zz-npx zz-persist zz-call zz-update; do
+    for tool in zz-use zz-colors zz-log zz-args zz-prompt zz-menu zz-input zz-bindir zz-dispatch zz-npx zz-persist zz-call zz-update; do
         [ -x "$bindir/$tool" ]
     done
     rm -rf "$bindir"
@@ -81,7 +81,7 @@ teardown() {
     zz_use_bin=$(command -v zz-use)
     run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" "totally-bogus-glob-*"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"No scripts match"* ]]
+    [[ "$output" == *"No script matches"* ]]
     rm -rf "$bindir"
 }
 
@@ -90,7 +90,7 @@ teardown() {
     zz_use_bin=$(command -v zz-use)
     run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" totally-bogus-tool-xyz
     [ "$status" -ne 0 ]
-    [[ "$output" == *"Unable to provide required dependency"* ]]
+    [[ "$output" == *"Cannot provide"* ]]
     rm -rf "$bindir"
 }
 
@@ -173,6 +173,9 @@ EOF
     [ "$status" -eq 0 ]
     [ -x "$bindir/some-tool" ]
     [[ "$("$bindir/some-tool")" == "from-local-repo" ]]
+    # The log names the origin: here the local path, not an org/repo@ref.
+    [[ "$output" == *"from"*"./$(basename "$local_repo")"* ]]
+    [[ "$output" != *"@main"* ]]
     rm -rf "$local_repo" "$bindir"
 }
 
@@ -454,4 +457,10 @@ _sha_config() {
     [[ "$output" == *"Checksum mismatch"* ]]
     [ ! -e "$bindir/fake-dl-tool" ]
     rm -rf "$payload" "$cfg" "$bindir"
+}
+
+@test "zz-use -x hands everything after the tool to it untouched, even -f" {
+    run env PATH="$TEST_BIN:/usr/bin:/bin" "$(command -v zz-use)" -x echo -f hi
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"-f hi"* ]]
 }

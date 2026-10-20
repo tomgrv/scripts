@@ -26,6 +26,14 @@ Environment: `ZZ_CACHE_TTL` (minutes, default 1440, `0` = never) sets
 when a cached archive for a mutable ref (branch, npm `latest`) is
 refetched; tags and commit shas never expire.
 
+## Where an install came from
+
+Each install logs `Installing <tool> from <org/repo>@<ref> (<source path>) to <bin dir>` and
+`Installed <tool> (<org/repo>@<ref>) to <path>`. The ref is the pinned one, else
+`ZZ_ORIGIN_REF` (default `main`); a local origin shows its path instead. Pin a branch of the
+scripts with `ZZ_ORIGIN_REF=<branch> zz-use -f ...`; it is not `ZZ_SETUP_REF`, which is the ref of
+the repository `zz-setup` sets up.
+
 ## Tests
 
 ```sh
@@ -39,7 +47,7 @@ bats test.bats
 - installs a functional script individually, not the whole set
 - installs a single zz-* tool individually, not the whole set
 - errors with "Unable to provide required dependency" when a tool can't be resolved
-- `--force` re-installs a zz-* tool even when already on PATH
+- `-f` (alias `--force`) re-installs a zz-* tool even when already on PATH; options are parsed by `zz-args`, after a pre-pass that hoists `-f` and stops at `-x <tool>` (the tool gets the rest verbatim)
 - recognizes `--force` after a tool name, not just as the first arg
 - resolves a functional script's `config/` folder alongside it
 - `-x` installs the target and execs it, passing arguments through

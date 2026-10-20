@@ -53,42 +53,9 @@
 
 set -e
 
-# One left-to-right scan for every option (--force/-f, -x/--exec), so
-# --force is recognized anywhere, not just as literal $1. Errors here use
-# plain stderr, not zz-log: this runs before any tool, zz-log included,
-# is resolved. Non-option args are single-quoted into _before (restored
-# via `eval set --` further down). Everything from -x's <tool> onward is
-# left untouched in "$@", to become the exec'd tool's own argv.
+# --- parameters: options, source and cache settings.
 FORCE=0
 EXEC_TOOL=""
-_before=""
-
-while [ $# -gt 0 ]; do
-    case "$1" in
-    --force | -f)
-        FORCE=1
-        shift
-        ;;
-    -x | --exec)
-        shift
-        EXEC_TOOL="${1:-}"
-        if [ -z "$EXEC_TOOL" ]; then
-            printf '[e] -x/--exec requires a tool name\n' >&2
-            exit 1
-        fi
-        shift
-        break
-        ;;
-    -*)
-        printf '[e] Unknown option: %s\n' "$1" >&2
-        exit 1
-        ;;
-    *)
-        _before="${_before} '$(printf '%s' "$1" | sed "s/'/'\\\\''/g")'"
-        shift
-        ;;
-    esac
-done
 
 # Follow symlinks (an installed "zz-use" on PATH is a symlink to this
 # file) so SCRIPT_DIR/ROOT_DIR resolve to the real checkout.
@@ -111,6 +78,8 @@ ZZ_CACHE_DIR="${ZZ_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zz_scripts}"
 # or npm's "latest") is refetched; 0 = never expire. Immutable refs (a
 # version tag or commit sha) never expire.
 ZZ_CACHE_TTL="${ZZ_CACHE_TTL:-1440}"
+
+# --- functions: resolve a source, install scripts and tools, then _use.
 
 # Every temp dir this script creates is cleaned up through this single
 # mechanism instead of each having its own EXIT trap (which would clobber
@@ -160,42 +129,12 @@ _have() {
     return 1
 }
 
-# Run a command as root: directly, through sudo, or fail.
-_as_root() {
-    if [ "$(id -u)" = "0" ]; then
-        "$@"
-    elif command -v sudo >/dev/null 2>&1; then
-        sudo "$@"
-    else
-        zz-log e "{Purple $1} requires root/sudo, neither available"
-        return 1
-    fi
-}
-
-# Install a system package with whichever package manager exists. The
-# apt index is refreshed at most once per run.
-_APT_UPDATED=0
+# Install a system package through zz-install (it picks the package manager
+# and escalates through sudo). Resolves the default source first when
+# zz-install isn't on PATH yet, like _bindir does.
 _pkg_install() {
-    _pkg="$1"
-    if command -v apt-get >/dev/null 2>&1; then
-        zz-log i "Installing {Purple $_pkg} via apt-get..."
-        if [ "$_APT_UPDATED" -eq 0 ]; then
-            _as_root apt-get update -qq || return 1
-            _APT_UPDATED=1
-        fi
-        _as_root apt-get install -y -qq "$_pkg"
-    elif command -v apk >/dev/null 2>&1; then
-        zz-log i "Installing {Purple $_pkg} via apk..."
-        _as_root apk add --no-cache -q "$_pkg"
-    elif command -v dnf >/dev/null 2>&1; then
-        zz-log i "Installing {Purple $_pkg} via dnf..."
-        _as_root dnf install -y -q "$_pkg"
-    elif command -v brew >/dev/null 2>&1; then
-        zz-log i "Installing {Purple $_pkg} via brew..."
-        brew install -q "$_pkg"
-    else
-        return 1
-    fi
+    command -v zz-install >/dev/null 2>&1 || _resolve_src || return 1
+    zz-install "$1"
 }
 
 # jq is needed to read zz-use.json and npm registry metadata: install it
@@ -205,24 +144,6 @@ _ensure_jq() {
     command -v jq >/dev/null 2>&1 && return 0
     _pkg_install jq >/dev/null 2>&1 || true
     command -v jq >/dev/null 2>&1
-}
-
-# Verify <file> against an expected sha256 (no-op when none is given).
-_verify_sha256() {
-    _vs_file="$1" _vs_sum="$2"
-    [ -n "$_vs_sum" ] || return 0
-    if command -v sha256sum >/dev/null 2>&1; then
-        _vs_got=$(sha256sum "$_vs_file" | cut -d' ' -f1)
-    elif command -v shasum >/dev/null 2>&1; then
-        _vs_got=$(shasum -a 256 "$_vs_file" | cut -d' ' -f1)
-    else
-        zz-log e "No sha256sum/shasum available to verify {U $_vs_file}"
-        return 1
-    fi
-    [ "$_vs_got" = "$_vs_sum" ] || {
-        zz-log e "Checksum mismatch for {U $_vs_file}: expected $_vs_sum, got $_vs_got"
-        return 1
-    }
 }
 
 # True if <ref> names something that never moves: a version tag
@@ -260,7 +181,7 @@ _cache_fresh() {
 _fetch_archive() {
     _cache_dir="$1" _url="$2" _desc="$3"
     if [ -n "$_url" ]; then
-        zz-log i "Retrieving ${_desc} from {U ${_url}}..."
+        zz-log i "Retrieving ${_desc} from {U ${_url}}"
         _tmp="${_cache_dir}.tmp.$$"
         _add_tmp "$_tmp"
         rm -rf "$_tmp"
@@ -272,9 +193,11 @@ _fetch_archive() {
             rm -rf "$_cache_dir"
             mv "$_tmp/x" "$_cache_dir"
         elif _cache_warm "$_cache_dir"; then
-            zz-log w "Could not refresh ${_desc}; using stale cache at {U ${_cache_dir}}"
+            zz-log w "Could not refresh ${_desc}"
+            zz-log - "Using the stale cache at {U ${_cache_dir}}"
         else
-            zz-log e "Could not retrieve ${_desc} (download failed or no <name>/run.sh scripts)"
+            zz-log e "Could not retrieve ${_desc}"
+            zz-log - "The download failed, or it holds no <name>/run.sh script"
             return 1
         fi
     else
@@ -298,8 +221,13 @@ _resolve_npm() {
         _meta_url="https://registry.npmjs.org/${_npm_origin_enc}/${_npm_ref}"
         _tarball=$(curl -fsSL "$_meta_url" 2>/dev/null | jq -r '.dist.tarball // empty' 2>/dev/null) || _tarball=""
         if [ -z "$_tarball" ]; then
-            _cache_warm "$_cache_dir" || { zz-log e "Could not resolve npm tarball for {Purple ${_req_origin}@${_npm_ref}} from {U ${_meta_url}}"; return 1; }
-            zz-log w "Could not refresh {Purple ${_req_origin}@${_npm_ref}}; using stale cache"
+            _cache_warm "$_cache_dir" || {
+                zz-log e "Could not resolve the npm tarball for {Purple ${_req_origin}@${_npm_ref}}"
+                zz-log - "Looked it up at {U ${_meta_url}}"
+                return 1
+            }
+            zz-log w "Could not refresh {Purple ${_req_origin}@${_npm_ref}}"
+            zz-log - "Using the stale cache"
         fi
     fi
     _fetch_archive "$_cache_dir" "$_tarball" "npm package ({B ${_req_origin}@${_npm_ref}})"
@@ -490,7 +418,13 @@ _install_repo_script() {
     _resolve_src "$_origin" "$_ref" || return 1
     _dir="$_ZZ_BINDIR"
 
-    zz-log i "Installing {Purple ${_name}} from {U ${_SRC}/${_name}} to {U ${_dir}}..."
+    # Say where it comes from: org/repo@ref, or the path for a local origin.
+    case "$_origin" in
+    ./* | ../* | /* | \$*) _from="$_origin" ;;
+    *) _from="${_origin}@${_ref:-$ZZ_ORIGIN_REF}" ;;
+    esac
+    zz-log i "Installing {Purple ${_name}} from {B ${_from}}"
+    zz-log d "Source {U ${_SRC}/${_name}}, target {U ${_dir}}"
     # Write to a temp file and `mv` into place rather than `cp` over the
     # target directly: <_name> can be zz-use itself (e.g. under
     # zz-update), and an in-place cp can truncate a script the shell is
@@ -502,57 +436,6 @@ _install_repo_script() {
     mkdir -p "${_dir}/.zz_use"
     printf '%s@%s\n' "$_origin" "$_ref" >"$(_stamp_path "${_dir}/${_name}" "$_name")"
     zz-log s "Installed {Purple ${_name}} to {U ${_dir}/${_name}}"
-}
-
-# Expand {VERSION}/{OS}/{ARCH} in a zz-use.json url/binpath template ({OS}:
-# uname -s, lowercased; {ARCH}: uname -m, mapped to amd64/arm64).
-_platform() {
-    _os=$(uname -s | tr '[:upper:]' '[:lower:]')
-    case "$(uname -m)" in
-    x86_64 | amd64) _arch=amd64 ;;
-    aarch64 | arm64) _arch=arm64 ;;
-    *) _arch=$(uname -m) ;;
-    esac
-}
-_expand() {
-    _platform
-    printf '%s' "$1" | sed \
-        -e "s/{VERSION}/${2:-}/g" \
-        -e "s/{OS}/${_os}/g" \
-        -e "s/{ARCH}/${_arch}/g"
-}
-
-# Download <url_tpl> to a file (never piped: sh has no pipefail), verify
-# its optional sha256, then extract and install the binary.
-_download_install() {
-    _tool="$1" _url_tpl="$2" _archive="$3" _binpath_tpl="$4" _version="$5" _sha="$6"
-
-    _url=$(_expand "$_url_tpl" "$_version")
-    _binpath=$(_expand "${_binpath_tpl:-$_tool}" "$_version")
-
-    zz-log i "Downloading {Purple $_tool} from {U $_url}..."
-    _tmp=$(mktemp -d)
-    _add_tmp "$_tmp"
-    mkdir -p "$_tmp/x"
-    curl -fsSL "$_url" -o "$_tmp/dl" || { zz-log e "Download of {U $_url} failed"; return 1; }
-    _verify_sha256 "$_tmp/dl" "$_sha" || return 1
-
-    case "$_archive" in
-    tar.gz | tgz) tar -xzf "$_tmp/dl" -C "$_tmp/x" || return 1 ;;
-    tar.xz) tar -xJf "$_tmp/dl" -C "$_tmp/x" || return 1 ;;
-    zip) unzip -q "$_tmp/dl" -d "$_tmp/x" || return 1 ;;
-    raw | "" | *)
-        mv "$_tmp/dl" "$_tmp/x/$_tool"
-        _binpath="$_tool"
-        ;;
-    esac
-
-    [ -f "$_tmp/x/$_binpath" ] || { zz-log e "Downloaded archive for {Purple $_tool} has no {U $_binpath}"; return 1; }
-
-    _bindir || { zz-log e "No writable bin directory found for {Purple ${_tool}}"; return 1; }
-    chmod +x "$_tmp/x/$_binpath"
-    cp "$_tmp/x/$_binpath" "$_ZZ_BINDIR/$_tool"
-    zz-log s "Installed {Purple $_tool} to {U $_ZZ_BINDIR/$_tool}"
 }
 
 # The activator itself: resolve every requested tool, one at a time.
@@ -632,7 +515,7 @@ _use() {
                 _g_names="${_g_names} $(basename "$_gd")"
             done
             if [ -z "$_g_names" ]; then
-                zz-log w "No scripts match {Purple ${tool}} in {U ${_SRC}}"
+                zz-log w "No script matches {Purple ${tool}} in {U ${_SRC}}"
                 continue
             fi
             for _g_name in $_g_names; do
@@ -687,17 +570,20 @@ _use() {
             url=$(printf '%s' "$entry" | jq -r '.url // empty')
 
             if [ -n "$apt_pkg" ]; then
-                _pkg_install "$apt_pkg" || zz-log w "Package install of {Purple $apt_pkg} failed"
+                _pkg_install "$apt_pkg" || zz-log w "Could not install {Purple $apt_pkg} as a package"
             elif [ -n "$url" ]; then
-                _platform
-                archive=$(printf '%s' "$entry" | jq -r '.archive // empty')
-                binpath=$(printf '%s' "$entry" | jq -r '.binpath // empty')
-                version=$(printf '%s' "$entry" | jq -r '.version // empty')
-                # sha256: one hash, or an object keyed "<os>_<arch>".
-                sha=$(printf '%s' "$entry" | jq -r --arg k "${_os}_${_arch}" \
-                    '.sha256 // empty | if type == "object" then .[$k] // empty else . end')
-                _download_install "$tool" "$url" "$archive" "$binpath" "$version" "$sha" \
-                    || zz-log w "Download install of {Purple $tool} failed"
+                # zz-install downloads, verifies and installs the binary
+                # (sha256: one hash, or an object keyed "<os>_<arch>").
+                set -- -u "$url"
+                for _f in archive:a binpath:b version:v; do
+                    _val=$(printf '%s' "$entry" | jq -r ".${_f%:*} // empty")
+                    [ -z "$_val" ] || set -- "$@" "-${_f#*:}" "$_val"
+                done
+                _val=$(printf '%s' "$entry" | jq -r '.sha256 // empty | if type == "object" then tojson else . end')
+                [ -z "$_val" ] || set -- "$@" -s "$_val"
+                zz-install "$@" "$tool" || zz-log w "Could not download {Purple $tool}"
+                # zz-install ran in a child: put the bin dir on our PATH for _have.
+                _bindir || true
             fi
         elif _install_repo_script "$tool" "$origin" "$ref"; then
             _peers_pending=1
@@ -706,7 +592,8 @@ _use() {
         fi
 
         if ! _have "$tool"; then
-            zz-log e "Unable to provide required dependency: {Purple $tool}"
+            zz-log e "Cannot provide {Purple $tool}"
+            zz-log - "It is not installed, and no source could install it"
             return 1
         fi
 
@@ -716,11 +603,61 @@ _use() {
     done
 }
 
-# -x/--exec: install EXEC_TOOL alongside the dependencies collected into
-# _before, then exec into it, remaining "$@" becoming its argv. Falls
-# through to the plain _use call below when -x wasn't given.
+# --- arguments. A pre-pass keeps what zz-args (getopts) cannot express:
+# -f/--force may sit anywhere (hoisted in front of the tools), and -x/--exec
+# <tool> ends parsing: everything after it is the exec'd tool's own argv
+# (kept quoted in _tail, never parsed). Errors use plain stderr: zz-log may
+# not be resolved yet.
+_opts=""
+_tools=""
+_tail=""
+_quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\''/g")"; }
+while [ $# -gt 0 ]; do
+    case "$1" in
+    -x | --exec)
+        shift
+        EXEC_TOOL="${1:-}"
+        if [ -z "$EXEC_TOOL" ]; then
+            printf '[e] -x/--exec requires a tool name\n' >&2
+            exit 1
+        fi
+        shift
+        for _a in "$@"; do _tail="$_tail $(_quote "$_a")"; done
+        break
+        ;;
+    --force) _opts="$_opts -f" ;;
+    --help) _opts="$_opts -h" ;;
+    --*)
+        printf '[e] Unknown option: %s\n' "$1" >&2
+        exit 1
+        ;;
+    -?) _opts="$_opts $1" ;;
+    *) _tools="$_tools $(_quote "$1")" ;;
+    esac
+    shift
+done
+
+# zz-args (and its zz-colors) must be on PATH: resolve the default source
+# when they are not, as _bindir does for zz-bindir.
+case " $_opts " in *" -f "*) FORCE=1 ;; esac
+command -v zz-args >/dev/null 2>&1 || _resolve_src || exit 1
+
+# Declares the options and collects the tools back onto "$@".
+_parse() {
+    eval "$(zz-args "Install tools on demand, only if missing" "zz-use" "$@" <<help
+f - force_flag Reinstall even when already on PATH
+x tool exec_tool Install <tool> and exec into it with the remaining arguments as its argv
+# tools tools Tools to install: [origin/]<tool>[@ref]
+help
+)" || return 1
+    [ -z "$force_flag" ] || FORCE=1
+    _use "$@" ${EXEC_TOOL:+"$EXEC_TOOL"}
+}
+
+# -x/--exec: install EXEC_TOOL alongside the tools, then exec into it with
+# the saved tail as its argv.
+eval "_parse $_opts $_tools" || exit 1
 if [ -n "$EXEC_TOOL" ]; then
-    eval "_use $_before \"\$EXEC_TOOL\"" || exit 1
     # Same leading-"@" vs trailing-"@ref" split as in _use: an npm-origin
     # exec target (e.g. "@myscope/pkg/tool@1.2.3") must not have its
     # command name mangled by splitting on the scope's own "@".
@@ -735,7 +672,6 @@ if [ -n "$EXEC_TOOL" ]; then
         ;;
     esac
     case "$_exec_name" in */*) _exec_name="${_exec_name##*/}" ;; esac
+    eval "set -- $_tail"
     exec "$_exec_name" "$@"
 fi
-
-eval "_use $_before"

@@ -7,7 +7,7 @@ setup() {
     # STUBS holds the fake package managers plus just the tools run.sh
     # needs: exposing /usr/bin would surface the host's real managers.
     STUBS=$(mktemp -d)
-    for tool in sh cat tr sed awk grep dirname readlink basename; do
+    for tool in sh cat tr sed awk grep dirname readlink basename cut expr; do
         ln -s "$(command -v $tool)" "$STUBS/$tool"
     done
     export CALLS="$STUBS/calls"
@@ -105,4 +105,19 @@ set_uid() {
     run_install jq
     [ "$status" -eq 1 ]
     [[ "$output" == *"No supported package manager"* ]]
+}
+
+@test "zz-install -u downloads a raw binary into the bin dir and checks its sha256" {
+    payload=$(mktemp)
+    printf '#!/bin/sh\necho downloaded\n' >"$payload"
+    bindir=$(mktemp -d)
+    sum=$(sha256sum "$payload" | cut -d' ' -f1)
+    run env INSTALL_BIN_DIR="$bindir" zz-install -u "file://$payload" -s "$sum" fake-tool
+    [ "$status" -eq 0 ]
+    [ "$("$bindir/fake-tool")" = downloaded ]
+    rm -f "$bindir/fake-tool"
+    run env INSTALL_BIN_DIR="$bindir" zz-install -u "file://$payload" -s 0000 fake-tool
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Checksum mismatch"* ]]
+    rm -rf "$payload" "$bindir"
 }

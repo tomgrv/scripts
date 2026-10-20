@@ -149,3 +149,53 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" == *'select(.path | test("(^|/)src/")) $HOME `id`'* ]]
 }
+
+@test "zz-log headline levels start at column 0, whatever ZZ_LOG_INDENT is" {
+    run bash -c 'unset GITHUB_ACTIONS; ZZ_LOG_INDENT=4 zz-log w "hi" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "! hi" ]
+    run bash -c 'ZZ_LOG_INDENT=4 zz-log i "hi" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "→ hi" ]
+}
+
+@test "zz-log o dims stdin lines behind a gutter, without step tag" {
+    run bash -c 'printf "a\nb\n" | ZZ_LOG_STEP=fetch zz-log o 2>&1'
+    [[ "$output" == *"│  a"* && "$output" == *"│  b"* ]]
+    [[ "$output" != *"[fetch]"* ]]
+}
+
+@test "zz-log leaves a brace that is not a colour marker alone" {
+    run bash -c 'zz-log i "{\"a\": 1} {Red x} {" 2>&1'
+    [[ "$output" == *"{\"a\": 1}"* && "$output" == *"x"* && "$output" == *"{"* ]]
+}
+
+@test "zz-log prints a command substitution in the message instead of running it" {
+    run bash -c 'zz-log i "\$(echo pwned)" 2>&1'
+    [[ "$output" == *'$(echo pwned)'* ]]
+}
+
+@test "zz-log custom level is the caller's own prefix: no step tag, no ZZ_LOG_INDENT" {
+    run bash -c 'ZZ_LOG_STEP=fetch ZZ_LOG_INDENT=6 zz-log "  | -" "nested" 2>&1'
+    [[ "$output" == "  | - nested"* ]]
+    [[ "$output" != *"[fetch]"* ]]
+}
+
+@test "zz-log - is a detail line behind one tree guide, one more per ZZ_LOG_INDENT level" {
+    run bash -c 'zz-log - "detail" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "   |  detail" ]
+    run bash -c 'ZZ_LOG_INDENT=1 zz-log - "detail" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "   |   |  detail" ]
+    run bash -c 'ZZ_LOG_INDENT=2 zz-log - "detail" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "   |   |   |  detail" ]
+}
+
+@test "zz-log o output hangs under its headline on the same scale as - lines" {
+    run bash -c 'echo line | zz-log o 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "   │  line" ]
+    run bash -c 'echo line | ZZ_LOG_INDENT=1 zz-log o 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "   |   │  line" ]
+}
+
+@test "zz-log ignores a ZZ_LOG_INDENT that is not an integer" {
+    run bash -c 'ZZ_LOG_INDENT=x zz-log - "d" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
+    [ "$output" = "   |  d" ]
+}
