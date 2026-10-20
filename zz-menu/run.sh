@@ -122,7 +122,7 @@ fi
 while true; do
     render
     # Asked by zz-prompt; input ending quits like q.
-    choice=$(zz-prompt -e "Choose") || exit 1
+    choice=$(zz-prompt -e) || exit 1
 
     case "$choice" in
     "")
