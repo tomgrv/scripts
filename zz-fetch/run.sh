@@ -37,7 +37,7 @@ command -v git >/dev/null 2>&1 || zz-install git || exit 1
 
 if [ -d "$dir/.git" ]; then
     # Existing checkout: move it to the requested ref, dropping local changes.
-    zz-log - "Updating {U $dir} to {B $ref}"
+    zz-log o "Updating {U $dir} to {B $ref}"
     op git -C "$dir" fetch --depth 1 origin -- "$ref" &&
         op git -C "$dir" checkout -q -f -B "$ref" FETCH_HEAD &&
         op git -C "$dir" reset -q --hard FETCH_HEAD
