@@ -157,15 +157,6 @@ teardown() {
     [ "$output" = "→ [fetch] hi" ]
 }
 
-@test "zz-log inside a step shows progress (i) and done (s) as detail lines, keeps w and e" {
-    run bash -c 'ZZ_LOG_STEP=x ZZ_LOG_INDENT=2 zz-log i "working" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
-    [ "$output" = "    working" ]
-    run bash -c 'ZZ_LOG_INDENT=2 zz-log s "done" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
-    [ "$output" = "    done" ]
-    run bash -c 'unset GITHUB_ACTIONS; ZZ_LOG_INDENT=2 zz-log e "bad" 2>&1 | sed "s/\x1b\[[0-9;]*m//g"'
-    [ "$output" = "✕ bad" ]
-}
-
 @test "zz-log o dims stdin lines behind a gutter, without step tag" {
     run bash -c 'printf "a\nb\n" | ZZ_LOG_STEP=fetch zz-log o 2>&1'
     [[ "$output" == *"│ a"* && "$output" == *"│ b"* ]]

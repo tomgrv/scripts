@@ -87,7 +87,7 @@ install_package() {
         command -v "$bin" >/dev/null 2>&1 || continue
 
         name=$(name_for "$key" "$@")
-        zz-log i "Installing {Purple $name} via {B $key}"
+        zz-log - "Installing {Purple $name} via {B $key}"
 
         case "$key" in
         apt) apt_update && op as_root apt-get install -y -qq "$name" ;;
@@ -148,7 +148,7 @@ install_download() {
     _url=$(expand "$url")
     _binpath=$(expand "${binpath:-$pkg}")
 
-    zz-log i "Downloading {Purple $pkg} from {U $_url}"
+    zz-log - "Downloading {Purple $pkg} from {U $_url}"
     _tmp=$(mktemp -d)
     trap 'rm -rf "$_tmp"' EXIT
     mkdir -p "$_tmp/x"
@@ -177,7 +177,7 @@ install_download() {
     eval "$(zz-bindir)" || return 1
     chmod +x "$_tmp/x/$_binpath"
     cp "$_tmp/x/$_binpath" "$dir/$pkg"
-    zz-log s "Installed {Purple $pkg} to {U $dir/$pkg}"
+    zz-log - "Installed {Purple $pkg} to {U $dir/$pkg}"
 }
 
 # --- run

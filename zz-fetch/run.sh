@@ -37,14 +37,14 @@ command -v git >/dev/null 2>&1 || zz-install git || exit 1
 
 if [ -d "$dir/.git" ]; then
     # Existing checkout: move it to the requested ref, dropping local changes.
-    zz-log i "Updating {U $dir} to {B $ref}"
+    zz-log - "Updating {U $dir} to {B $ref}"
     op git -C "$dir" fetch --depth 1 origin -- "$ref" &&
         op git -C "$dir" checkout -q -f -B "$ref" FETCH_HEAD &&
         op git -C "$dir" reset -q --hard FETCH_HEAD
 elif [ -d "$dir" ]; then
     zz-log n "{U $dir} is not a git checkout, using it as is"
 else
-    zz-log i "Cloning into {U $dir}"
+    zz-log - "Cloning into {U $dir}"
     mkdir -p "$(dirname "$dir")" &&
         op git clone -q --depth 1 --branch "$ref" "$url" "$dir"
 fi
