@@ -1,6 +1,6 @@
 ---
 applyTo: '**/run.sh'
-description: 'Shell script conventions for the zz-* and functional scripts: block comments and file layout.'
+description: 'POSIX sh conventions for the zz-* and functional scripts: file layout, comments, functions, flow, indentation and naming.'
 ---
 
 <!-- @format -->
