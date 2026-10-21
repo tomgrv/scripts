@@ -59,7 +59,7 @@ if echo "$changed_files" | grep -q "package.json"; then
 	fi
 fi
 
-if echo "$changed_files" | grep -q "composer.json"; then
+if echo "$changed_files" | grep -q "composer.json" && command -v composer >/dev/null 2>&1; then
 
 	zz-log i "Ensure that the composer.json is valid and composer.lock is up-to-date..."
 	composer_validate=$(composer validate --no-check-all --strict 2>&1)
