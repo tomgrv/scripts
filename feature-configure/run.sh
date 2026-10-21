@@ -144,6 +144,16 @@ if [ -d $source/stubs ]; then
 
         dest=$folder/$base
 
+        # Composer files are useless (and would trigger composer hooks) without PHP
+        case "$base" in
+        composer.json | composer.lock)
+            if ! command -v php >/dev/null 2>&1; then
+                zz-log i "Skipping {U $dest}: php is not installed"
+                continue
+            fi
+            ;;
+        esac
+
         mkdir -p $folder
 
         # A dangling symlink fails every "-f $dest" test below, yet cp and
