@@ -11,11 +11,11 @@
 
 # --- arguments
 eval "$(
-	zz-args "Run a local npm binary, falling back to npx" $0 "$@" <<-help
-		s   -    withscripts  Allow npx's on-the-fly install to run lifecycle scripts
-		-   tool tool         Package binary to run
-		#   args args         Arguments passed through to <tool>
-	help
+    zz-args "Run a local npm binary, falling back to npx" $0 "$@" <<help
+        s   -    withscripts  Allow npx's on-the-fly install to run lifecycle scripts
+        -   tool tool         Package binary to run
+        #   args args         Arguments passed through to <tool>
+help
 )"
 
 # --- parameters

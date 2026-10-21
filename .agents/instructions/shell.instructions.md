@@ -64,7 +64,7 @@ Write `#!/bin/sh` scripts that run under dash and busybox. No bashisms:
 - Leave one blank line between functions, between `# --- step` blocks, and around each top-level `if`, `for`, `while` or `case`. Never leave two in a row.
 - Group a function's `local` lines together and follow them with one blank line. Do not open a short function with a blank line.
 - Inside a `case`, leave one blank line after `case … in` and after each pattern line when the body has more than one statement.
-- Keep an option's help text in the `zz-args` here-doc aligned in columns: short flag, long name, variable, description.
+- Write the `zz-args` here-doc as plain `<<help` with a spaces-only body and an unindented closing `help` (no `<<-`, no tabs). Keep its help text aligned in columns: short flag, long name, variable, description.
 - Wrap a pipeline at `|` only past 100 characters, and indent the continuation one level.
 
 ### Naming

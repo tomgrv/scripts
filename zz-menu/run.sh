@@ -25,13 +25,13 @@
 # Quoted eval: unquoted, field splitting would squeeze runs of spaces inside
 # the values (item labels are often column-aligned).
 eval "$(
-    zz-args "Interactive numbered menu" $0 "$@" <<- help
-		t title   title    Title line shown above the items
-		d default default  Key chosen when the user just presses Enter
-		f footer  footer   Hint line replacing the default one under the items
-		c cycle   cycle    Comma-separated states; choosing an item advances its state
-		# items   items    Items: <key>=<label> or <label>
-	help
+    zz-args "Interactive numbered menu" $0 "$@" <<help
+        t title   title    Title line shown above the items
+        d default default  Key chosen when the user just presses Enter
+        f footer  footer   Hint line replacing the default one under the items
+        c cycle   cycle    Comma-separated states; choosing an item advances its state
+        # items   items    Items: <key>=<label> or <label>
+help
 )"
 
 # --- parameters
@@ -147,7 +147,9 @@ while true; do
         ;;
     esac
 
-    choice=$(expr "$choice" + 0)
+    # Drop leading zeros ("007" -> 7); $(( )) would read them as octal.
+    choice=$(printf '%s' "$choice" | sed 's/^0*//')
+    choice=${choice:-0}
     if [ "$choice" -lt 1 ] || [ "$choice" -gt "$count" ]; then
         zz-log w "No such item: $choice (enter a number between 1 and ${count})."
         continue
