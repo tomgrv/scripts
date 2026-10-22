@@ -1,12 +1,12 @@
 #!/bin/sh
 
 eval $(
-    zz-args "git enhanced commit" $0 "$@" <<-help
+    zz-args "git enhanced commit" $0 "$@" <<help
         n -         noscope     Enforce no scope in commit message
         s scope     scope       Scope to use in commit message
         b branch    branch      Branch to commit to
-		+ msg       msg         Commit message
-	help
+        + msg       msg         Commit message
+help
 )
 
 if [ -z "$msg" ]; then

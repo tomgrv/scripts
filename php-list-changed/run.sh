@@ -1,7 +1,7 @@
 #!/bin/sh
 
 eval $(
-    zz-args "List PHP test parts (core, modules, packages) affected by a change" $0 "$@" <<-help
+    zz-args "List PHP test parts (core, modules, packages) affected by a change" $0 "$@" <<help
         b   base    base    Base ref to diff against (default: origin/\$GITHUB_BASE_REF, origin/develop, origin/main)
         f   format  format  Output format: names (default), paths, suites or json
         a   -       all     Ignore the diff and select every part
@@ -15,9 +15,9 @@ SHARED='^(app|bootstrap|config|database|routes|resources|public|\.github)/|^(com
 
 # Part directories, from the composer merge-plugin globs (one per line)
 list_parts() {
-    jq -r '.extra["merge-plugin"].include[]? // empty' composer.json 2>/dev/null |
-        sed 's|/composer\.json$||' |
-        while read -r glob; do
+    jq -r '.extra["merge-plugin"].include[]? // empty' composer.json 2>/dev/null \
+        | sed 's|/composer\.json$||' \
+        | while read -r glob; do
             for dir in $glob; do
                 [ -f "$dir/composer.json" ] && echo "$dir"
             done

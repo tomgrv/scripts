@@ -1,7 +1,7 @@
 #!/bin/sh
 
 eval $(
-    zz-args "Release production branch" $0 "$@" <<-help
+    zz-args "Release production branch" $0 "$@" <<help
 help
 )
 
@@ -118,7 +118,7 @@ if [ -z "$finished" ]; then
     # is-ancestor(remote, local) succeeds only when the remote tip is already
     # contained in local -- i.e. local is not behind. Passed the other way
     # round it would succeed while local is behind (needs a pull).
-    if ! git merge-base --is-ancestor "$(git rev-parse "refs/remotes/origin/$flow/$name")" "$(git rev-parse "$flow/$name")" ; then
+    if ! git merge-base --is-ancestor "$(git rev-parse "refs/remotes/origin/$flow/$name")" "$(git rev-parse "$flow/$name")"; then
         zz-log e "$flow/$name branch is not up-to-date with remote. Please pull the latest changes."
         exit 1
     fi
@@ -150,14 +150,14 @@ if [ -z "$finished" ]; then
         exit 1
     fi
 
-    if ! git merge-base --is-ancestor "$(git rev-parse origin/develop)" "$(git rev-parse develop)" ; then
+    if ! git merge-base --is-ancestor "$(git rev-parse origin/develop)" "$(git rev-parse develop)"; then
         zz-log e "Develop branch is not up-to-date with remote. Please pull the latest changes."
         exit 1
     fi
 
     # git flow finish prepends gitflow.prefix.versiontag to --tagname itself,
     # so pass the bare version here -- prefixing it ourselves would tag "vv$GBV".
-    if git flow "$flow" finish "$name" --push --tagname "$GBV" --message "$GBV" ; then
+    if git flow "$flow" finish "$name" --push --tagname "$GBV" --message "$GBV"; then
         zz-log n "Release finished: {B $GBV}"
     else
         zz-log e "Cannot finish release. Please fix the issues, commit any pending changes, then re-run this command to retry -- or finish manually with:"

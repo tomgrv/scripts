@@ -47,7 +47,7 @@ set -e
 
 # --- arguments
 eval "$(
-    zz-args "Resolve a caller's declared env vars (ask+persist if missing), then run a command" $0 "$@" <<-help
+    zz-args "Resolve a caller's declared env vars (ask+persist if missing), then run a command" $0 "$@" <<help
         p package   package     package.json file(s) to read, ':'-separated (default: ./package.json)
         f file      envfile     Env file to read and persist to (default: config.file, else .env)
         P profile   profile     Also export persisted values from <ZZ_PROFILE_DIR, default /etc/profile.d>/<profile>.sh
@@ -61,7 +61,10 @@ help
 pkgs="${package:-./package.json}"
 first=${pkgs%%:*}
 for _p in $(printf '%s' "$pkgs" | tr ':' ' '); do
-    [ -f "$_p" ] || { zz-log e "No package.json found at {U $_p}"; exit 1; }
+    [ -f "$_p" ] || {
+        zz-log e "No package.json found at {U $_p}"
+        exit 1
+    }
 done
 pkg=$first
 

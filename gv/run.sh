@@ -40,11 +40,11 @@ for step in $steps; do
     name=${step%%:*}
     check=${step#*:}
 
-    if ! command -v "$check" > /dev/null 2>&1; then
+    if ! command -v "$check" >/dev/null 2>&1; then
         sh "$dir/config/install-$name.sh" || true
     fi
 
-    if command -v "$check" > /dev/null 2>&1; then
+    if command -v "$check" >/dev/null 2>&1; then
         zz-log s "Using $name ($check)"
         run_"$name" "$@"
     fi

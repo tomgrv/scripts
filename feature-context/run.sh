@@ -5,10 +5,10 @@
 . zz-colors
 
 eval $(
-    zz-args "Export Source/Targets folders depending on feature context" $0 "$@" <<-help
-        s source 	source		Force source directory
-        t target	target		Force target directory
-        - caller	caller		Force caller script
+    zz-args "Export Source/Targets folders depending on feature context" $0 "$@" <<help
+        s source    source      Force source directory
+        t target    target      Force target directory
+        - caller    caller      Force caller script
 help
 )
 

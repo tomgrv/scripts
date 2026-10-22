@@ -1,10 +1,10 @@
 #!/bin/sh
 
 eval $(
-    zz-args "Pick files from a specific commit" $0 "$@" <<-help
-		    c commit   commit    commit sha to pick from (if not provided, will prompt)
-			- path     path      path to restore (default: current directory)
-	help
+    zz-args "Pick files from a specific commit" $0 "$@" <<help
+            c commit   commit    commit sha to pick from (if not provided, will prompt)
+            - path     path      path to restore (default: current directory)
+help
 )
 
 cd "$(git rev-parse --show-toplevel)"

@@ -1,25 +1,25 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 . zz-colors
 
 eval $(
-    zz-args "Normalize JSON according to schema" $0 "$@" <<-help
-        w -         write	    write normalized json to original file
-        t tabSize   tabSize	    tab size for indentation
-        c -         cache	    allow caching of schema validation map
-        a -         allow	    allow additional properties at root level
-        d -         debug	    debug output
-        f fallback  fallback	fallback schema to use if none found locally
-        l local     local	    infer schema in <local> folder from json file name (x.y.json => <local>/y.schema.json)
-        i -         import	    infer on schema store if nothing found locally (x.y.json => "y" on schema store)
-        s schema	schema		schema to use for normalization
-        + files	    files		jsons to normalize
+    zz-args "Normalize JSON according to schema" $0 "$@" <<help
+        w -         write       write normalized json to original file
+        t tabSize   tabSize     tab size for indentation
+        c -         cache       allow caching of schema validation map
+        a -         allow       allow additional properties at root level
+        d -         debug       debug output
+        f fallback  fallback    fallback schema to use if none found locally
+        l local     local       infer schema in <local> folder from json file name (x.y.json => <local>/y.schema.json)
+        i -         import      infer on schema store if nothing found locally (x.y.json => "y" on schema store)
+        s schema    schema      schema to use for normalization
+        + files     files       jsons to normalize
 
 help
 )
 
-if test -z "$files" || test "$files" = "-" || test "$files" = "/dev/stdin"; then
+if [ -z "$files" ] || [ "$files" = "-" ] || [ "$files" = "/dev/stdin" ]; then
 
     if [ -n "$write" ]; then
         zz-log e "Cannot write to stdin. Please unset -w option" && exit 1
@@ -31,7 +31,7 @@ fi
 
 for file in $files; do
 
-    if ! test -s "$file"; then
+    if ! [ -s "$file" ]; then
         zz-log e "File {U $file} not found" && continue
     fi
 
@@ -42,9 +42,9 @@ for file in $files; do
         zz-log e "{U $file} not valid, cannot normalize" && exit 1
     fi
 
-    if test -z "$tabSize"; then
+    if [ -z "$tabSize" ]; then
         tabSize=$(head -n 2 "$file" | tail -n 1 | sed 's/^\( *\).*/\1/' | tr -d '\n' | wc -c)
-        if test -z "$tabSize"; then
+        if [ -z "$tabSize" ]; then
             tabSize=2
         fi
     fi
@@ -73,10 +73,10 @@ for file in $files; do
                         )
                 );'
 
-    echo "$list" | sed 's/^\(.*\)$/path(\1)/' | paste -sd, -  | jq "$script traverse([$(cat)])" $file >/tmp/$$.norm
+    echo "$list" | sed 's/^\(.*\)$/path(\1)/' | paste -sd, - | jq "$script traverse([$(cat)])" $file >/tmp/$$.norm
 
-    if test -s /tmp/$$.norm; then
-        if test -z "$write"; then
+    if [ -s /tmp/$$.norm ]; then
+        if [ -z "$write" ]; then
             jq -M --indent ${tabSize:-2} . /tmp/$$.norm
         else
             jq -M --indent ${tabSize:-4} . /tmp/$$.norm >$file

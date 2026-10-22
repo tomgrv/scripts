@@ -11,7 +11,7 @@ set -e
 
 # --- arguments
 eval "$(
-     zz-args "Dispatch Utility" $0 "$@" <<help
+    zz-args "Dispatch Utility" $0 "$@" <<help
         -   caller caller     Caller script path
         -   subcmd subcmd     Target script to execute
         d   debug  debug      Enable debug mode

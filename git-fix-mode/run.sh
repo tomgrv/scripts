@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Reapply file mode changes (chmod) from the working tree diff without touching content
 

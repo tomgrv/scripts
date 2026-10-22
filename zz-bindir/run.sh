@@ -11,7 +11,8 @@
 . zz-colors
 
 # --- arguments
-eval "$(zz-args "Resolve a writable bin directory on PATH" "$0" "$@" <<help
+eval "$(
+    zz-args "Resolve a writable bin directory on PATH" "$0" "$@" <<help
 t target target Extra directory whose bin/ is a candidate (created if needed)
 help
 )"

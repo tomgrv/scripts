@@ -1,14 +1,14 @@
 #!/bin/sh
 
 eval $(
-	zz-args "Fix privacy in history" $0 "$@" <<-help
-		f -      force      force overwrite backup
-		p -      push       push to remote
-		o old    old        old email to replace
-		n new    new        new name to replace with
-		a author author     author name to replace with
-		- sha    sha        sha commit to start from
-	help
+    zz-args "Fix privacy in history" $0 "$@" <<help
+        f -      force      force overwrite backup
+        p -      push       push to remote
+        o old    old        old email to replace
+        n new    new        new name to replace with
+        a author author     author name to replace with
+        - sha    sha        sha commit to start from
+help
 )
 
 cd "$(git rev-parse --show-toplevel)" >/dev/null
@@ -16,18 +16,18 @@ cd "$(git rev-parse --show-toplevel)" >/dev/null
 git fetch --progress --prune --recurse-submodules=no origin >/dev/null
 
 if [ -z "$old" ]; then
-	zz-log w "Old email is not specified, it will be taken from the last commit"
-	old=$(git log -1 --pretty=format:'%ae')
+    zz-log w "Old email is not specified, it will be taken from the last commit"
+    old=$(git log -1 --pretty=format:'%ae')
 
-	[ "$(zz-prompt -c Yn "Do you want to proceed with this <$old> as old email?")" = "y" ] || exit 1
+    [ "$(zz-prompt -c Yn "Do you want to proceed with this <$old> as old email?")" = "y" ] || exit 1
 fi
 
 if [ -z "$new" ]; then
-	zz-log w "New email is not specified, it will be taken from the specified commit"
+    zz-log w "New email is not specified, it will be taken from the specified commit"
 fi
 
 if [ -z "$author" ]; then
-	zz-log w "Author is not specified, it will be taken from the specified commit"
+    zz-log w "Author is not specified, it will be taken from the specified commit"
 fi
 
 sha=$(git getcommit $force $sha)
@@ -35,19 +35,19 @@ sha=$(git getcommit $force $sha)
 zz-log i "Fix privacy from commit: $sha"
 
 if [ -n "$new" ]; then
-	zz-log i "Setting new email for git config"
-	git config user.email "$new"
+    zz-log i "Setting new email for git config"
+    git config user.email "$new"
 else
-	zz-log s "Take email from specified commit"
-	new=$(git log -1 --pretty=format:'%ae' "$sha")
+    zz-log s "Take email from specified commit"
+    new=$(git log -1 --pretty=format:'%ae' "$sha")
 fi
 
 if [ -n "$author" ]; then
-	echo "Setting new author for git config"
-	git config user.name "$author"
+    echo "Setting new author for git config"
+    git config user.name "$author"
 else
-	zz-log s "Take author from specified commit"
-	author=$(git log -1 --pretty=format:'%an' "$sha")
+    zz-log s "Take author from specified commit"
+    author=$(git log -1 --pretty=format:'%an' "$sha")
 fi
 
 git filter-branch $force --env-filter "
@@ -64,11 +64,11 @@ fi
 " --tag-name-filter cat -- --branches --tags ${sha:---all}${sha:+..HEAD}
 
 if [ -n "$push" ]; then
-	zz-log i "Pushing changes to remote"
-	git push --force --progress --recurse-submodules=no origin --all
-	git push --force --progress --recurse-submodules=no origin --tags
+    zz-log i "Pushing changes to remote"
+    git push --force --progress --recurse-submodules=no origin --all
+    git push --force --progress --recurse-submodules=no origin --tags
 else
-	zz-log w "Changes are not pushed to remote, use -p option to push"
+    zz-log w "Changes are not pushed to remote, use -p option to push"
 fi
 
 # filter-branch leaves rewritten refs behind; purge them so the old history is unreachable

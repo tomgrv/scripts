@@ -4,10 +4,10 @@ set -e
 . zz-colors
 
 eval $(
-    zz-args "Merge 2 json files" $0 "$@" <<-help
+    zz-args "Merge 2 json files" $0 "$@" <<help
         t tabSize     tabSize   tab size for indentation
-        - target      target		Target JSON file to merge into
-        - source      source		Source JSON file to merge from
+        - target      target        Target JSON file to merge into
+        - source      source        Source JSON file to merge from
 help
 )
 
@@ -52,4 +52,4 @@ def merge($a; $b):
     $a
   end;
 
-merge(.; input)' $target $source | json-normalize -c -a -i -t ${tabSize:-4} -f local -l true 2>/dev/null > /tmp/$$.merge && mv /tmp/$$.merge $target && zz-log s "JSON merged successfully"
+merge(.; input)' $target $source | json-normalize -c -a -i -t ${tabSize:-4} -f local -l true 2>/dev/null >/tmp/$$.merge && mv /tmp/$$.merge $target && zz-log s "JSON merged successfully"

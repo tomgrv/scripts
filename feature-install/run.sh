@@ -6,7 +6,7 @@
 . zz-colors
 
 eval $(
-    zz-args "Install a feature" $0 "$@" <<-help
+    zz-args "Install a feature" $0 "$@" <<help
     s source    source      Force source directory
     t target    target      Force target directory
     - arg       arg         Caller script path

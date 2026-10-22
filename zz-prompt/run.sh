@@ -11,7 +11,8 @@
 . zz-colors
 
 # --- arguments
-eval "$(zz-args "Interactive free-form input" "$0" "$@" <<help
+eval "$(
+    zz-args "Interactive free-form input" "$0" "$@" <<help
 s - secret Secret: masked input, default shown as ***
 e - eof_fail Exit 1 when input ends (no answer at all)
 c choices choices Accepted single letters (uppercase = default), e.g. Yn

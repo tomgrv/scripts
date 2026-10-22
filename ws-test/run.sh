@@ -4,7 +4,7 @@ set -e
 . zz-colors
 
 eval $(
-    zz-args "Run each root JSON file's .scripts.test entry as a workspace's test suite" $0 "$@" <<-help
+    zz-args "Run each root JSON file's .scripts.test entry as a workspace's test suite" $0 "$@" <<help
         - workspace   workspace     Workspace directory to test
 help
 )
