@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-message",
-  "version": "4.3.0",
+  "version": "4.6.0",
   "description": "Rewrite an arbitrary commit message",
   "bin": {
     "git-fix-message": "run.sh"

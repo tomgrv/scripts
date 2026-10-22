@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-hook-prepush",
-  "version": "1.0.0",
+  "version": "4.6.0",
   "description": "Git pre-push hook: validate the current branch name",
   "bin": {
     "git-hook-prepush": "run.sh"
