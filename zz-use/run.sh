@@ -99,17 +99,18 @@ trap _cleanup EXIT
 # run ("<origin>@<ref>|<dir>" lines), so switching back and forth between
 # origins (a pinned script whose peers live at the default origin, say)
 # neither re-downloads under --force nor stacks another boot dir on PATH.
-# _BOOT_DIRS lists those scratch boot dirs, whose zz-* symlinks must never
-# count as "installed" (they vanish when this process exits).
+# _BOOT_DIR is the one scratch dir (created on first use, shared by every
+# origin) holding their zz-* symlinks: it must never count as "installed"
+# (it vanishes when this process exits) nor as an install target.
 _SRC=""
 _SRC_MAP=""
-_BOOT_DIRS=""
+_BOOT_DIR=""
 
 # POSIX sh has no `local`: every variable below is global, and _use
 # recurses (through _install_peer_deps). Callers therefore never read one
 # of _use's own variables back after a call that may recurse into it.
 
-# True if <tool> is on PATH outside the scratch boot dirs — i.e. actually
+# True if <tool> is on PATH outside the scratch boot dir — i.e. actually
 # installed, not merely exposed for the lifetime of this process. Sets
 # _HAVE_PATH to where it was found.
 _HAVE_PATH=""
@@ -118,7 +119,7 @@ _have() {
     IFS=':'
     for _h_d in $PATH; do
         [ -n "$_h_d" ] || continue
-        case " $_BOOT_DIRS " in *" $_h_d "*) continue ;; esac
+        [ "$_h_d" = "$_BOOT_DIR" ] && continue
         if [ -f "$_h_d/$1" ] && [ -x "$_h_d/$1" ]; then
             IFS=$_h_old_ifs
             _HAVE_PATH="$_h_d/$1"
@@ -311,14 +312,17 @@ _resolve_src() {
         esac
     fi
 
-    _boot_dir=$(mktemp -d)
-    _add_tmp "$_boot_dir"
-    _BOOT_DIRS="${_BOOT_DIRS} ${_boot_dir}"
+    if [ -z "$_BOOT_DIR" ]; then
+        _BOOT_DIR=$(mktemp -d)
+        _add_tmp "$_BOOT_DIR"
+        export PATH="${_BOOT_DIR}:${PATH}"
+    fi
+    # -f: a later origin's zz-* shadows an earlier one's, as a newer dir
+    # prepended to PATH would.
     for _d in "${_SRC}"/zz-*/; do
         [ -f "${_d}run.sh" ] || continue
-        ln -s "${_d}run.sh" "${_boot_dir}/$(basename "$_d")"
+        ln -sf "${_d}run.sh" "${_BOOT_DIR}/$(basename "$_d")"
     done
-    export PATH="${_boot_dir}:${PATH}"
 
     _SRC_MAP="${_SRC_MAP}
 ${_src_key}|${_SRC}"
@@ -335,7 +339,7 @@ _bindir() {
     [ -n "$_ZZ_BINDIR" ] && return 0
     command -v zz-bindir >/dev/null 2>&1 || _resolve_src || return 1
     dir=""
-    eval "$(zz-bindir)" || return 1
+    eval "$(zz-bindir -s "$_BOOT_DIR")" || return 1
     [ -n "$dir" ] || return 1
     _ZZ_BINDIR="$dir"
     case ":$PATH:" in
@@ -687,5 +691,17 @@ if [ -n "$EXEC_TOOL" ]; then
     esac
     case "$_exec_name" in */*) _exec_name="${_exec_name##*/}" ;; esac
     eval "set -- $_tail"
+    # exec skips the EXIT trap, and the exec'd tool (which may call zz-use
+    # again) must not inherit the boot dir as if it were a real PATH dir.
+    if [ -n "$_BOOT_DIR" ]; then
+        _new_path=""
+        IFS=':'
+        for _p in $PATH; do
+            [ "$_p" = "$_BOOT_DIR" ] || _new_path="${_new_path:+$_new_path:}$_p"
+        done
+        unset IFS
+        PATH="$_new_path"
+        _cleanup
+    fi
     exec "$_exec_name" "$@"
 fi
