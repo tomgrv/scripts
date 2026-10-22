@@ -5,11 +5,9 @@ name: Test workspaces
 # A draft pull request only runs the workspaces its changes impact (the ones
 # owning a changed file, and what depends on them - see ws-impacted); marking it
 # ready for review and any push to a non-draft pull request run every
-# workspace. develop is only tested through its pull requests; main is also
-# tested on push.
+# workspace. Nothing runs on a push to main or develop: they are only tested
+# through their pull requests.
 on:
-  push:
-    branches: [main]
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review]
 
