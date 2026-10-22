@@ -141,6 +141,23 @@ teardown() {
     [ "$status" -eq 7 ]
 }
 
+@test "zz-use -x hands the exec'd tool a PATH without its scratch boot dir" {
+    # A tool run via -x may call zz-use again; an inherited boot dir would
+    # look like an ordinary writable PATH dir to that nested zz-bindir.
+    origin=$(mktemp -d)
+    bindir=$(mktemp -d)
+    mkdir "$origin/showpath"
+    printf '#!/bin/sh\nprintf "%%s\\n" "$PATH"\n' >"$origin/showpath/run.sh"
+    zz_use_bin=$(command -v zz-use)
+    run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" -x "$origin/showpath"
+    [ "$status" -eq 0 ]
+    IFS=: read -ra dirs <<<"${lines[-1]}"
+    for d in "${dirs[@]}"; do
+        [ ! -e "$d/zz-args" ]
+    done
+    rm -rf "$origin" "$bindir"
+}
+
 @test "zz-use -x resolves leading dependencies before installing/exec'ing the target" {
     bindir=$(mktemp -d)
     zz_use_bin=$(command -v zz-use)
