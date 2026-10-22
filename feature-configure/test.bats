@@ -117,6 +117,16 @@ teardown() {
     sh -n run.sh
 }
 
+@test "feature-configure replaces an existing Dockerfile or XML stub wholesale" {
+    mkdir -p src/stubs
+    printf '<a>\n  <b/>\n</a>\n' >src/stubs/r.xml
+    printf '<a>\n  <c/>\n</a>\n' >r.xml
+
+    run feature-configure -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    cmp -s src/stubs/r.xml r.xml
+}
+
 @test "feature-configure strips a leading underscore prefix from stub filenames" {
     mkdir -p src/stubs
     echo "content" >src/stubs/_prefix.actual.txt

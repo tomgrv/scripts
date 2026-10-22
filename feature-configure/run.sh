@@ -231,9 +231,10 @@ if [ -d $source/stubs ]; then
                 cp $file $dest && how=copied || how=failed
             elif [ $base != /dev/null ] && [ ! $file -nt $base ]; then
                 how=unchanged
-            elif [ "$(head -n1 $file)" = "---" ] || [ "$(head -c2 $file)" = "#!" ]; then
+            elif [ "$(head -n1 $file)" = "---" ] || [ "$(head -c2 $file)" = "#!" ] ||
+                case ${dest##*/} in Dockerfile | *.xml) true ;; *) false ;; esac; then
                 # A file opening with a `---` frontmatter block (SKILL.md,
-                # *.instructions.md) or a `#!` shebang (scripts) is a
+                # *.instructions.md), a `#!` shebang (scripts), a Dockerfile or an XML file is a
                 # single-owner document, not a fragment: its first line must
                 # stay first, and the line-set reconciliation below would
                 # drop or duplicate repeated lines (`fi`, `)`) and break it.
