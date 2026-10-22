@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz-persist",
-  "version": "4.6.0",
+  "version": "4.9.0",
   "description": "Upsert a KEY=VALUE pair into an env file and/or /etc/profile.d",
   "bin": {
     "zz-persist": "run.sh"

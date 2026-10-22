@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz-install",
-  "version": "4.6.0",
+  "version": "4.9.0",
   "description": "Install a tool as a system package or a downloaded binary",
   "bin": {
     "zz-install": "run.sh"
