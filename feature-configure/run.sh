@@ -12,6 +12,8 @@ eval $(
 help
 )
 
+# --- parameters: the feature name is mandatory; the source directory defaults
+# to the share directory the feature was installed into
 feature=$arg
 
 if [ -z "$feature" ]; then
@@ -21,10 +23,6 @@ fi
 
 export source=${source:-/usr/local/share/$feature}
 export tabSize=4
-
-zz-log i "Configure feature <{Purple $feature}>"
-zz-log - "In {U $(pwd)}"
-zz-log - "From {U $source}"
 
 if [ ! -d $source ]; then
     zz-log e "Source directory <$source> does not exist"
@@ -89,14 +87,15 @@ clean_key() {
         | if . == null then null else .path end') || return 0
     [ "$ck_resolved" != null ] || return 0
 
-    zz-log - "Removing key {U $ck_path} from {U $ck_file}..."
     if [ "$ck_type" = yaml ]; then
         CK_PATHS="[$ck_resolved]" yq -i -I "${tabSize:-2}" 'delpaths(env(CK_PATHS))' "$ck_file" \
+            && zz-log s "Removed key {U $ck_path} from {U $ck_file}" \
             || zz-log w "Could not remove key {U $ck_path} from {U $ck_file}"
     else
         ck_tmp=$(mktemp)
         if jq --indent "${tabSize:-4}" --argjson r "$ck_resolved" 'delpaths([$r])' "$ck_file" >"$ck_tmp"; then
             cat "$ck_tmp" >"$ck_file"
+            zz-log s "Removed key {U $ck_path} from {U $ck_file}"
         else
             zz-log w "Could not remove key {U $ck_path} from {U $ck_file}"
         fi
@@ -104,15 +103,31 @@ clean_key() {
     fi
 }
 
+# --- step: configure the feature
+zz-log i "Configure feature <{Purple $feature}> from {U $source} in {U $(pwd)}"
+
+# --- step: deploy the stubs into the current directory (.clean directives,
+# files, symlinks); skipped when the feature ships none
 if [ -d $source/stubs ]; then
+
+    # The .clean files are walked twice: KEY directives before the merge,
+    # RMV/DEL directives after it.
+    cleanfiles=$(find "$source/stubs" -type f -name ".clean" | sort)
+    directives=$(printf '%s\n' "$cleanfiles" | while IFS= read -r cleanfile; do
+        [ -f "$cleanfile" ] && cat "$cleanfile"
+    done)
+    stubfiles=$(find $source/stubs -type f -name ".*" -not -name ".clean" -o -type f -not -name ".clean" | sort)
+    links=$(find "$source/stubs" -type l)
 
     # KEY directives run BEFORE the stubs are merged: json-merge and
     # yaml-merge keep the value already in the target, so dropping a key first
     # is what lets the merge write the stub's current value in its place (a
     # fixed scalar), or leaves it gone when the stub no longer has the key.
-    zz-log i "Processing .clean KEY directives if existing..."
-
-    find "$source/stubs" -type f -name ".clean" | sort | while read cleanfile; do
+    if printf '%s\n' "$directives" | grep -qE '^[[:space:]]*KEY([[:space:]]|$)'; then
+        zz-log i "Processing .clean KEY directives"
+    fi
+    printf '%s\n' "$cleanfiles" | while read cleanfile; do
+        [ -n "$cleanfile" ] || continue
         while IFS= read -r line || [ -n "$line" ]; do
             line=$(printf '%s\n' "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
             [ "$(printf '%s\n' "$line" | awk '{print $1}')" = KEY ] || continue
@@ -127,12 +142,22 @@ if [ -d $source/stubs ]; then
             clean_key "$keyfile" "$keypath"
         done <"$cleanfile"
     done
+    if printf '%s\n' "$directives" | grep -qE '^[[:space:]]*KEY([[:space:]]|$)'; then
+        zz-log s "Processed .clean KEY directives"
+    fi
 
-    zz-log i "Deploying stubs..."
+    if [ -n "$stubfiles" ]; then
+        zz-log i "Deploying stubs"
+    fi
 
-    find $source/stubs -type f -name ".*" -not -name ".clean" -o -type f -not -name ".clean" | sort | while read file; do
+    # Deploy every stub file: merge it into the existing destination (JSON,
+    # YAML or line-set reconciliation), or copy it when there is none yet.
+    deploy_failed=
+    while read file; do
+        [ -n "$file" ] || continue
 
         folder=$(dirname ${file#$source/stubs/})
+        ignored=
 
         base=$(basename $file | sed 's/\.\./\./g')
         case "$base" in
@@ -165,28 +190,26 @@ if [ -d $source/stubs ]; then
 
         if [ "$(basename $file | cut -c1)" = "#" ]; then
             dest=$(echo $dest | sed 's/\/\#/\//g')
-            zz-log - "Add {U $dest} to .gitignore"
-            grep -qxF $dest .gitignore || echo "$dest" >>.gitignore
+            grep -qxF $dest .gitignore || {
+                echo "$dest" >>.gitignore
+                ignored=", added to .gitignore"
+            }
         fi
 
         if [ "${dest##*.}" = "json" ]; then
 
             if [ -f $dest ]; then
-                zz-log - "Merging {U $file} into {U $dest}..."
-                json-merge -t ${tabSize:-4} $dest $file
+                json-merge -t ${tabSize:-4} $dest $file && how=merged || how=failed
             else
-                zz-log w "Destination file {U $dest} does not exist. Copying {U $file} to {U $dest}..."
-                cp $file $dest
+                cp $file $dest && how=copied || how=failed
             fi
 
         elif [ "${dest##*.}" = "yaml" ] || [ "${dest##*.}" = "yml" ]; then
 
             if [ -f $dest ]; then
-                zz-log - "Merging {U $file} into {U $dest}..."
-                yaml-merge -i ${tabSize:-2} $dest $file
+                yaml-merge -i ${tabSize:-2} $dest $file && how=merged || how=failed
             else
-                zz-log w "Destination file {U $dest} does not exist. Copying {U $file} to {U $dest}..."
-                cp $file $dest
+                cp $file $dest && how=copied || how=failed
             fi
 
         else
@@ -205,19 +228,18 @@ if [ -d $source/stubs ]; then
             [ -f $base ] || base=/dev/null
 
             if [ ! -f $dest ]; then
-                zz-log w "Destination file {U $dest} does not exist. Copying {U $file} to {U $dest}..."
-                cp $file $dest
+                cp $file $dest && how=copied || how=failed
             elif [ $base != /dev/null ] && [ ! $file -nt $base ]; then
-                zz-log - "No change in {U $file} since last deploy, skipping merge into {U $dest}"
+                how=unchanged
             elif [ "$(head -n1 $file)" = "---" ]; then
                 # A file opening with a `---` frontmatter block (SKILL.md,
                 # *.instructions.md) is a single-owner document, not a
                 # fragment: its frontmatter must stay on line 1, and the
                 # reconciliation below appends new lines at the end.
-                zz-log - "Replacing {U $dest} with {U $file} (frontmatter document)..."
                 cp $file $dest
+                how=replaced
             else
-                zz-log - "Reconciling {U $file} into {U $dest}..."
+                how=reconciled
 
                 removed=$(mktemp)
                 grep -vFxf $file $base >$removed
@@ -247,12 +269,29 @@ if [ -d $source/stubs ]; then
         fi
 
         chmod $(stat -c "%a" $file) $dest
+        if [ "$how" = failed ]; then
+            deploy_failed=1
+            zz-log e "Failed to deploy {U $file} to {U $dest}"
+        else
+            zz-log - "Deployed {U $dest} ($how$ignored)"
+        fi
 
-    done
+    done <<EOF
+$stubfiles
+EOF
 
-    zz-log i "Processing .clean files if existing..."
+    if [ -n "$stubfiles" ] && [ -n "$deploy_failed" ]; then
+        zz-log e "Deployed stubs with errors"
+    elif [ -n "$stubfiles" ]; then
+        zz-log s "Deployed stubs"
+    fi
 
-    find "$source/stubs" -type f -name ".clean" | sort | while read cleanfile; do
+    # RMV and DEL directives run AFTER the merge, so they win over the stubs.
+    if printf '%s\n' "$directives" | grep -qE '^[[:space:]]*(RMV|DEL)([[:space:]]|$)'; then
+        zz-log i "Processing .clean files"
+    fi
+    printf '%s\n' "$cleanfiles" | while read cleanfile; do
+        [ -n "$cleanfile" ] || continue
         while IFS= read -r line || [ -n "$line" ]; do
             line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
             [ -z "$line" ] && continue
@@ -266,17 +305,17 @@ if [ -d $source/stubs ]; then
             case "$op" in
             RMV)
                 if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
-                    zz-log - "Untracking {U $path} (kept on disk)..."
                     git rm --cached -q -- "$path"
+                    zz-log - "Untracked {U $path} (kept on disk)"
                 fi
                 ;;
             DEL)
                 if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
-                    zz-log - "Deleting {U $path} and untracking..."
                     git rm -f -q -- "$path"
+                    zz-log - "Deleted {U $path} and untracked it"
                 elif [ -e "$path" ]; then
-                    zz-log - "Deleting {U $path}..."
                     rm -f -- "$path"
+                    zz-log - "Deleted {U $path}"
                 fi
                 ;;
             KEY) ;; # already handled before the stubs were deployed
@@ -286,31 +325,61 @@ if [ -d $source/stubs ]; then
             esac
         done <"$cleanfile"
     done
+    if printf '%s\n' "$directives" | grep -qE '^[[:space:]]*(RMV|DEL)([[:space:]]|$)'; then
+        zz-log s "Processed .clean files"
+    fi
 
-    zz-log i "Deploying stubs symlinks if existing..."
-
-    find "$source/stubs" -type l | while IFS= read -r link; do
+    # Stub symlinks are recreated unless something already sits at the
+    # destination.
+    if [ -n "$links" ]; then
+        zz-log i "Deploying stubs symlinks"
+    fi
+    printf '%s\n' "$links" | while IFS= read -r link; do
+        [ -n "$link" ] || continue
         rel=${link#"$source/stubs/"}
         dest=$rel
         mkdir -p "$(dirname "$dest")"
         if [ ! -e "$dest" ] && [ ! -L "$dest" ]; then
             target=$(readlink "$link")
-            zz-log - "Creating symlink {U $dest} -> {U $target}..."
             ln -s "$target" "$dest"
+            zz-log - "Created symlink {U $dest} -> {U $target}"
         fi
     done
-
-    zz-log s "Done deploying stubs."
+    if [ -n "$links" ]; then
+        zz-log s "Deployed stubs symlinks"
+    fi
 fi
 
+# --- step: run the feature's configure-*.sh lifecycle scripts, from the
+# repository top level only
 if [ "$(pwd)" = "$(git rev-parse --show-toplevel)" ]; then
 
-    zz-log i "Checking for configure scripts in the source directory..."
-
-    find $source -maxdepth 1 -name configure-*.sh | sort | while read file; do
-        zz-log - "Calling {U $file}..."
-        sh -c "$file" && zz-log s "Done!" || zz-log e "Failed!"
-    done
+    scripts=$(find $source -maxdepth 1 -name configure-*.sh | sort)
+    if [ -n "$scripts" ]; then
+        zz-log i "Running configure scripts"
+    fi
+    scripts_failed=
+    while read file; do
+        [ -n "$file" ] || continue
+        sh -c "$file" && zz-log - "Ran {U $file}" || {
+            scripts_failed=1
+            zz-log e "Failed {U $file}"
+        }
+    done <<EOF
+$scripts
+EOF
+    if [ -n "$scripts" ] && [ -n "$scripts_failed" ]; then
+        zz-log e "Ran configure scripts with errors"
+    elif [ -n "$scripts" ]; then
+        zz-log s "Ran configure scripts"
+    fi
 else
     zz-log w "Not in top level directory, skipping configure scripts"
+fi
+
+# --- step: done
+if [ -n "$deploy_failed$scripts_failed" ]; then
+    zz-log e "Configured feature <{Purple $feature}> with errors"
+else
+    zz-log s "Configured feature <{Purple $feature}>"
 fi
