@@ -25,12 +25,15 @@ ref=${ref:-main}
 
 # --- functions
 
-# Run a command, forwarding its output as operation output; keeps its status.
-op() {
-    _rc=0
-    _out=$("$@" 2>&1) || _rc=$?
-    [ -z "$_out" ] || printf '%s\n' "$_out" | zz-log o
-    return "$_rc"
+# run_op <command> [args...]: run a command, forwarding its output as
+# operation output; keeps its status.
+run_op() {
+    local rc=0
+    local out
+
+    out=$("$@" 2>&1) || rc=$?
+    [ -z "$out" ] || printf '%s\n' "$out" | zz-log o
+    return "$rc"
 }
 
 # --- fetch
@@ -39,13 +42,13 @@ command -v git >/dev/null 2>&1 || zz-install git || exit 1
 if [ -d "$dir/.git" ]; then
     # Existing checkout: move it to the requested ref, dropping local changes.
     zz-log - "Updating {U $dir} to {B $ref}"
-    op git -C "$dir" fetch --depth 1 origin -- "$ref" \
-        && op git -C "$dir" checkout -q -f -B "$ref" FETCH_HEAD \
-        && op git -C "$dir" reset -q --hard FETCH_HEAD
+    run_op git -C "$dir" fetch --depth 1 origin -- "$ref" \
+        && run_op git -C "$dir" checkout -q -f -B "$ref" FETCH_HEAD \
+        && run_op git -C "$dir" reset -q --hard FETCH_HEAD
 elif [ -d "$dir" ]; then
     zz-log n "{U $dir} is not a git checkout, using it as is"
 else
     zz-log - "Cloning into {U $dir}"
     mkdir -p "$(dirname "$dir")" \
-        && op git clone -q --depth 1 --branch "$ref" "$url" "$dir"
+        && run_op git clone -q --depth 1 --branch "$ref" "$url" "$dir"
 fi

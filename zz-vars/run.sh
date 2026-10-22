@@ -31,24 +31,34 @@ us=$(printf '\037')
 
 # --- functions
 
-# Value of KEY in the env file, read literally.
-env_get() { [ ! -f "$envfile" ] || sed -n "s/^$1=//p" "$envfile" | tail -n1; }
+# get_env_value <key>: value of <key> in the env file, read literally.
+get_env_value() {
+    local key="$1" # variable name (mandatory)
 
-# Inputs of one workspace: "VAR US description US required US default US owner
-# US secret" ($1=owner name, $2=dir).
-inputs_of() {
-    jq -r --arg n "$1" '
+    [ ! -f "$envfile" ] || sed -n "s/^$key=//p" "$envfile" | tail -n1
+}
+
+# get_inputs <owner> <dir>: inputs of one workspace: "VAR US description US
+# required US default US owner US secret".
+get_inputs() {
+    local owner="$1" # workspace name (mandatory)
+    local dir="$2"   # workspace directory holding package.json (mandatory)
+
+    jq -r --arg n "$owner" '
       ((.config.inputs // {}) | to_entries[]
          | [.key, (.value.description // ""), ((.value.required // false) | tostring), (.value.default // ""), $n, ((.value.secret // false) | tostring)] | join("\u001f")),
       ((.config.input // [])[]
-         | [.var, (.question // ""), "false", (.default // ""), $n, "false"] | join("\u001f"))' "$2/package.json"
+         | [.var, (.question // ""), "false", (.default // ""), $n, "false"] | join("\u001f"))' "$dir/package.json"
 }
 
-# set / required / optional for variable $1 (required flag $2).
-input_status() {
-    if [ -n "$(eval "printf '%s' \"\${$1:-}\"")" ]; then
+# get_input_status <name> <required>: set / required / optional for a variable.
+get_input_status() {
+    local name="$1"     # variable name (mandatory)
+    local required="$2" # "true" when the input is required (mandatory)
+
+    if [ -n "$(eval "printf '%s' \"\${$name:-}\"")" ]; then
         echo set
-    elif [ "$2" = true ]; then
+    elif [ "$required" = true ]; then
         echo required
     else
         echo optional
@@ -60,7 +70,7 @@ command -v jq >/dev/null 2>&1 || zz-install jq || exit 1
 all_inputs=
 pkgs=
 for item in "$@"; do
-    all_inputs="$all_inputs$(inputs_of "${item%%=*}" "${item#*=}")
+    all_inputs="$all_inputs$(get_inputs "${item%%=*}" "${item#*=}")
 "
     pkgs="$pkgs${pkgs:+:}${item#*=}/package.json"
 done
@@ -68,11 +78,11 @@ all_inputs=$(printf '%s' "$all_inputs" | awk -F"$us" 'NF && !seen[$1]++')
 
 # The caller's environment first, then the env file, for what is unset.
 # The final resolution, defaults and persistence are zz-call's, below.
-while IFS="$us" read -r var _rest; do
+while IFS="$us" read -r var rest; do
     [ -n "$var" ] || continue
     if [ -z "$(eval "printf '%s' \"\${$var:-}\"")" ]; then
-        _v=$(env_get "$var")
-        [ -n "$_v" ] && eval "export $var=\$_v"
+        value=$(get_env_value "$var")
+        [ -n "$value" ] && eval "export $var=\$value"
     fi
 done <<EXPLICIT
 $all_inputs
@@ -82,7 +92,7 @@ EXPLICIT
 if [ -n "$status_flag" ]; then
     while IFS="$us" read -r var desc req def owner secret; do
         [ -n "$var" ] || continue
-        printf '  input %-24s [%s] %s\n' "$var" "$(input_status "$var" "$req")" "$owner"
+        printf '  input %-24s [%s] %s\n' "$var" "$(get_input_status "$var" "$req")" "$owner"
     done <<STATUS
 $all_inputs
 STATUS
@@ -96,7 +106,7 @@ if [ -t 0 ] && [ -n "$all_inputs" ]; then
         set --
         unset_count=0
         while IFS="$us" read -r var desc req def owner secret; do
-            st=$(input_status "$var" "$req")
+            st=$(get_input_status "$var" "$req")
             [ "$st" = set ] || unset_count=$((unset_count + 1))
             set -- "$@" "$var=$(printf '%-24s' "$var") [$(printf '%-8s' "$st")] $owner${desc:+ - $desc}"
         done <<ROWS
@@ -125,8 +135,8 @@ ROWS
         [ -z "$def" ] || set -- "$@" -v "$def"
         zz-persist -q -f "$envfile" -i "${choice}${desc:+ ($desc)}" "$@" "$choice"
         saved=1
-        _v=$(env_get "$choice")
-        [ -z "$_v" ] || eval "export $choice=\$_v"
+        value=$(get_env_value "$choice")
+        [ -z "$value" ] || eval "export $choice=\$value"
     done
     # One line for all of them, instead of one "persisted" line per input.
     [ -z "$saved" ] || zz-log i "Inputs saved in {U $envfile}"
@@ -141,7 +151,7 @@ fi
 missing=0
 while IFS="$us" read -r var desc req def owner secret; do
     [ -n "$var" ] || continue
-    if [ "$(input_status "$var" "$req")" = required ]; then
+    if [ "$(get_input_status "$var" "$req")" = required ]; then
         zz-log e "$var is required by '$owner' but is empty: set it, or skip the workspace with -s $owner."
         missing=1
     fi

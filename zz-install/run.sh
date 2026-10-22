@@ -36,14 +36,17 @@ help
 
 # --- functions
 
-# Package name for manager $1: its <manager>=<name> override, else <pkg>.
-name_for() {
-    _key=$1
+# get_package_name <manager> [<manager>=<name>...]: package name for a manager:
+# its <manager>=<name> override, else <pkg>.
+get_package_name() {
+    local manager="$1" # short manager name, e.g. apt (mandatory)
+    local override
+
     shift
-    for _arg in "$@"; do
-        case "$_arg" in
-        "$_key"=*)
-            echo "${_arg#*=}"
+    for override in "$@"; do
+        case "$override" in
+        "$manager"=*)
+            echo "${override#*=}"
             return
             ;;
         esac
@@ -51,8 +54,9 @@ name_for() {
     echo "$pkg"
 }
 
-# Run a command as root: directly, through sudo, or fail.
-as_root() {
+# run_as_root <command> [args...]: run a command as root: directly, through
+# sudo, or fail.
+run_as_root() {
     if [ "$(id -u)" -eq 0 ]; then
         "$@"
     elif command -v sudo >/dev/null 2>&1; then
@@ -63,42 +67,47 @@ as_root() {
     fi
 }
 
-# Run a command, forwarding what it prints as operation output (zz-log o);
-# keeps its status.
-op() {
-    _rc=0
-    _out=$("$@" 2>&1) || _rc=$?
-    [ -z "$_out" ] || printf '%s\n' "$_out" | zz-log o
-    return "$_rc"
+# run_op <command> [args...]: run a command, forwarding what it prints as
+# operation output (zz-log o); keeps its status.
+run_op() {
+    local rc=0
+    local out
+
+    out=$("$@" 2>&1) || rc=$?
+    [ -z "$out" ] || printf '%s\n' "$out" | zz-log o
+    return "$rc"
 }
 
-# Refresh the apt index unless it was refreshed within the last hour, so
-# installing several tools in a row updates once.
-apt_update() {
+# update_apt: refresh the apt index unless it was refreshed within the last
+# hour, so installing several tools in a row updates once.
+update_apt() {
     find /var/lib/apt/lists -maxdepth 1 -type f -mmin -60 2>/dev/null | grep -q . && return 0
-    op as_root apt-get update -qq
+    run_op run_as_root apt-get update -qq
 }
 
-# Install the system package through the first manager found.
-# Overrides are keyed by the short manager name (apt, not apt-get).
+# install_package [<manager>=<name>...]: install the system package through
+# the first manager found. Overrides are keyed by the short manager name (apt,
+# not apt-get).
 install_package() {
+    local key bin name
+
     for key in apt apk dnf yum brew pacman zypper winget; do
         bin=$key
         [ "$key" = apt ] && bin=apt-get
         command -v "$bin" >/dev/null 2>&1 || continue
 
-        name=$(name_for "$key" "$@")
+        name=$(get_package_name "$key" "$@")
         zz-log - "Installing {Purple $name} via {B $key}"
 
         case "$key" in
-        apt) apt_update && op as_root apt-get install -y -qq "$name" ;;
-        apk) op as_root apk add --no-cache -q "$name" ;;
-        dnf) op as_root dnf install -y -q "$name" ;;
-        yum) op as_root yum install -y -q "$name" ;;
-        brew) op brew install -q "$name" ;;
-        pacman) op as_root pacman -S --noconfirm --needed "$name" ;;
-        zypper) op as_root zypper --non-interactive --quiet install "$name" ;;
-        winget) op winget install -s winget -e --name "$name" ;;
+        apt) update_apt && run_op run_as_root apt-get install -y -qq "$name" ;;
+        apk) run_op run_as_root apk add --no-cache -q "$name" ;;
+        dnf) run_op run_as_root dnf install -y -q "$name" ;;
+        yum) run_op run_as_root yum install -y -q "$name" ;;
+        brew) run_op brew install -q "$name" ;;
+        pacman) run_op run_as_root pacman -S --noconfirm --needed "$name" ;;
+        zypper) run_op run_as_root zypper --non-interactive --quiet install "$name" ;;
+        winget) run_op winget install -s winget -e --name "$name" ;;
         esac
         return $?
     done
@@ -107,38 +116,48 @@ install_package() {
     return 1
 }
 
-# Expand {VERSION}/{OS}/{ARCH} in $1; sets os and arch for the sha lookup.
-expand() {
-    printf '%s' "$1" | sed \
+# expand_template <text>: expand {VERSION}/{OS}/{ARCH} in <text>, from the
+# script-wide version, os and arch (the last two set by install_download).
+expand_template() {
+    local text="$1" # text holding the placeholders (mandatory)
+
+    printf '%s' "$text" | sed \
         -e "s/{VERSION}/${version}/g" \
         -e "s/{OS}/${os}/g" \
         -e "s/{ARCH}/${arch}/g"
 }
 
-# Verify file $1 against the expected sha256 $2 (no-op when empty). A JSON
-# object is reduced to its "<os>_<arch>" entry first.
+# verify_sha256 <file> <expected>: verify a file against the expected sha256
+# (no-op when empty). A JSON object is reduced to its "<os>_<arch>" entry first.
 verify_sha256() {
-    _sum=$2
-    case "$_sum" in
-    "{"*) _sum=$(printf '%s' "$_sum" | jq -r --arg k "${os}_${arch}" '.[$k] // empty') ;;
+    local target="$1" # file to check (mandatory)
+    local sum="$2"    # hash, or JSON object keyed <os>_<arch> (mandatory, may be empty)
+    local got
+
+    case "$sum" in
+    "{"*) sum=$(printf '%s' "$sum" | jq -r --arg k "${os}_${arch}" '.[$k] // empty') ;;
     esac
-    [ -n "$_sum" ] || return 0
+    [ -n "$sum" ] || return 0
     if command -v sha256sum >/dev/null 2>&1; then
-        _got=$(sha256sum "$1" | cut -d' ' -f1)
+        got=$(sha256sum "$target" | cut -d' ' -f1)
     elif command -v shasum >/dev/null 2>&1; then
-        _got=$(shasum -a 256 "$1" | cut -d' ' -f1)
+        got=$(shasum -a 256 "$target" | cut -d' ' -f1)
     else
-        zz-log e "No sha256sum/shasum available to verify {U $1}"
+        zz-log e "No sha256sum/shasum available to verify {U $target}"
         return 1
     fi
-    [ "$_got" = "$_sum" ] || {
-        zz-log e "Checksum mismatch for {U $1}: expected $_sum, got $_got"
+    [ "$got" = "$sum" ] || {
+        zz-log e "Checksum mismatch for {U $target}: expected $sum, got $got"
         return 1
     }
 }
 
-# Download <url>, verify it, extract the binary and copy it to the bin dir.
+# install_download: download <url>, verify it, extract the binary and copy it
+# to the bin dir. os and arch stay script-wide for expand_template and
+# verify_sha256.
 install_download() {
+    local download_url binary_path tmp dir
+
     os=$(uname -s | tr '[:upper:]' '[:lower:]')
     case "$(uname -m)" in
     x86_64 | amd64) arch=amd64 ;;
@@ -146,38 +165,39 @@ install_download() {
     *) arch=$(uname -m) ;;
     esac
 
-    _url=$(expand "$url")
-    _binpath=$(expand "${binpath:-$pkg}")
+    download_url=$(expand_template "$url")
+    binary_path=$(expand_template "${binpath:-$pkg}")
 
-    zz-log - "Downloading {Purple $pkg} from {U $_url}"
-    _tmp=$(mktemp -d)
-    trap 'rm -rf "$_tmp"' EXIT
-    mkdir -p "$_tmp/x"
-    curl -fsSL "$_url" -o "$_tmp/dl" || {
-        zz-log e "Download of {U $_url} failed"
+    zz-log - "Downloading {Purple $pkg} from {U $download_url}"
+    tmp=$(mktemp -d)
+    # Double quotes: $tmp is local, gone when the trap fires at exit.
+    trap "rm -rf '$tmp'" EXIT
+    mkdir -p "$tmp/x"
+    curl -fsSL "$download_url" -o "$tmp/dl" || {
+        zz-log e "Download of {U $download_url} failed"
         return 1
     }
-    verify_sha256 "$_tmp/dl" "$sha256" || return 1
+    verify_sha256 "$tmp/dl" "$sha256" || return 1
 
     case "$archive" in
-    tar.gz | tgz) tar -xzf "$_tmp/dl" -C "$_tmp/x" || return 1 ;;
-    tar.xz) tar -xJf "$_tmp/dl" -C "$_tmp/x" || return 1 ;;
-    zip) unzip -q "$_tmp/dl" -d "$_tmp/x" || return 1 ;;
+    tar.gz | tgz) tar -xzf "$tmp/dl" -C "$tmp/x" || return 1 ;;
+    tar.xz) tar -xJf "$tmp/dl" -C "$tmp/x" || return 1 ;;
+    zip) unzip -q "$tmp/dl" -d "$tmp/x" || return 1 ;;
     *)
-        mv "$_tmp/dl" "$_tmp/x/$pkg"
-        _binpath=$pkg
+        mv "$tmp/dl" "$tmp/x/$pkg"
+        binary_path=$pkg
         ;;
     esac
 
-    [ -f "$_tmp/x/$_binpath" ] || {
-        zz-log e "Downloaded archive for {Purple $pkg} has no {U $_binpath}"
+    [ -f "$tmp/x/$binary_path" ] || {
+        zz-log e "Downloaded archive for {Purple $pkg} has no {U $binary_path}"
         return 1
     }
 
     # zz-bindir extends PATH and sets $dir (exit 1 and an error when none is writable).
     eval "$(zz-bindir)" || return 1
-    chmod +x "$_tmp/x/$_binpath"
-    cp "$_tmp/x/$_binpath" "$dir/$pkg"
+    chmod +x "$tmp/x/$binary_path"
+    cp "$tmp/x/$binary_path" "$dir/$pkg"
     zz-log - "Installed {Purple $pkg} to {U $dir/$pkg}"
 }
 

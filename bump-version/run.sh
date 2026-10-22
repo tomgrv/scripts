@@ -126,16 +126,16 @@ update_version_files() {
             # share the same range, so cache the lookup (and its "no
             # workspaces affected" warning) per range instead of repeating
             # both the ws-list call and the warning for every entry.
-            if [ "$range" != "${_workspace_list_range:-}" ]; then
-                _workspace_list_range="$range"
-                _workspace_list_cache=$(ws-list -r "$range" 2>/dev/null || echo "")
-                if [ -z "$_workspace_list_cache" ]; then
+            if [ "$range" != "${workspace_list_range:-}" ]; then
+                workspace_list_range="$range"
+                workspace_list_cache=$(ws-list -r "$range" 2>/dev/null || echo "")
+                if [ -z "$workspace_list_cache" ]; then
                     zz-log w "No workspaces affected by commits in range $range"
                 else
                     zz-log i "Minimal mode: updating workspaces affected by $range"
                 fi
             fi
-            workspace_list="$_workspace_list_cache"
+            workspace_list="$workspace_list_cache"
 
             if [ -z "$workspace_list" ]; then
                 return 0

@@ -43,30 +43,36 @@ fi
 
 # --- functions
 
-# Next state after $1 in the comma-separated cycle (first one when $1 is
-# the last or unknown).
+# next_state <state>: next state after <state> in the comma-separated cycle
+# (first one when <state> is the last or unknown).
 next_state() {
-    _first="" _take=0 _old_ifs=$IFS
+    local current="$1" # state to advance from (mandatory)
+    local first="" take=0
+    local old_ifs state
+
+    old_ifs=$IFS
     IFS=,
-    for _s in $cycle; do
-        [ -z "$_first" ] && _first=$_s
-        if [ "$_take" -eq 1 ]; then
-            IFS=$_old_ifs
-            printf '%s' "$_s"
+    for state in $cycle; do
+        [ -z "$first" ] && first=$state
+        if [ "$take" -eq 1 ]; then
+            IFS=$old_ifs
+            printf '%s' "$state"
             return
         fi
-        [ "$_s" = "$1" ] && _take=1
+        [ "$state" = "$current" ] && take=1
     done
-    IFS=$_old_ifs
-    printf '%s' "$_first"
+    IFS=$old_ifs
+    printf '%s' "$first"
 }
 
-# Draw the menu (title, items with their state, hint line) on stderr.
+# render: draw the menu (title, items with their state, hint line) on stderr.
 render() {
+    local i key label mark state
+
     [ -n "$title" ] && printf '%b%s%b\n' "${BBlue}==== " "$title" " ====${End}" >&2
     i=1
     while [ "$i" -le "$count" ]; do
-        eval "key=\$_k$i label=\$_l$i state=\$_s$i"
+        eval "key=\$key_$i label=\$label_$i state=\$state_$i"
         mark=" "
         [ -n "$default" ] && [ "$key" = "$default" ] && mark="*"
         if [ -n "$cycle" ]; then
@@ -88,8 +94,8 @@ render() {
 
 # --- items
 
-# Split every item into _k<N> (key), _l<N> (label) and, in cycle mode, _s<N>
-# (state) - POSIX sh has no arrays, so they live in eval'd variables.
+# Split every item into key_<N> (key), label_<N> (label) and, in cycle mode,
+# state_<N> (state) - POSIX sh has no arrays, so they live in eval'd variables.
 i=1
 for item in "$@"; do
     case "$item" in
@@ -103,19 +109,19 @@ for item in "$@"; do
         *) state=${cycle%%,*} ;;
         esac
     fi
-    eval "_k$i=\$left _l$i=\$label _s$i=\$state"
+    eval "key_$i=\$left label_$i=\$label state_$i=\$state"
     i=$((i + 1))
 done
 
 # Widest state, so the [state] column lines up.
 width=0
 if [ -n "$cycle" ]; then
-    _old_ifs=$IFS
+    old_ifs=$IFS
     IFS=,
-    for _s in $cycle; do
-        [ "${#_s}" -gt "$width" ] && width=${#_s}
+    for cycle_state in $cycle; do
+        [ "${#cycle_state}" -gt "$width" ] && width=${#cycle_state}
     done
-    IFS=$_old_ifs
+    IFS=$old_ifs
 fi
 
 # --- menu loop: draw, read a choice, then pick, cycle or finish.
@@ -129,7 +135,7 @@ while true; do
         if [ -n "$cycle" ]; then
             i=1
             while [ "$i" -le "$count" ]; do
-                eval "printf '%s=%s\\n' \"\$_k$i\" \"\$_s$i\""
+                eval "printf '%s=%s\\n' \"\$key_$i\" \"\$state_$i\""
                 i=$((i + 1))
             done
             exit 0
@@ -156,12 +162,12 @@ while true; do
     fi
 
     if [ -n "$cycle" ]; then
-        eval "_cur=\$_s$choice"
-        _new=$(next_state "$_cur")
-        eval "_s$choice=\$_new"
+        eval "current=\$state_$choice"
+        next=$(next_state "$current")
+        eval "state_$choice=\$next"
         continue
     fi
 
-    eval "printf '%s\\n' \"\$_k$choice\""
+    eval "printf '%s\\n' \"\$key_$choice\""
     exit 0
 done
