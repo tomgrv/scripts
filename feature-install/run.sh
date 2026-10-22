@@ -50,14 +50,10 @@ find $source -maxdepth 1 -name "configure-*.sh" -type f -exec cp {} $target \;
 find $target -type f -name "*.sh" -exec chmod +x {} \;
 
 find $source -maxdepth 1 -type f -name "install-*.sh" | while read script; do
-    zz-log i "Calling {U $script}..."
     # Invoke via `sh "$script" "$@"` (not `sh -c "$script $@"`) so a
     # multi-element "$@" forwards correctly regardless of element count.
-    sh "$script" "$@" && zz-log s "Done!" || zz-log e "Failed!"
+    sh "$script" "$@" && zz-log s "Ran {U $script}" || zz-log e "Failed {U $script}"
 done
-
-zz-log i "Installing bin scripts for {Purple $feature}..."
-zz-log i "Finding writable bin directory..."
 
 eval "$(zz-bindir -t "$target")"
 link_dir="$dir"

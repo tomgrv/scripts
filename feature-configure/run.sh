@@ -22,9 +22,7 @@ fi
 export source=${source:-/usr/local/share/$feature}
 export tabSize=4
 
-zz-log i "Configure feature <{Purple $feature}>"
-zz-log - "In {U $(pwd)}"
-zz-log - "From {U $source}"
+zz-log i "Configure feature <{Purple $feature}> from {U $source} in {U $(pwd)}"
 
 if [ ! -d $source ]; then
     zz-log e "Source directory <$source> does not exist"
@@ -110,8 +108,6 @@ if [ -d $source/stubs ]; then
     # yaml-merge keep the value already in the target, so dropping a key first
     # is what lets the merge write the stub's current value in its place (a
     # fixed scalar), or leaves it gone when the stub no longer has the key.
-    zz-log i "Processing .clean KEY directives if existing..."
-
     find "$source/stubs" -type f -name ".clean" | sort | while read cleanfile; do
         while IFS= read -r line || [ -n "$line" ]; do
             line=$(printf '%s\n' "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
@@ -127,8 +123,6 @@ if [ -d $source/stubs ]; then
             clean_key "$keyfile" "$keypath"
         done <"$cleanfile"
     done
-
-    zz-log i "Deploying stubs..."
 
     find $source/stubs -type f -name ".*" -not -name ".clean" -o -type f -not -name ".clean" | sort | while read file; do
 
@@ -165,8 +159,10 @@ if [ -d $source/stubs ]; then
 
         if [ "$(basename $file | cut -c1)" = "#" ]; then
             dest=$(echo $dest | sed 's/\/\#/\//g')
-            zz-log - "Add {U $dest} to .gitignore"
-            grep -qxF $dest .gitignore || echo "$dest" >>.gitignore
+            grep -qxF $dest .gitignore || {
+                zz-log - "Add {U $dest} to .gitignore"
+                echo "$dest" >>.gitignore
+            }
         fi
 
         if [ "${dest##*.}" = "json" ]; then
@@ -175,7 +171,7 @@ if [ -d $source/stubs ]; then
                 zz-log - "Merging {U $file} into {U $dest}..."
                 json-merge -t ${tabSize:-4} $dest $file
             else
-                zz-log w "Destination file {U $dest} does not exist. Copying {U $file} to {U $dest}..."
+                zz-log - "Copying {U $file} to {U $dest}"
                 cp $file $dest
             fi
 
@@ -185,7 +181,7 @@ if [ -d $source/stubs ]; then
                 zz-log - "Merging {U $file} into {U $dest}..."
                 yaml-merge -i ${tabSize:-2} $dest $file
             else
-                zz-log w "Destination file {U $dest} does not exist. Copying {U $file} to {U $dest}..."
+                zz-log - "Copying {U $file} to {U $dest}"
                 cp $file $dest
             fi
 
@@ -205,7 +201,7 @@ if [ -d $source/stubs ]; then
             [ -f $base ] || base=/dev/null
 
             if [ ! -f $dest ]; then
-                zz-log w "Destination file {U $dest} does not exist. Copying {U $file} to {U $dest}..."
+                zz-log - "Copying {U $file} to {U $dest}"
                 cp $file $dest
             elif [ $base != /dev/null ] && [ ! $file -nt $base ]; then
                 zz-log - "No change in {U $file} since last deploy, skipping merge into {U $dest}"
@@ -250,8 +246,6 @@ if [ -d $source/stubs ]; then
 
     done
 
-    zz-log i "Processing .clean files if existing..."
-
     find "$source/stubs" -type f -name ".clean" | sort | while read cleanfile; do
         while IFS= read -r line || [ -n "$line" ]; do
             line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
@@ -287,8 +281,6 @@ if [ -d $source/stubs ]; then
         done <"$cleanfile"
     done
 
-    zz-log i "Deploying stubs symlinks if existing..."
-
     find "$source/stubs" -type l | while IFS= read -r link; do
         rel=${link#"$source/stubs/"}
         dest=$rel
@@ -299,17 +291,12 @@ if [ -d $source/stubs ]; then
             ln -s "$target" "$dest"
         fi
     done
-
-    zz-log s "Done deploying stubs."
 fi
 
 if [ "$(pwd)" = "$(git rev-parse --show-toplevel)" ]; then
 
-    zz-log i "Checking for configure scripts in the source directory..."
-
     find $source -maxdepth 1 -name configure-*.sh | sort | while read file; do
-        zz-log - "Calling {U $file}..."
-        sh -c "$file" && zz-log s "Done!" || zz-log e "Failed!"
+        sh -c "$file" && zz-log s "Ran {U $file}" || zz-log e "Failed {U $file}"
     done
 else
     zz-log w "Not in top level directory, skipping configure scripts"
