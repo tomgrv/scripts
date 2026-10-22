@@ -79,12 +79,12 @@ teardown() {
     rm -rf "$target"
 }
 
-@test "zz-bindir never picks a PATH dir listed in ZZ_BINDIR_SKIP" {
+@test "zz-bindir -s never picks a PATH dir it lists" {
     skipped=$(mktemp -d)
     blockfile=$(mktemp)
     home=$(mktemp -d)
-    run env INSTALL_BIN_DIR="$blockfile/bin" HOME="$home" ZZ_BINDIR_SKIP=" $skipped " \
-        PATH="$skipped:$TEST_BIN" "$ZZ_BINDIR_BIN"
+    run env INSTALL_BIN_DIR="$blockfile/bin" HOME="$home" \
+        PATH="$skipped:$TEST_BIN:/usr/bin:/bin" "$ZZ_BINDIR_BIN" -s "$skipped"
     [ "$status" -eq 0 ]
     [[ "$output" != *"dir='$skipped'"* ]]
 }

@@ -335,7 +335,7 @@ _bindir() {
     [ -n "$_ZZ_BINDIR" ] && return 0
     command -v zz-bindir >/dev/null 2>&1 || _resolve_src || return 1
     dir=""
-    eval "$(ZZ_BINDIR_SKIP="$_BOOT_DIRS" zz-bindir)" || return 1
+    eval "$(zz-bindir -s "$_BOOT_DIRS")" || return 1
     [ -n "$dir" ] || return 1
     _ZZ_BINDIR="$dir"
     case ":$PATH:" in
