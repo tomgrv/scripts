@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz-fetch",
-  "version": "4.6.0",
+  "version": "4.9.0",
   "description": "Shallow clone or update a git repository into a directory",
   "bin": {
     "zz-fetch": "run.sh"

@@ -1,5 +1,38 @@
 # Changelog
 
+## 4.9.0 (2026-10-22)
+
+*Commits from: v4.8.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v4.8.0' into develop
+### 📦 scripts-feature-configure changes
+
+#### Bug Fixes
+
+- 🐛 merge only allow-listed fragment stubs (#90)
+
+### 📦 scripts-zz changes
+
+#### Other changes
+
+- ♻️ local variables, verb-first functions, no leading underscores (#92)
+
+### 📦 scripts-zz-bindir changes
+
+#### Bug Fixes
+
+- 🐛 never pick zz-use's scratch boot dir as the install dir (#89)
+
+### 📦 scripts-zz-use changes
+
+#### Other changes
+
+- ♻️ local variables, verb-first functions, no leading underscores (#91)
+
 ## 4.8.0 (2026-10-22)
 
 *Commits from: v4.7.0..HEAD*
@@ -859,6 +892,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 
