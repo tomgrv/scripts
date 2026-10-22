@@ -1,5 +1,26 @@
 # Changelog
 
+## 4.6.0 (2026-10-22)
+
+*Commits from: v4.5.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v4.5.0' into develop
+### 📦 scripts-json-validate changes
+
+#### Other changes
+
+- 🎨 conform run.sh scripts to POSIX sh style rules (#85)
+
+### 📦 scripts-zz-use changes
+
+#### Other changes
+
+- ♻️ log one line per install (#86)
+
 ## 4.5.0 (2026-10-22)
 
 *Commits from: v4.4.0..HEAD*
@@ -808,6 +829,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 

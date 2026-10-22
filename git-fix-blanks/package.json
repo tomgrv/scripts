@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-blanks",
-  "version": "1.0.0",
+  "version": "4.6.0",
   "description": "Discard changes made only of whitespace, blanks, quote/slash swaps",
   "bin": {
     "git-fix-blanks": "run.sh"

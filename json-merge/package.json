@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-json-merge",
-  "version": "1.0.0",
+  "version": "4.6.0",
   "description": "Recursively merge one JSON file into another, arrays deduped and unioned",
   "bin": {
     "json-merge": "run.sh"
