@@ -27,7 +27,7 @@ datatype=""
 help=""
 invert=""
 
-if test $# -lt 1; then
+if [ "$#" -lt 1 ]; then
     echo "Usage: $(basename $0) <title> <caller> <<-help
         ...
         <argname> <datatype> <varname> <help>
@@ -130,7 +130,7 @@ elif [ "$bad" = "h" ]; then
 elif [ "$bad" = "@" ]; then
     echo "Stop processing arguments !${End}" >&2
 else
-    shift $(expr "$OPTIND" - 1)
+    shift $((OPTIND - 1))
 
     for arg in $(printf '%b' "$varnames" | grep -E "^-" | cut -f2); do
         if [ "$#" -gt "0" ]; then
