@@ -181,7 +181,7 @@ _cache_fresh() {
 _fetch_archive() {
     _cache_dir="$1" _url="$2" _desc="$3"
     if [ -n "$_url" ]; then
-        zz-log i "Retrieving ${_desc} from {U ${_url}}"
+        zz-log d "Retrieving ${_desc} from {U ${_url}}"
         _tmp="${_cache_dir}.tmp.$$"
         _add_tmp "$_tmp"
         rm -rf "$_tmp"
@@ -438,8 +438,6 @@ _install_repo_script() {
     ./* | ../* | /* | \$*) _from="$_origin" ;;
     *) _from="${_origin}@${_ref:-$ZZ_ORIGIN_REF}" ;;
     esac
-    zz-log i "Installing {Purple ${_name}} from {B ${_from}}"
-    zz-log d "Source {U ${_SRC}/${_name}}, target {U ${_dir}}"
     # Write to a temp file and `mv` into place rather than `cp` over the
     # target directly: <_name> can be zz-use itself (e.g. under
     # zz-update), and an in-place cp can truncate a script the shell is
@@ -450,7 +448,7 @@ _install_repo_script() {
     _install_script_config "${_SRC}/${_name}/config" "${_dir}/config"
     mkdir -p "${_dir}/.zz_use"
     printf '%s@%s\n' "$_origin" "$_ref" >"$(_stamp_path "${_dir}/${_name}" "$_name")"
-    zz-log s "Installed {Purple ${_name}} to {U ${_dir}/${_name}}"
+    zz-log s "Installed {Purple ${_name}} from {B ${_from}} to {U ${_dir}/${_name}}"
 }
 
 # The activator itself: resolve every requested tool, one at a time.
