@@ -27,23 +27,26 @@ if [ -z "$feature" ]; then
     exit 1
 fi
 
-zz-log i "Installing feature {Purple $feature}..."
+zz-log i "Installing feature {Purple $feature}"
 
 if [ -d $source/stubs ]; then
-    zz-log i "Copying stubs to {U $target}..."
+    zz-log i "Copying stubs to {U $target}"
     cp -a $source/stubs $target
+    zz-log s "Copied stubs"
 else
     zz-log w "No stubs found in {U $source}"
 fi
 
 if [ -d $source/config ]; then
-    zz-log i "Copying config to {U $target}..."
+    zz-log i "Copying config to {U $target}"
     cp -a $source/config $target
+    zz-log s "Copied config"
 fi
 
 if [ -d $source/bin ]; then
-    zz-log i "Copying bin scripts to {U $target}..."
+    zz-log i "Copying bin scripts to {U $target}"
     cp -a $source/bin $target
+    zz-log s "Copied bin scripts"
 fi
 
 find $source -maxdepth 1 -name "configure-*.sh" -type f -exec cp {} $target \;
@@ -52,6 +55,7 @@ find $target -type f -name "*.sh" -exec chmod +x {} \;
 find $source -maxdepth 1 -type f -name "install-*.sh" | while read script; do
     # Invoke via `sh "$script" "$@"` (not `sh -c "$script $@"`) so a
     # multi-element "$@" forwards correctly regardless of element count.
+    zz-log i "Running {U $script}"
     sh "$script" "$@" && zz-log s "Ran {U $script}" || zz-log e "Failed {U $script}"
 done
 
@@ -60,5 +64,8 @@ link_dir="$dir"
 
 find "$target/bin" -type f -name "*.sh" 2>/dev/null | while IFS= read -r file; do
     link="$link_dir/$(basename "$file" | sed 's/.sh$//')"
-    ln -sf "$file" "$link" && zz-log s "Linked {U $file} to {U $link}"
+    zz-log i "Linking {U $file} to {U $link}"
+    ln -sf "$file" "$link" && zz-log s "Linked {U $link}"
 done
+
+zz-log s "Installed feature {Purple $feature}"

@@ -87,14 +87,16 @@ clean_key() {
         | if . == null then null else .path end') || return 0
     [ "$ck_resolved" != null ] || return 0
 
-    zz-log - "Removing key {U $ck_path} from {U $ck_file}..."
+    zz-log i "Removing key {U $ck_path} from {U $ck_file}"
     if [ "$ck_type" = yaml ]; then
         CK_PATHS="[$ck_resolved]" yq -i -I "${tabSize:-2}" 'delpaths(env(CK_PATHS))' "$ck_file" \
+            && zz-log s "Removed key {U $ck_path} from {U $ck_file}" \
             || zz-log w "Could not remove key {U $ck_path} from {U $ck_file}"
     else
         ck_tmp=$(mktemp)
         if jq --indent "${tabSize:-4}" --argjson r "$ck_resolved" 'delpaths([$r])' "$ck_file" >"$ck_tmp"; then
             cat "$ck_tmp" >"$ck_file"
+            zz-log s "Removed key {U $ck_path} from {U $ck_file}"
         else
             zz-log w "Could not remove key {U $ck_path} from {U $ck_file}"
         fi
@@ -127,6 +129,7 @@ if [ -d $source/stubs ]; then
     find $source/stubs -type f -name ".*" -not -name ".clean" -o -type f -not -name ".clean" | sort | while read file; do
 
         folder=$(dirname ${file#$source/stubs/})
+        ignored=
 
         base=$(basename $file | sed 's/\.\./\./g')
         case "$base" in
@@ -160,29 +163,31 @@ if [ -d $source/stubs ]; then
         if [ "$(basename $file | cut -c1)" = "#" ]; then
             dest=$(echo $dest | sed 's/\/\#/\//g')
             grep -qxF $dest .gitignore || {
-                zz-log - "Add {U $dest} to .gitignore"
                 echo "$dest" >>.gitignore
+                ignored=", added to .gitignore"
             }
         fi
+
+        zz-log i "Deploying {U $file} to {U $dest}"
 
         if [ "${dest##*.}" = "json" ]; then
 
             if [ -f $dest ]; then
-                zz-log - "Merging {U $file} into {U $dest}..."
                 json-merge -t ${tabSize:-4} $dest $file
+                how=merged
             else
-                zz-log - "Copying {U $file} to {U $dest}"
                 cp $file $dest
+                how=copied
             fi
 
         elif [ "${dest##*.}" = "yaml" ] || [ "${dest##*.}" = "yml" ]; then
 
             if [ -f $dest ]; then
-                zz-log - "Merging {U $file} into {U $dest}..."
                 yaml-merge -i ${tabSize:-2} $dest $file
+                how=merged
             else
-                zz-log - "Copying {U $file} to {U $dest}"
                 cp $file $dest
+                how=copied
             fi
 
         else
@@ -201,19 +206,19 @@ if [ -d $source/stubs ]; then
             [ -f $base ] || base=/dev/null
 
             if [ ! -f $dest ]; then
-                zz-log - "Copying {U $file} to {U $dest}"
                 cp $file $dest
+                how=copied
             elif [ $base != /dev/null ] && [ ! $file -nt $base ]; then
-                zz-log - "No change in {U $file} since last deploy, skipping merge into {U $dest}"
+                how=unchanged
             elif [ "$(head -n1 $file)" = "---" ]; then
                 # A file opening with a `---` frontmatter block (SKILL.md,
                 # *.instructions.md) is a single-owner document, not a
                 # fragment: its frontmatter must stay on line 1, and the
                 # reconciliation below appends new lines at the end.
-                zz-log - "Replacing {U $dest} with {U $file} (frontmatter document)..."
                 cp $file $dest
+                how=replaced
             else
-                zz-log - "Reconciling {U $file} into {U $dest}..."
+                how=reconciled
 
                 removed=$(mktemp)
                 grep -vFxf $file $base >$removed
@@ -243,6 +248,7 @@ if [ -d $source/stubs ]; then
         fi
 
         chmod $(stat -c "%a" $file) $dest
+        zz-log s "Deployed {U $dest} ($how$ignored)"
 
     done
 
@@ -260,17 +266,20 @@ if [ -d $source/stubs ]; then
             case "$op" in
             RMV)
                 if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
-                    zz-log - "Untracking {U $path} (kept on disk)..."
+                    zz-log i "Untracking {U $path} (kept on disk)"
                     git rm --cached -q -- "$path"
+                    zz-log s "Untracked {U $path}"
                 fi
                 ;;
             DEL)
                 if git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
-                    zz-log - "Deleting {U $path} and untracking..."
+                    zz-log i "Deleting {U $path} and untracking"
                     git rm -f -q -- "$path"
+                    zz-log s "Deleted {U $path}"
                 elif [ -e "$path" ]; then
-                    zz-log - "Deleting {U $path}..."
+                    zz-log i "Deleting {U $path}"
                     rm -f -- "$path"
+                    zz-log s "Deleted {U $path}"
                 fi
                 ;;
             KEY) ;; # already handled before the stubs were deployed
@@ -287,8 +296,9 @@ if [ -d $source/stubs ]; then
         mkdir -p "$(dirname "$dest")"
         if [ ! -e "$dest" ] && [ ! -L "$dest" ]; then
             target=$(readlink "$link")
-            zz-log - "Creating symlink {U $dest} -> {U $target}..."
+            zz-log i "Creating symlink {U $dest} -> {U $target}"
             ln -s "$target" "$dest"
+            zz-log s "Created symlink {U $dest}"
         fi
     done
 fi
@@ -296,8 +306,11 @@ fi
 if [ "$(pwd)" = "$(git rev-parse --show-toplevel)" ]; then
 
     find $source -maxdepth 1 -name configure-*.sh | sort | while read file; do
+        zz-log i "Running {U $file}"
         sh -c "$file" && zz-log s "Ran {U $file}" || zz-log e "Failed {U $file}"
     done
 else
     zz-log w "Not in top level directory, skipping configure scripts"
 fi
+
+zz-log s "Configured feature <{Purple $feature}>"
