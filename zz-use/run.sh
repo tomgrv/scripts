@@ -71,8 +71,8 @@ ZZ_ORIGIN_REF="${ZZ_ORIGIN_REF:-main}"
 # Built as a separate assignment, not inlined into ${ZZ_USE_REPO_URL:-...}:
 # a literal "}" in the default text (from "{REF}") would terminate that
 # expansion early at parse time regardless of quoting.
-_ZZ_USE_REPO_URL_DEFAULT='https://github.com/{ORIGIN}/archive/{REF}.tar.gz'
-ZZ_USE_REPO_URL="${ZZ_USE_REPO_URL:-$_ZZ_USE_REPO_URL_DEFAULT}"
+default_repo_url='https://github.com/{ORIGIN}/archive/{REF}.tar.gz'
+ZZ_USE_REPO_URL="${ZZ_USE_REPO_URL:-$default_repo_url}"
 ZZ_CACHE_DIR="${ZZ_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zz_scripts}"
 # Minutes before a cached archive for a mutable ref (a branch like "main",
 # or npm's "latest") is refetched; 0 = never expire. Immutable refs (a
@@ -84,49 +84,52 @@ ZZ_CACHE_TTL="${ZZ_CACHE_TTL:-1440}"
 # Every temp dir this script creates is cleaned up through this single
 # mechanism instead of each having its own EXIT trap (which would clobber
 # each other).
-_TMP_DIRS=""
-_add_tmp() { _TMP_DIRS="${_TMP_DIRS} $1"; }
-# Always returns 0, so an empty $_TMP_DIRS (nothing to clean up) doesn't
+tmp_dirs=""
+_add_tmp() { tmp_dirs="${tmp_dirs} $1"; }
+# Always returns 0, so an empty $tmp_dirs (nothing to clean up) doesn't
 # turn an otherwise-successful run into a reported failure.
 _cleanup() {
-    [ -n "$_TMP_DIRS" ] && rm -rf $_TMP_DIRS
+    [ -n "$tmp_dirs" ] && rm -rf $tmp_dirs
     return 0
 }
 trap _cleanup EXIT
 
-# _SRC: the resolved source tree of the origin+ref last passed to
-# _resolve_src. _SRC_MAP remembers every origin+ref already resolved this
+# src: the resolved source tree of the origin+ref last passed to
+# _resolve_src. src_map remembers every origin+ref already resolved this
 # run ("<origin>@<ref>|<dir>" lines), so switching back and forth between
 # origins (a pinned script whose peers live at the default origin, say)
 # neither re-downloads under --force nor stacks another boot dir on PATH.
-# _BOOT_DIR is the one scratch dir (created on first use, shared by every
+# boot_dir is the one scratch dir (created on first use, shared by every
 # origin) holding their zz-* symlinks: it must never count as "installed"
 # (it vanishes when this process exits) nor as an install target.
-_SRC=""
-_SRC_MAP=""
-_BOOT_DIR=""
+src=""
+src_map=""
+boot_dir=""
 
-# POSIX sh has no `local`: every variable below is global, and _use
-# recurses (through _install_peer_deps). Callers therefore never read one
-# of _use's own variables back after a call that may recurse into it.
+# Every function declares its variables `local`, so _use recursing (through
+# _install_peer_deps) cannot clobber its caller's. Only the globals above
+# are shared: src in particular changes under any call that resolves a
+# source, so read it right after the _resolve_src that set it.
 
 # True if <tool> is on PATH outside the scratch boot dir — i.e. actually
 # installed, not merely exposed for the lifetime of this process. Sets
-# _HAVE_PATH to where it was found.
-_HAVE_PATH=""
+# have_path to where it was found.
+have_path=""
 _have() {
-    _h_old_ifs=$IFS
+    local dir old_ifs
+
+    old_ifs=$IFS
     IFS=':'
-    for _h_d in $PATH; do
-        [ -n "$_h_d" ] || continue
-        [ "$_h_d" = "$_BOOT_DIR" ] && continue
-        if [ -f "$_h_d/$1" ] && [ -x "$_h_d/$1" ]; then
-            IFS=$_h_old_ifs
-            _HAVE_PATH="$_h_d/$1"
+    for dir in $PATH; do
+        [ -n "$dir" ] || continue
+        [ "$dir" = "$boot_dir" ] && continue
+        if [ -f "$dir/$1" ] && [ -x "$dir/$1" ]; then
+            IFS=$old_ifs
+            have_path="$dir/$1"
             return 0
         fi
     done
-    IFS=$_h_old_ifs
+    IFS=$old_ifs
     return 1
 }
 
@@ -139,8 +142,8 @@ _pkg_install() {
 }
 
 # jq is needed to read zz-use.json and npm registry metadata: install it
-# straight through the package manager (never through _use, which would
-# clobber the caller's variables) when it's missing.
+# straight through the package manager (never through _use, which needs jq
+# itself) when it's missing.
 _ensure_jq() {
     command -v jq >/dev/null 2>&1 && return 0
     _pkg_install jq >/dev/null 2>&1 || true
@@ -160,7 +163,9 @@ _ref_immutable() {
 # <name>/run.sh directly under it) — shared warm-cache test for every
 # origin that downloads and caches.
 _cache_warm() {
-    for _cw_d in "$1"/*/; do [ -f "${_cw_d}run.sh" ] && return 0; done
+    local dir
+
+    for dir in "$1"/*/; do [ -f "${dir}run.sh" ] && return 0; done
     return 1
 }
 
@@ -178,170 +183,179 @@ _cache_fresh() {
 # <name>/run.sh scripts before replacing any existing cache. Downloads to
 # a file first (sh has no pipefail, so `curl | tar` would hide a curl
 # failure). A failed refresh falls back to a stale-but-warm cache. Sets
-# _SRC on success; <url> may be empty when fresh.
+# src on success; <url> may be empty when fresh.
 _fetch_archive() {
-    _cache_dir="$1" _url="$2" _desc="$3"
-    if [ -n "$_url" ]; then
-        zz-log d "Retrieving ${_desc} from {U ${_url}}"
-        _tmp="${_cache_dir}.tmp.$$"
-        _add_tmp "$_tmp"
-        rm -rf "$_tmp"
-        mkdir -p "$_tmp/x"
-        if curl -fsSL "$_url" -o "$_tmp/a.tar.gz" \
-            && tar -xzf "$_tmp/a.tar.gz" -C "$_tmp/x" --strip-components=1 \
-            && _cache_warm "$_tmp/x"; then
-            mkdir -p "$(dirname "$_cache_dir")"
-            rm -rf "$_cache_dir"
-            mv "$_tmp/x" "$_cache_dir"
-        elif _cache_warm "$_cache_dir"; then
-            zz-log w "Could not refresh ${_desc}"
-            zz-log - "Using the stale cache at {U ${_cache_dir}}"
+    local cache_dir url desc tmp
+
+    cache_dir="$1" url="$2" desc="$3"
+    if [ -n "$url" ]; then
+        zz-log d "Retrieving ${desc} from {U ${url}}"
+        tmp="${cache_dir}.tmp.$$"
+        _add_tmp "$tmp"
+        rm -rf "$tmp"
+        mkdir -p "$tmp/x"
+        if curl -fsSL "$url" -o "$tmp/a.tar.gz" \
+            && tar -xzf "$tmp/a.tar.gz" -C "$tmp/x" --strip-components=1 \
+            && _cache_warm "$tmp/x"; then
+            mkdir -p "$(dirname "$cache_dir")"
+            rm -rf "$cache_dir"
+            mv "$tmp/x" "$cache_dir"
+        elif _cache_warm "$cache_dir"; then
+            zz-log w "Could not refresh ${desc}"
+            zz-log - "Using the stale cache at {U ${cache_dir}}"
         else
-            zz-log e "Could not retrieve ${_desc}"
+            zz-log e "Could not retrieve ${desc}"
             zz-log - "The download failed, or it holds no <name>/run.sh script"
             return 1
         fi
     else
-        zz-log d "Using cached ${_desc} at {U ${_cache_dir}}"
+        zz-log d "Using cached ${desc} at {U ${cache_dir}}"
     fi
-    _SRC="$_cache_dir"
+    src="$cache_dir"
 }
 
 # Fetch (or reuse the cache for) an npm-registry origin, scoped
 # ("@scope/pkg") or unscoped ("pkg") alike. <ref> is a dist-tag or exact
 # version (default "latest"). Cached under its own origin+ref slot like a
 # GitHub archive (_fetch_archive above), just fetched from the npm
-# registry's tarball. Sets _SRC on success.
+# registry's tarball. Sets src on success.
 _resolve_npm() {
+    local origin="$1" ref="$2" # npm package name; dist-tag or exact version (both mandatory, ref may be empty)
+    local cache_dir meta_url npm_origin_enc npm_ref tarball
+
     _ensure_jq || {
-        printf '[e] npm origin %s requires jq on PATH\n' "$_req_origin" >&2
+        printf '[e] npm origin %s requires jq on PATH\n' "$origin" >&2
         return 1
     }
-    _npm_ref="${_req_ref:-latest}"
-    _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_npm_ref}"
-    _tarball=""
-    if [ "$FORCE" -eq 1 ] || ! _cache_fresh "$_cache_dir" "$_npm_ref"; then
-        _npm_origin_enc=$(printf '%s' "$_req_origin" | sed 's#/#%2f#g')
-        _meta_url="https://registry.npmjs.org/${_npm_origin_enc}/${_npm_ref}"
-        _tarball=$(curl -fsSL "$_meta_url" 2>/dev/null | jq -r '.dist.tarball // empty' 2>/dev/null) || _tarball=""
-        if [ -z "$_tarball" ]; then
-            _cache_warm "$_cache_dir" || {
-                zz-log e "Could not resolve the npm tarball for {Purple ${_req_origin}@${_npm_ref}}"
-                zz-log - "Looked it up at {U ${_meta_url}}"
+    npm_ref="${ref:-latest}"
+    cache_dir="${ZZ_CACHE_DIR}/${origin}/${npm_ref}"
+    tarball=""
+    if [ "$FORCE" -eq 1 ] || ! _cache_fresh "$cache_dir" "$npm_ref"; then
+        npm_origin_enc=$(printf '%s' "$origin" | sed 's#/#%2f#g')
+        meta_url="https://registry.npmjs.org/${npm_origin_enc}/${npm_ref}"
+        tarball=$(curl -fsSL "$meta_url" 2>/dev/null | jq -r '.dist.tarball // empty' 2>/dev/null) || tarball=""
+        if [ -z "$tarball" ]; then
+            _cache_warm "$cache_dir" || {
+                zz-log e "Could not resolve the npm tarball for {Purple ${origin}@${npm_ref}}"
+                zz-log - "Looked it up at {U ${meta_url}}"
                 return 1
             }
-            zz-log w "Could not refresh {Purple ${_req_origin}@${_npm_ref}}"
+            zz-log w "Could not refresh {Purple ${origin}@${npm_ref}}"
             zz-log - "Using the stale cache"
         fi
     fi
-    _fetch_archive "$_cache_dir" "$_tarball" "npm package ({B ${_req_origin}@${_npm_ref}})"
+    _fetch_archive "$cache_dir" "$tarball" "npm package ({B ${origin}@${npm_ref}})"
 }
 
-# Resolve _SRC for <origin> (default ZZ_ORIGIN) at <ref> (default
+# Resolve src for <origin> (default ZZ_ORIGIN) at <ref> (default
 # ZZ_ORIGIN_REF): a local checkout (ROOT_DIR) when running from within
 # this repo at the default origin/ref, otherwise the local cache for
 # that origin+ref (refreshed first when missing, expired or under
 # --force). Then exposes every zz-*/run.sh in it on PATH under its bare
 # name (zz-colors, zz-log, ...) via symlinks in a scratch dir, so
 # `zz-log ...` and `. zz-colors` resolve normally from here on. Each
-# origin+ref is resolved at most once per run (_SRC_MAP).
+# origin+ref is resolved at most once per run (src_map).
 _resolve_src() {
-    _req_origin="${1:-$ZZ_ORIGIN}"
-    _req_ref="${2:-}"
-    _src_key="${_req_origin}@${_req_ref}"
-    _src_hit=$(printf '%s\n' "$_SRC_MAP" | awk -F'|' -v k="$_src_key" '$1 == k { print $2; exit }')
-    if [ -n "$_src_hit" ]; then
-        _SRC="$_src_hit"
+    local cache_dir dir gh_ref git_root req_origin req_ref src_hit src_key sub url
+
+    req_origin="${1:-$ZZ_ORIGIN}"
+    req_ref="${2:-}"
+    src_key="${req_origin}@${req_ref}"
+    src_hit=$(printf '%s\n' "$src_map" | awk -F'|' -v k="$src_key" '$1 == k { print $2; exit }')
+    if [ -n "$src_hit" ]; then
+        src="$src_hit"
         return 0
     fi
 
-    if [ "$_req_origin" = "$ZZ_ORIGIN" ] && [ -z "$_req_ref" ] && [ -f "${ROOT_DIR}/zz-colors/run.sh" ]; then
-        _SRC="$ROOT_DIR"
+    if [ "$req_origin" = "$ZZ_ORIGIN" ] && [ -z "$req_ref" ] && [ -f "${ROOT_DIR}/zz-colors/run.sh" ]; then
+        src="$ROOT_DIR"
     else
-        case "$_req_origin" in
+        case "$req_origin" in
         . | .. | ./* | ../* | /*)
             # Local-path scheme: resolved relative to the caller's cwd (or
             # absolute), no cache/download. Plain stderr, not zz-log: this
             # can be the very first thing zz-use resolves, before zz-log
             # is on PATH.
-            _SRC=$(cd "$_req_origin" 2>/dev/null && pwd) || {
-                printf '[e] Local repo path %s not found\n' "$_req_origin" >&2
+            src=$(cd "$req_origin" 2>/dev/null && pwd) || {
+                printf '[e] Local repo path %s not found\n' "$req_origin" >&2
                 return 1
             }
             ;;
         '$'*)
             # Git-root scheme ("$" or "$<subpath>"): same no-cache handling
             # as a local path, anchored at the repo root instead of cwd.
-            _git_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
-                printf '[e] %s: not inside a git repository\n' "$_req_origin" >&2
+            git_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
+                printf '[e] %s: not inside a git repository\n' "$req_origin" >&2
                 return 1
             }
-            _sub="${_req_origin#\$}"
-            case "$_sub" in /*) _sub="${_sub#/}" ;; esac
-            if [ -z "$_sub" ]; then
-                _SRC="$_git_root"
+            sub="${req_origin#\$}"
+            case "$sub" in /*) sub="${sub#/}" ;; esac
+            if [ -z "$sub" ]; then
+                src="$git_root"
             else
-                _SRC=$(cd "${_git_root}/${_sub}" 2>/dev/null && pwd) || {
-                    printf '[e] Git-root path %s not found (root: %s)\n' "$_req_origin" "$_git_root" >&2
+                src=$(cd "${git_root}/${sub}" 2>/dev/null && pwd) || {
+                    printf '[e] Git-root path %s not found (root: %s)\n' "$req_origin" "$git_root" >&2
                     return 1
                 }
             fi
             ;;
         @*)
             # npm scheme, scoped package (e.g. "@myscope/pkg").
-            _resolve_npm || return 1
+            _resolve_npm "$req_origin" "$req_ref" || return 1
             ;;
         */*)
             # GitHub-archive scheme: "org/repo" — always has a "/", unlike
             # an unscoped npm name (caught by the "*)" arm below).
-            _gh_ref="${_req_ref:-$ZZ_ORIGIN_REF}"
-            _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_gh_ref}"
-            _url=""
-            if [ "$FORCE" -eq 1 ] || ! _cache_fresh "$_cache_dir" "$_gh_ref"; then
+            gh_ref="${req_ref:-$ZZ_ORIGIN_REF}"
+            cache_dir="${ZZ_CACHE_DIR}/${req_origin}/${gh_ref}"
+            url=""
+            if [ "$FORCE" -eq 1 ] || ! _cache_fresh "$cache_dir" "$gh_ref"; then
                 # "|" (not "/") as the sed delimiter: {ORIGIN} and {REF}
                 # can themselves contain "/" (org/repo, or a branch name
                 # like "feature/foo"), which would break s///.
-                _url=$(printf '%s' "$ZZ_USE_REPO_URL" | sed -e "s|{ORIGIN}|${_req_origin}|g" -e "s|{REF}|${_gh_ref}|g")
+                url=$(printf '%s' "$ZZ_USE_REPO_URL" | sed -e "s|{ORIGIN}|${req_origin}|g" -e "s|{REF}|${gh_ref}|g")
             fi
-            _fetch_archive "$_cache_dir" "$_url" "repo scripts ({B ${_req_origin}@${_gh_ref}})" || return 1
+            _fetch_archive "$cache_dir" "$url" "repo scripts ({B ${req_origin}@${gh_ref}})" || return 1
             ;;
         *)
             # npm scheme, unscoped package (e.g. "mypkg") — no "/" at all.
-            _resolve_npm || return 1
+            _resolve_npm "$req_origin" "$req_ref" || return 1
             ;;
         esac
     fi
 
-    if [ -z "$_BOOT_DIR" ]; then
-        _BOOT_DIR=$(mktemp -d)
-        _add_tmp "$_BOOT_DIR"
-        export PATH="${_BOOT_DIR}:${PATH}"
+    if [ -z "$boot_dir" ]; then
+        boot_dir=$(mktemp -d)
+        _add_tmp "$boot_dir"
+        export PATH="${boot_dir}:${PATH}"
     fi
     # -f: a later origin's zz-* shadows an earlier one's, as a newer dir
     # prepended to PATH would.
-    for _d in "${_SRC}"/zz-*/; do
-        [ -f "${_d}run.sh" ] || continue
-        ln -sf "${_d}run.sh" "${_BOOT_DIR}/$(basename "$_d")"
+    for dir in "${src}"/zz-*/; do
+        [ -f "${dir}run.sh" ] || continue
+        ln -sf "${dir}run.sh" "${boot_dir}/$(basename "$dir")"
     done
 
-    _SRC_MAP="${_SRC_MAP}
-${_src_key}|${_SRC}"
+    src_map="${src_map}
+${src_key}|${src}"
 }
 
 # _bindir runs before anything captured via $(...) could cache it, so it
-# sets _ZZ_BINDIR (memoized for the whole run) instead of printing it, and
+# sets bindir (memoized for the whole run) instead of printing it, and
 # extends this script's own PATH so a tool installed just now is found by
 # later checks. Delegates to the real zz-bindir, resolving the default
 # source first if zz-bindir isn't on PATH yet — callers re-resolve their
-# own source afterwards, since that can change _SRC.
-_ZZ_BINDIR=""
+# own source afterwards, since that can change src.
+bindir=""
 _bindir() {
-    [ -n "$_ZZ_BINDIR" ] && return 0
+    local dir
+
+    [ -n "$bindir" ] && return 0
     command -v zz-bindir >/dev/null 2>&1 || _resolve_src || return 1
     dir=""
-    eval "$(zz-bindir -s "$_BOOT_DIR")" || return 1
+    eval "$(zz-bindir -s "$boot_dir")" || return 1
     [ -n "$dir" ] || return 1
-    _ZZ_BINDIR="$dir"
+    bindir="$dir"
     case ":$PATH:" in
     *":$dir:"*) ;;
     *) export PATH="$dir:$PATH" ;;
@@ -354,13 +368,15 @@ _bindir() {
 # all into one shared bindir/config/: copy in whatever isn't already
 # there, never overwrite (first script installed wins on a name clash).
 _install_script_config() {
-    _cfg_src="$1" _cfg_dir="$2"
-    [ -d "$_cfg_src" ] || return 0
-    mkdir -p "$_cfg_dir"
-    for _cfg_file in "$_cfg_src"/*; do
-        [ -f "$_cfg_file" ] || continue
-        _cfg_dest="$_cfg_dir/$(basename "$_cfg_file")"
-        [ -e "$_cfg_dest" ] || cp "$_cfg_file" "$_cfg_dest"
+    local cfg_dest cfg_dir cfg_file cfg_src
+
+    cfg_src="$1" cfg_dir="$2"
+    [ -d "$cfg_src" ] || return 0
+    mkdir -p "$cfg_dir"
+    for cfg_file in "$cfg_src"/*; do
+        [ -f "$cfg_file" ] || continue
+        cfg_dest="$cfg_dir/$(basename "$cfg_file")"
+        [ -e "$cfg_dest" ] || cp "$cfg_file" "$cfg_dest"
     done
 }
 
@@ -374,41 +390,43 @@ _install_script_config() {
 # runs through npx belong in "dependencies", which is ignored here.
 #
 # Every peer spec is computed before the first recursive _use call (which
-# clobbers globals, this function's own included). _PEER_SEEN guards
+# may resolve another source and change src). peer_seen guards
 # against reprocessing the same spec twice (two siblings sharing one, or
 # a glob install) and against a cycle recursing forever.
-_PEER_SEEN=""
+peer_seen=""
 _install_peer_deps() {
-    _pd_name="$1" _pd_origin="${2:-$ZZ_ORIGIN}" _pd_ref="${3:-}"
-    _resolve_src "$_pd_origin" "$_pd_ref" || return 1
-    _peer_json="${_SRC}/${_pd_name}/package.json"
-    [ -f "$_peer_json" ] || return 0
+    local pd_name pd_origin pd_ref peer peer_json peers specs
+
+    pd_name="$1" pd_origin="${2:-$ZZ_ORIGIN}" pd_ref="${3:-}"
+    _resolve_src "$pd_origin" "$pd_ref" || return 1
+    peer_json="${src}/${pd_name}/package.json"
+    [ -f "$peer_json" ] || return 0
     if command -v jq >/dev/null 2>&1; then
-        _peers=$(jq -r '.peerDependencies // {} | keys[]' "$_peer_json")
+        peers=$(jq -r '.peerDependencies // {} | keys[]' "$peer_json")
     else
-        _peers=$(sed -n '/"peerDependencies"[[:space:]]*:/,/}/p' "$_peer_json" | grep -o '"[^"]*"[[:space:]]*:' | sed -e 's/"[[:space:]]*:$//' -e 's/^"//' | grep -v '^peerDependencies$')
+        peers=$(sed -n '/"peerDependencies"[[:space:]]*:/,/}/p' "$peer_json" | grep -o '"[^"]*"[[:space:]]*:' | sed -e 's/"[[:space:]]*:$//' -e 's/^"//' | grep -v '^peerDependencies$')
     fi
-    _specs=""
-    for _peer in $_peers; do
-        case "$_peer" in
-        "@tomgrv/scripts-"*) _peer="${_peer#@tomgrv/scripts-}" ;;
+    specs=""
+    for peer in $peers; do
+        case "$peer" in
+        "@tomgrv/scripts-"*) peer="${peer#@tomgrv/scripts-}" ;;
         esac
-        if [ "$_pd_origin" != "$ZZ_ORIGIN" ] || [ -n "$_pd_ref" ]; then
-            case "$_peer" in
+        if [ "$pd_origin" != "$ZZ_ORIGIN" ] || [ -n "$pd_ref" ]; then
+            case "$peer" in
             */* | @*) ;;
-            *) [ -f "${_SRC}/${_peer}/run.sh" ] && _peer="${_pd_origin}/${_peer}${_pd_ref:+@${_pd_ref}}" ;;
+            *) [ -f "${src}/${peer}/run.sh" ] && peer="${pd_origin}/${peer}${pd_ref:+@${pd_ref}}" ;;
             esac
         fi
-        case " $_PEER_SEEN " in
-        *" $_peer "*) continue ;;
+        case " $peer_seen " in
+        *" $peer "*) continue ;;
         esac
-        _PEER_SEEN="${_PEER_SEEN} ${_peer}"
-        _specs="${_specs} ${_peer}"
+        peer_seen="${peer_seen} ${peer}"
+        specs="${specs} ${peer}"
     done
-    [ -n "$_specs" ] || return 0
+    [ -n "$specs" ] || return 0
     # Word-split on purpose: specs never contain whitespace.
     # shellcheck disable=SC2086
-    _use $_specs
+    _use $specs
 }
 
 # Where the stamp recording which <origin>@<ref> produced an installed
@@ -423,45 +441,49 @@ _stamp_path() {
 # Does not install peers: the caller does, once it's done reading its own
 # variables (see _install_peer_deps).
 _install_repo_script() {
-    _name="$1"
-    _origin="${2:-$ZZ_ORIGIN}"
-    _ref="${3:-}"
-    _resolve_src "$_origin" "$_ref" || return 1
-    [ -f "${_SRC}/${_name}/run.sh" ] || return 1
+    local dir from name origin ref
+
+    name="$1"
+    origin="${2:-$ZZ_ORIGIN}"
+    ref="${3:-}"
+    _resolve_src "$origin" "$ref" || return 1
+    [ -f "${src}/${name}/run.sh" ] || return 1
 
     _bindir || {
-        zz-log e "No writable bin directory found for {Purple ${_name}}"
+        zz-log e "No writable bin directory found for {Purple ${name}}"
         return 1
     }
     # _bindir may have resolved the default source: switch back.
-    _resolve_src "$_origin" "$_ref" || return 1
-    _dir="$_ZZ_BINDIR"
+    _resolve_src "$origin" "$ref" || return 1
+    dir="$bindir"
 
     # Say where it comes from: org/repo@ref, or the path for a local origin.
-    case "$_origin" in
-    ./* | ../* | /* | \$*) _from="$_origin" ;;
-    *) _from="${_origin}@${_ref:-$ZZ_ORIGIN_REF}" ;;
+    case "$origin" in
+    ./* | ../* | /* | \$*) from="$origin" ;;
+    *) from="${origin}@${ref:-$ZZ_ORIGIN_REF}" ;;
     esac
     # Write to a temp file and `mv` into place rather than `cp` over the
-    # target directly: <_name> can be zz-use itself (e.g. under
+    # target directly: <name> can be zz-use itself (e.g. under
     # zz-update), and an in-place cp can truncate a script the shell is
     # still mid-read on. mv (same filesystem) is an atomic rename instead.
-    cp "${_SRC}/${_name}/run.sh" "${_dir}/.${_name}.$$"
-    chmod +x "${_dir}/.${_name}.$$"
-    mv "${_dir}/.${_name}.$$" "${_dir}/${_name}"
-    _install_script_config "${_SRC}/${_name}/config" "${_dir}/config"
-    mkdir -p "${_dir}/.zz_use"
-    printf '%s@%s\n' "$_origin" "$_ref" >"$(_stamp_path "${_dir}/${_name}" "$_name")"
-    zz-log s "Installed {Purple ${_name}} from {B ${_from}} to {U ${_dir}/${_name}}"
+    cp "${src}/${name}/run.sh" "${dir}/.${name}.$$"
+    chmod +x "${dir}/.${name}.$$"
+    mv "${dir}/.${name}.$$" "${dir}/${name}"
+    _install_script_config "${src}/${name}/config" "${dir}/config"
+    mkdir -p "${dir}/.zz_use"
+    printf '%s@%s\n' "$origin" "$ref" >"$(_stamp_path "${dir}/${name}" "$name")"
+    zz-log s "Installed {Purple ${name}} from {B ${from}} to {U ${dir}/${name}}"
 }
 
 # The activator itself: resolve every requested tool, one at a time.
 # "[org/repo/]<tool>[@ref]" pulls that tool from a specific repo and/or
 # pins it to a tag/branch/commit instead of ZZ_ORIGIN/ZZ_ORIGIN_REF.
 #
-# Recursion (peers) clobbers every variable below, so each iteration
-# installs its peers as its very last step, reading nothing afterwards.
+# Recursion (peers) may change src, so each iteration installs its peers as
+# its very last step, reading nothing afterwards.
 _use() {
+    local apt_pkg at_sigil dir entry field g_name g_names g_origin g_ref name_part origin peers_pending ref rest_ref stamp tool tool_ref url val
+
     if [ $# -eq 0 ]; then
         # Plain stderr, not zz-log: this can run before zz-log itself has
         # been resolved.
@@ -484,21 +506,21 @@ _use() {
         # "1.2.3" instead of splitting on the scope's own "@".
         case "$tool_ref" in
         @*)
-            _at_sigil="@"
-            _rest_ref="${tool_ref#@}"
+            at_sigil="@"
+            rest_ref="${tool_ref#@}"
             ;;
         *)
-            _at_sigil=""
-            _rest_ref="$tool_ref"
+            at_sigil=""
+            rest_ref="$tool_ref"
             ;;
         esac
-        case "$_rest_ref" in
+        case "$rest_ref" in
         *@*)
-            _name_part="${_at_sigil}${_rest_ref%%@*}"
-            ref="${_rest_ref#*@}"
+            name_part="${at_sigil}${rest_ref%%@*}"
+            ref="${rest_ref#*@}"
             ;;
         *)
-            _name_part="${_at_sigil}${_rest_ref}"
+            name_part="${at_sigil}${rest_ref}"
             ref=""
             ;;
         esac
@@ -506,45 +528,45 @@ _use() {
         # The origin prefix is everything before <tool>'s own last "/" —
         # one rule for every scheme. A tool name with no "/" at all
         # defaults to ZZ_ORIGIN.
-        case "$_name_part" in
+        case "$name_part" in
         */*)
-            origin="${_name_part%/*}"
-            tool="${_name_part##*/}"
+            origin="${name_part%/*}"
+            tool="${name_part##*/}"
             ;;
         *)
             origin="$ZZ_ORIGIN"
-            tool="$_name_part"
+            tool="$name_part"
             ;;
         esac
 
         # A glob tool name (e.g. "zz-*") expands to every matching script
         # folder in the source tree. Each match installs unconditionally.
         # The match list and origin/ref are captured up front: installing
-        # a match's peers recurses into _use and clobbers the rest. A glob
+        # a match's peers recurses into _use and may change src. A glob
         # matching nothing warns rather than failing.
         case "$tool" in
         *\**)
             _resolve_src "$origin" "$ref" || return 1
-            _g_origin="$origin" _g_ref="$ref"
-            _g_names=""
-            for _gd in "${_SRC}"/${tool}/; do
-                [ -f "${_gd}run.sh" ] || continue
-                _g_names="${_g_names} $(basename "$_gd")"
+            g_origin="$origin" g_ref="$ref"
+            g_names=""
+            for dir in "${src}"/${tool}/; do
+                [ -f "${dir}run.sh" ] || continue
+                g_names="${g_names} $(basename "$dir")"
             done
-            if [ -z "$_g_names" ]; then
-                zz-log w "No script matches {Purple ${tool}} in {U ${_SRC}}"
+            if [ -z "$g_names" ]; then
+                zz-log w "No script matches {Purple ${tool}} in {U ${src}}"
                 continue
             fi
-            for _g_name in $_g_names; do
-                _install_repo_script "$_g_name" "$_g_origin" "$_g_ref" || return 1
+            for g_name in $g_names; do
+                _install_repo_script "$g_name" "$g_origin" "$g_ref" || return 1
             done
-            for _g_name in $_g_names; do
-                _PEER_SEEN="${_PEER_SEEN} ${_g_name}"
+            for g_name in $g_names; do
+                peer_seen="${peer_seen} ${g_name}"
             done
             # One peer pass once every match is installed; the matches
             # are marked seen above so their peers don't reinstall them.
-            for _g_name in $_g_names; do
-                _install_peer_deps "$_g_name" "$_g_origin" "$_g_ref" || return 1
+            for g_name in $g_names; do
+                _install_peer_deps "$g_name" "$g_origin" "$g_ref" || return 1
             done
             continue
             ;;
@@ -566,8 +588,8 @@ _use() {
                 case "$origin" in
                 . | .. | ./* | ../* | /* | '$'*) ;;
                 *)
-                    _stamp=$(_stamp_path "$_HAVE_PATH" "$tool")
-                    if [ "$(cat "$_stamp" 2>/dev/null)" = "${origin}@${ref}" ]; then
+                    stamp=$(_stamp_path "$have_path" "$tool")
+                    if [ "$(cat "$stamp" 2>/dev/null)" = "${origin}@${ref}" ]; then
                         zz-log d "{Purple $tool} already installed from {B ${origin}@${ref}}"
                         continue
                     fi
@@ -581,7 +603,7 @@ _use() {
             entry=$(jq -c --arg t "$tool" '.[$t] // empty' "$ZZ_USE_CONFIG" 2>/dev/null)
         fi
 
-        _peers_pending=0
+        peers_pending=0
         if [ -n "$entry" ]; then
             apt_pkg=$(printf '%s' "$entry" | jq -r '.apt // empty')
             url=$(printf '%s' "$entry" | jq -r '.url // empty')
@@ -592,18 +614,18 @@ _use() {
                 # zz-install downloads, verifies and installs the binary
                 # (sha256: one hash, or an object keyed "<os>_<arch>").
                 set -- -u "$url"
-                for _f in archive:a binpath:b version:v; do
-                    _val=$(printf '%s' "$entry" | jq -r ".${_f%:*} // empty")
-                    [ -z "$_val" ] || set -- "$@" "-${_f#*:}" "$_val"
+                for field in archive:a binpath:b version:v; do
+                    val=$(printf '%s' "$entry" | jq -r ".${field%:*} // empty")
+                    [ -z "$val" ] || set -- "$@" "-${field#*:}" "$val"
                 done
-                _val=$(printf '%s' "$entry" | jq -r '.sha256 // empty | if type == "object" then tojson else . end')
-                [ -z "$_val" ] || set -- "$@" -s "$_val"
+                val=$(printf '%s' "$entry" | jq -r '.sha256 // empty | if type == "object" then tojson else . end')
+                [ -z "$val" ] || set -- "$@" -s "$val"
                 zz-install "$@" "$tool" || zz-log w "Could not download {Purple $tool}"
                 # zz-install ran in a child: put the bin dir on our PATH for _have.
                 _bindir || true
             fi
         elif _install_repo_script "$tool" "$origin" "$ref"; then
-            _peers_pending=1
+            peers_pending=1
         else
             _pkg_install "$tool" || true
         fi
@@ -614,7 +636,7 @@ _use() {
             return 1
         fi
 
-        if [ "$_peers_pending" -eq 1 ]; then
+        if [ "$peers_pending" -eq 1 ]; then
             _install_peer_deps "$tool" "$origin" "$ref" || return 1
         fi
     done
@@ -623,11 +645,11 @@ _use() {
 # --- arguments. A pre-pass keeps what zz-args (getopts) cannot express:
 # -f/--force may sit anywhere (hoisted in front of the tools), and -x/--exec
 # <tool> ends parsing: everything after it is the exec'd tool's own argv
-# (kept quoted in _tail, never parsed). Errors use plain stderr: zz-log may
+# (kept quoted in tail, never parsed). Errors use plain stderr: zz-log may
 # not be resolved yet.
-_opts=""
-_tools=""
-_tail=""
+opts=""
+tools=""
+tail=""
 _quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\''/g")"; }
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -639,28 +661,30 @@ while [ $# -gt 0 ]; do
             exit 1
         fi
         shift
-        for _a in "$@"; do _tail="$_tail $(_quote "$_a")"; done
+        for arg in "$@"; do tail="$tail $(_quote "$arg")"; done
         break
         ;;
-    --force) _opts="$_opts -f" ;;
-    --help) _opts="$_opts -h" ;;
+    --force) opts="$opts -f" ;;
+    --help) opts="$opts -h" ;;
     --*)
         printf '[e] Unknown option: %s\n' "$1" >&2
         exit 1
         ;;
-    -?) _opts="$_opts $1" ;;
-    *) _tools="$_tools $(_quote "$1")" ;;
+    -?) opts="$opts $1" ;;
+    *) tools="$tools $(_quote "$1")" ;;
     esac
     shift
 done
 
 # zz-args (and its zz-colors) must be on PATH: resolve the default source
 # when they are not, as _bindir does for zz-bindir.
-case " $_opts " in *" -f "*) FORCE=1 ;; esac
+case " $opts " in *" -f "*) FORCE=1 ;; esac
 command -v zz-args >/dev/null 2>&1 || _resolve_src || exit 1
 
 # Declares the options and collects the tools back onto "$@".
 _parse() {
+    local force_flag exec_tool tools
+
     eval "$(
         zz-args "Install tools on demand, only if missing" "zz-use" "$@" <<help
 f - force_flag Reinstall even when already on PATH
@@ -674,34 +698,34 @@ help
 
 # -x/--exec: install EXEC_TOOL alongside the tools, then exec into it with
 # the saved tail as its argv.
-eval "_parse $_opts $_tools" || exit 1
+eval "_parse $opts $tools" || exit 1
 if [ -n "$EXEC_TOOL" ]; then
     # Same leading-"@" vs trailing-"@ref" split as in _use: an npm-origin
     # exec target (e.g. "@myscope/pkg/tool@1.2.3") must not have its
     # command name mangled by splitting on the scope's own "@".
     case "$EXEC_TOOL" in
     @*)
-        _exec_rest="${EXEC_TOOL#@}"
-        case "$_exec_rest" in *@*) _exec_rest="${_exec_rest%%@*}" ;; esac
-        _exec_name="@${_exec_rest}"
+        exec_rest="${EXEC_TOOL#@}"
+        case "$exec_rest" in *@*) exec_rest="${exec_rest%%@*}" ;; esac
+        exec_name="@${exec_rest}"
         ;;
     *)
-        _exec_name="${EXEC_TOOL%%@*}"
+        exec_name="${EXEC_TOOL%%@*}"
         ;;
     esac
-    case "$_exec_name" in */*) _exec_name="${_exec_name##*/}" ;; esac
-    eval "set -- $_tail"
+    case "$exec_name" in */*) exec_name="${exec_name##*/}" ;; esac
+    eval "set -- $tail"
     # exec skips the EXIT trap, and the exec'd tool (which may call zz-use
     # again) must not inherit the boot dir as if it were a real PATH dir.
-    if [ -n "$_BOOT_DIR" ]; then
-        _new_path=""
+    if [ -n "$boot_dir" ]; then
+        new_path=""
         IFS=':'
-        for _p in $PATH; do
-            [ "$_p" = "$_BOOT_DIR" ] || _new_path="${_new_path:+$_new_path:}$_p"
+        for dir in $PATH; do
+            [ "$dir" = "$boot_dir" ] || new_path="${new_path:+$new_path:}$dir"
         done
         unset IFS
-        PATH="$_new_path"
+        PATH="$new_path"
         _cleanup
     fi
-    exec "$_exec_name" "$@"
+    exec "$exec_name" "$@"
 fi
