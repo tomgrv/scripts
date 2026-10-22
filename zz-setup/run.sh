@@ -99,30 +99,36 @@ if [ -z "$envfile" ]; then
 fi
 
 # --- functions
-# Run a command; when nobody can answer a prompt (stdin is not a terminal) its
-# stdout is shown as operation output (zz-log o), apart from our own lines. On a
-# terminal it stays raw: a prompt without a newline must show up at once.
-# Its stderr (including the zz-log lines of a child script) is left alone.
-output() {
+# run_output <command> [args...]: run a command; when nobody can answer a
+# prompt (stdin is not a terminal) its stdout is shown as operation output
+# (zz-log o), apart from our own lines. On a terminal it stays raw: a prompt
+# without a newline must show up at once. Its stderr (including the zz-log lines
+# of a child script) is left alone.
+run_output() {
+    local fifo reader
+    local rc=0
+
     if [ -t 0 ]; then
         "$@"
         return
     fi
-    _fifo=$(mktemp -u) && mkfifo "$_fifo" || {
+    fifo=$(mktemp -u) && mkfifo "$fifo" || {
         "$@"
         return
     }
-    zz-log o <"$_fifo" &
-    _reader=$!
-    _rc=0
-    "$@" >"$_fifo" || _rc=$?
-    wait "$_reader"
-    rm -f "$_fifo"
-    return "$_rc"
+    zz-log o <"$fifo" &
+    reader=$!
+    "$@" >"$fifo" || rc=$?
+    wait "$reader"
+    rm -f "$fifo"
+    return "$rc"
 }
 
-# No workspaces (or forced): hand over to the repo's own entrypoint.
+# run_entry [args...]: no workspaces (or forced): hand over to the repo's own
+# entrypoint, with the remaining arguments.
 run_entry() {
+    local entry cand
+
     entry=
     for cand in "$ZZ_SETUP_ENTRY" "$repo-setup/run.sh" setup.sh run.sh; do
         if [ -n "$cand" ] && [ -f "$dir/$cand" ]; then
@@ -140,56 +146,76 @@ run_entry() {
     exec sh -c '[ -x "$0" ] && exec "$0" "$@" || exec bash "$0" "$@"' "$dir/$entry" "$@"
 }
 
-# Field $2 of workspace $1's row (3 dir, 4 description, 5 default, 6 deps,
-# 7 conflicts, 8 bin).
-ws() { printf '%s\n' "$list" | awk -F"$us" -v n="$1" -v f="$2" '$2 == n { print $f; exit }'; }
-dir_of() { ws "$1" 3; }
-exists() { [ -n "$(ws "$1" 3)" ]; }
-desc_of() { ws "$1" 4; }
-deps_of() { ws "$1" 6 | tr ',' '\n'; }
-conflicts_of() { ws "$1" 7 | tr ',' '\n'; }
-var_of() { printf 'STATE_%s' "$1" | tr -c 'A-Za-z0-9_\n' '_'; }
-state_get() { eval "printf '%s' \"\${$(var_of "$1"):-skip}\""; }
-state_set() { eval "$(var_of "$1")=\$2"; }
+# get_field <name> <column>: column of workspace <name>'s row (3 dir,
+# 4 description, 5 default, 6 deps, 7 conflicts, 8 bin).
+get_field() { printf '%s\n' "$list" | awk -F"$us" -v n="$1" -v f="$2" '$2 == n { print $f; exit }'; }
 
-# The env file is plain KEY=VALUE (zz-persist's format), read literally and
-# never sourced, so a value can hold spaces/quotes without being executed.
-env_get() { [ ! -f "$envfile" ] || sed -n "s/^$1=//p" "$envfile" | tail -n1; }
+# get_dir / get_description / get_deps / get_conflicts <name>: a workspace's
+# directory, description, and its dependencies / conflicts one per line.
+# has_workspace <name>: true when <name> is a known workspace.
+get_dir() { get_field "$1" 3; }
+has_workspace() { [ -n "$(get_field "$1" 3)" ]; }
+get_description() { get_field "$1" 4; }
+get_deps() { get_field "$1" 6 | tr ',' '\n'; }
+get_conflicts() { get_field "$1" 7 | tr ',' '\n'; }
 
-# The last successful run is remembered per workspace (up, or skip once brought
-# down; "down" is never sticky) and preselects the menu, which only opens on a
-# terminal with no option, so flags and non-interactive runs are unchanged.
-state_key() { printf 'ZZ_%s' "$(var_of "$1")"; }
+# get_state_var <name>: the shell variable holding workspace <name>'s state.
+# get_state <name>: its state (up|skip|down), skip when unset.
+# set_state <name> <state>: set it.
+get_state_var() { printf 'STATE_%s' "$1" | tr -c 'A-Za-z0-9_\n' '_'; }
+get_state() { eval "printf '%s' \"\${$(get_state_var "$1"):-skip}\""; }
+set_state() { eval "$(get_state_var "$1")=\$2"; }
 
-# Set the state of the comma-separated workspaces $2 to $1 (up|skip|down).
+# get_env_value <key>: the env file is plain KEY=VALUE (zz-persist's format),
+# read literally and never sourced, so a value can hold spaces/quotes without
+# being executed.
+get_env_value() { [ ! -f "$envfile" ] || sed -n "s/^$1=//p" "$envfile" | tail -n1; }
+
+# get_state_key <name>: the env file key under which the last successful run
+# is remembered per workspace (up, or skip once brought down; "down" is never
+# sticky) and preselects the menu, which only opens on a terminal with no
+# option, so flags and non-interactive runs are unchanged.
+get_state_key() { printf 'ZZ_%s' "$(get_state_var "$1")"; }
+
+# apply_state <state> <names>: set the state of the comma-separated workspaces
+# to <state>.
 apply_state() {
-    for n in $(printf '%s' "$2" | tr ',' ' '); do
-        exists "$n" || {
+    local state="$1"      # up, skip or down (mandatory)
+    local list_names="$2" # comma-separated workspace names (mandatory, may be empty)
+    local n
+
+    for n in $(printf '%s' "$list_names" | tr ',' ' '); do
+        has_workspace "$n" || {
             zz-log e "Unknown workspace: {Purple $n}"
             zz-log - "Available: $(printf '%s' "$names" | tr '\n' ' ')"
             exit 1
         }
-        state_set "$n" "$1"
+        set_state "$n" "$state"
     done
 }
 
 # --- run: down in reverse order first, then up in order.
 # The workspace's own zz-log lines and its stdout hang under the "running" line.
+# run_step <name> <action>: run a workspace's bin with <action> (up|down).
 run_step() {
-    d=$(dir_of "$1")
-    b=$(ws "$1" 8)
-    zz-log i "{B $1}: $2"
-    rc=0
-    output sh -c 'cd "$1" && if [ -x "$2" ]; then "./$2" $3; else bash "$2" $3; fi' sh "$d" "$b" "$2" || rc=$?
+    local name="$1"   # workspace name (mandatory)
+    local action="$2" # up or down (mandatory)
+    local ws_dir ws_bin remember
+    local rc=0
+
+    ws_dir=$(get_dir "$name")
+    ws_bin=$(get_field "$name" 8)
+    zz-log i "{B $name}: $action"
+    run_output sh -c 'cd "$1" && if [ -x "$2" ]; then "./$2" $3; else bash "$2" $3; fi' sh "$ws_dir" "$ws_bin" "$action" || rc=$?
     if [ "$rc" -ne 0 ]; then
-        zz-log e "{B $1}: $2 failed (exit $rc)"
-        zz-log - "Script: {U $d/$b}"
-        zz-log - "Re-run only this step: zz-setup $spec -o $1"
+        zz-log e "{B $name}: $action failed (exit $rc)"
+        zz-log - "Script: {U $ws_dir/$ws_bin}"
+        zz-log - "Re-run only this step: zz-setup $spec -o $name"
         exit 1
     fi
-    zz-log s "{B $1}: $2 done"
-    if [ "$2" = up ]; then _remember=up; else _remember=skip; fi
-    zz-persist -q -f "$envfile" "$(state_key "$1")" "$_remember"
+    zz-log s "{B $name}: $action done"
+    if [ "$action" = up ]; then remember=up; else remember=skip; fi
+    zz-persist -q -f "$envfile" "$(get_state_key "$name")" "$remember"
 }
 
 # --- code
@@ -225,10 +251,10 @@ names=$(printf '%s\n' "$list" | cut -d"$us" -f2)
 
 # Initial state: the workspaces flagged "default" start enabled.
 for n in $names; do
-    if [ "$(ws "$n" 5)" = true ]; then
-        state_set "$n" up
+    if [ "$(get_field "$n" 5)" = true ]; then
+        set_state "$n" up
     else
-        state_set "$n" skip
+        set_state "$n" skip
     fi
 done
 
@@ -266,15 +292,15 @@ only=$(printf '%s' "$only_list" | tr ',' ' ')
 
 if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
     for n in $names; do
-        saved=$(env_get "$(state_key "$n")")
-        case "$saved" in up | skip) state_set "$n" "$saved" ;; esac
+        saved=$(get_env_value "$(get_state_key "$n")")
+        case "$saved" in up | skip) set_state "$n" "$saved" ;; esac
     done
     items=
     set --
     for n in $names; do
         mark=" "
-        [ "$(ws "$n" 5)" = true ] && mark="*"
-        set -- "$@" "$n:$(state_get "$n")=$mark $(printf '%-20s' "$n") $(desc_of "$n")"
+        [ "$(get_field "$n" 5)" = true ] && mark="*"
+        set -- "$@" "$n:$(get_state "$n")=$mark $(printf '%-20s' "$n") $(get_description "$n")"
     done
     rc=0
     out=$(zz-menu -t "$repo workspaces" -c "skip,up,down" \
@@ -285,13 +311,13 @@ if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
         exit 0
     fi
     for line in $out; do
-        state_set "${line%%=*}" "${line#*=}"
+        set_state "${line%%=*}" "${line#*=}"
     done
 fi
 
 if [ -n "$only" ]; then
-    for n in $names; do state_set "$n" skip; done
-    for n in $only; do state_set "$n" up; done
+    for n in $names; do set_state "$n" skip; done
+    for n in $only; do set_state "$n" up; done
 fi
 
 # Enable what a selected workspace depends on.
@@ -299,12 +325,12 @@ pass=0
 while [ "$pass" -lt 5 ]; do
     changed=0
     for n in $names; do
-        [ "$(state_get "$n")" = up ] || continue
-        for dep in $(deps_of "$n"); do
-            exists "$dep" || continue
-            if [ "$(state_get "$dep")" = skip ]; then
+        [ "$(get_state "$n")" = up ] || continue
+        for dep in $(get_deps "$n"); do
+            has_workspace "$dep" || continue
+            if [ "$(get_state "$dep")" = skip ]; then
                 zz-log n "Also enabling {Purple $dep} (required by $n)"
-                state_set "$dep" up
+                set_state "$dep" up
                 changed=1
             fi
         done
@@ -317,9 +343,9 @@ done
 # before anything runs (checked after the dependencies above were enabled).
 if [ "$status_only" -ne 1 ]; then
     for n in $names; do
-        [ "$(state_get "$n")" = up ] || continue
-        for c in $(conflicts_of "$n"); do
-            exists "$c" && [ "$(state_get "$c")" = up ] || continue
+        [ "$(get_state "$n")" = up ] || continue
+        for c in $(get_conflicts "$n"); do
+            has_workspace "$c" && [ "$(get_state "$c")" = up ] || continue
             zz-log e "{Purple $n} conflicts with {Purple $c}, and both are enabled"
             zz-log - "Skip one of them: -s $c, or -s $n"
             exit 1
@@ -329,10 +355,10 @@ fi
 
 if [ "$force_down" -ne 1 ]; then
     for n in $names; do
-        [ "$(state_get "$n")" = down ] || continue
+        [ "$(get_state "$n")" = down ] || continue
         for o in $names; do
-            [ "$o" != "$n" ] && [ "$(state_get "$o")" = up ] || continue
-            for dep in $(deps_of "$o"); do
+            [ "$o" != "$n" ] && [ "$(get_state "$o")" = up ] || continue
+            for dep in $(get_deps "$o"); do
                 [ "$dep" = "$n" ] || continue
                 zz-log e "Cannot bring {Purple $n} down: {Purple $o} depends on it and stays enabled"
                 zz-log - "Also pass -d $o, or -F"
@@ -343,8 +369,8 @@ if [ "$force_down" -ne 1 ]; then
 fi
 
 up_names=
-for n in $names; do [ "$(state_get "$n")" = up ] && up_names="$up_names $n"; done
-[ "$status_only" -eq 1 ] || [ -n "$up_names$(for n in $names; do [ "$(state_get "$n")" = down ] && echo "$n"; done)" ] || {
+for n in $names; do [ "$(get_state "$n")" = up ] && up_names="$up_names $n"; done
+[ "$status_only" -eq 1 ] || [ -n "$up_names$(for n in $names; do [ "$(get_state "$n")" = down ] && echo "$n"; done)" ] || {
     zz-log n "Nothing selected, nothing to do"
     exit 0
 }
@@ -354,11 +380,11 @@ for n in $names; do [ "$(state_get "$n")" = up ] && up_names="$up_names $n"; don
 # workspaces inherit the values. Exit 3 means the user aborted.
 set --
 for n in $([ "$status_only" -eq 1 ] && echo "$names" || echo "$up_names"); do
-    set -- "$@" "$n=$(dir_of "$n")"
+    set -- "$@" "$n=$(get_dir "$n")"
 done
 if [ "$status_only" -eq 1 ]; then
     for n in $names; do
-        printf '%-6s %-22s %s\n' "$(state_get "$n")" "$n" "$(desc_of "$n")"
+        printf '%-6s %-22s %s\n' "$(get_state "$n")" "$n" "$(get_description "$n")"
     done
     zz-vars -S -f "$envfile" "$@"
     exit 0
@@ -373,9 +399,9 @@ fi
 
 # --- run: all "down" steps in reverse order, then all "up" steps in order.
 for n in $(printf '%s\n' "$names" | sed '1!G;h;$!d'); do
-    [ "$(state_get "$n")" = down ] && run_step "$n" down
+    [ "$(get_state "$n")" = down ] && run_step "$n" down
 done
 for n in $names; do
-    [ "$(state_get "$n")" = up ] && run_step "$n" up
+    [ "$(get_state "$n")" = up ] && run_step "$n" up
 done
 exit 0

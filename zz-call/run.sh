@@ -60,9 +60,9 @@ help
 # --- parameters: the package.json files and the env file.
 pkgs="${package:-./package.json}"
 first=${pkgs%%:*}
-for _p in $(printf '%s' "$pkgs" | tr ':' ' '); do
-    [ -f "$_p" ] || {
-        zz-log e "No package.json found at {U $_p}"
+for pkg_file in $(printf '%s' "$pkgs" | tr ':' ' '); do
+    [ -f "$pkg_file" ] || {
+        zz-log e "No package.json found at {U $pkg_file}"
         exit 1
     }
 done
@@ -72,21 +72,28 @@ file="${envfile:-$(jq -r '.config.file // ".env"' "$first")}"
 
 # --- functions
 
-# Collect input entries from every package: config.input plus config.inputs
-# (normalised to the same shape), first definition of a var wins.
-_collect() {
-    for _p in $(printf '%s' "$pkgs" | tr ':' ' '); do
-        jq -c "$1" "$_p"
+# collect_entries <filter>: collect input entries from every package:
+# config.input plus config.inputs (normalised to the same shape), first
+# definition of a var wins.
+collect_entries() {
+    local filter="$1" # jq filter selecting the entries of one package (mandatory)
+    local pkg_file
+
+    for pkg_file in $(printf '%s' "$pkgs" | tr ':' ' '); do
+        jq -c "$filter" "$pkg_file"
     done | jq -c -s 'reduce .[] as $e ([]; if any(.[]; .var == $e.var) then . else . + [$e] end) | .[]'
 }
-# Sets var/as/question/default/secret from one input/output entry.
-# "as" defaults to "var" so every caller can rely on it being set.
-_parse_entry() {
-    var=$(printf '%s' "$1" | jq -r '.var')
-    as=$(printf '%s' "$1" | jq -r '.as // .var')
-    question=$(printf '%s' "$1" | jq -r '.question // empty')
-    default=$(printf '%s' "$1" | jq -r '.default // empty')
-    secret=$(printf '%s' "$1" | jq -r '.secret // false')
+# parse_entry <json>: set the script-wide var/as/question/default/secret from
+# one input/output entry. "as" defaults to "var" so every caller can rely on it
+# being set.
+parse_entry() {
+    local json="$1" # one entry, as a JSON object (mandatory)
+
+    var=$(printf '%s' "$json" | jq -r '.var')
+    as=$(printf '%s' "$json" | jq -r '.as // .var')
+    question=$(printf '%s' "$json" | jq -r '.question // empty')
+    default=$(printf '%s' "$json" | jq -r '.default // empty')
+    secret=$(printf '%s' "$json" | jq -r '.secret // false')
 
     case "$var" in
     "" | [0-9]* | *[!A-Za-z0-9_]*)
@@ -96,69 +103,90 @@ _parse_entry() {
     esac
 }
 
-# Value of $1 in the env file, read literally (the file is never sourced).
-_file_get() { [ ! -f "$file" ] || sed -n "s/^$1=//p" "$file" | tail -n1; }
+# get_file_value <key>: value of <key> in the env file, read literally (the
+# file is never sourced).
+get_file_value() {
+    local key="$1" # variable name (mandatory)
 
-# Persisting, secrets included, is zz-persist's job alone: a secret entry is
-# only flagged (-s), and zz-persist masks, restricts the file and refuses.
-# $1=var $2=value $3=secret(true|false)
-_flag() { [ "$1" != true ] || printf '%s' -s; }
-
-_persist_profile() {
-    [ -n "$profile" ] || return 0
-    # zz-persist quotes the value for the sourced snippet.
-    zz-persist -p "$profile" $(_flag "$3") "$1" "$2"
+    [ ! -f "$file" ] || sed -n "s/^$key=//p" "$file" | tail -n1
 }
 
-_persist() {
-    zz-persist -f "$file" $(_flag "$3") "$1" "$2"
-    _persist_profile "$1" "$2" "$3"
+# get_secret_flag <is_secret>: persisting, secrets included, is zz-persist's
+# job alone: a secret entry is only flagged (-s), and zz-persist masks,
+# restricts the file and refuses.
+get_secret_flag() {
+    local is_secret="$1" # "true" when the value is a secret (mandatory)
+
+    [ "$is_secret" != true ] || printf '%s' -s
+}
+
+# persist_profile <name> <value> <is_secret>: export the value from the
+# profile snippet, when a profile is given.
+persist_profile() {
+    local name="$1"      # variable name (mandatory)
+    local value="$2"     # value to persist (mandatory)
+    local is_secret="$3" # "true" or "false" (mandatory)
+
+    [ -n "$profile" ] || return 0
+    # zz-persist quotes the value for the sourced snippet.
+    zz-persist -p "$profile" $(get_secret_flag "$is_secret") "$name" "$value"
+}
+
+# persist_value <name> <value> <is_secret>: persist the value to the env file
+# and the profile snippet.
+persist_value() {
+    local name="$1"      # variable name (mandatory)
+    local value="$2"     # value to persist (mandatory)
+    local is_secret="$3" # "true" or "false" (mandatory)
+
+    zz-persist -f "$file" $(get_secret_flag "$is_secret") "$name" "$value"
+    persist_profile "$name" "$value" "$is_secret"
 }
 
 # --- resolve: the declared inputs, then (when no command) the outputs.
-_inputs='(.config.input // [])[], ((.config.inputs // {}) | to_entries[] | {var: .key, question: .value.description, default: .value.default, secret: .value.secret})'
-_input_entries=$(_collect "$_inputs")
-_output_entries=$(_collect '(.config.output // [])[]')
-[ -n "$_output_entries" ] || _output_entries=$_input_entries
+inputs_filter='(.config.input // [])[], ((.config.inputs // {}) | to_entries[] | {var: .key, question: .value.description, default: .value.default, secret: .value.secret})'
+input_entries=$(collect_entries "$inputs_filter")
+output_entries=$(collect_entries '(.config.output // [])[]')
+[ -n "$output_entries" ] || output_entries=$input_entries
 
 # Each input comes from the environment, then the env file, then a prompt (or
 # its default with -n).
 # jq's own output is looped over via a captured command substitution, not
 # a pipe: `jq ... | while read ...` would run the loop in a subshell, and
 # the `export`s inside it would be lost the moment that subshell exits.
-_old_ifs=$IFS
+old_ifs=$IFS
 IFS='
 '
-for _entry in $_input_entries; do
-    IFS="$_old_ifs"
-    _parse_entry "$_entry"
+for entry in $input_entries; do
+    IFS="$old_ifs"
+    parse_entry "$entry"
 
-    eval "_current=\${$var:-}"
-    if [ -n "$_current" ]; then
+    eval "current=\${$var:-}"
+    if [ -n "$current" ]; then
         # Set by the caller: used as-is, persisted only on request.
-        [ -z "$persistenv" ] || _persist "$var" "$_current" "$secret"
+        [ -z "$persistenv" ] || persist_value "$var" "$current" "$secret"
     else
-        _current=$(_file_get "$var")
-        if [ -n "$_current" ]; then
+        current=$(get_file_value "$var")
+        if [ -n "$current" ]; then
             :
         elif [ -n "$noprompt" ]; then
-            _current=$default
+            current=$default
         elif [ "$secret" = true ]; then
             # Asked and stored by zz-persist (masked, owner-only).
             zz-persist -f "$file" -s -i "${question:-$var}" ${default:+-v "$default"} "$var"
-            _current=$(_file_get "$var")
-            [ -z "$_current" ] || _persist_profile "$var" "$_current" true
+            current=$(get_file_value "$var")
+            [ -z "$current" ] || persist_profile "$var" "$current" true
         else
-            _current=$(zz-prompt "${question:-Value for $var?}" "$default")
-            _persist "$var" "$_current" false
+            current=$(zz-prompt "${question:-Value for $var?}" "$default")
+            persist_value "$var" "$current" false
         fi
     fi
-    export "$var=$_current"
-    [ "$as" != "$var" ] && export "$as=$_current"
+    export "$var=$current"
+    [ "$as" != "$var" ] && export "$as=$current"
     IFS='
 '
 done
-IFS="$_old_ifs"
+IFS="$old_ifs"
 
 # With a command, run it with everything resolved in its environment.
 if [ "$#" -gt 0 ]; then
@@ -168,13 +196,13 @@ fi
 # Without one, print the declared outputs as `export` lines to eval.
 IFS='
 '
-for _entry in $_output_entries; do
-    IFS="$_old_ifs"
-    _parse_entry "$_entry"
+for entry in $output_entries; do
+    IFS="$old_ifs"
+    parse_entry "$entry"
 
-    eval "_val=\${$var:-}"
-    echo "export ${as}='$(printf '%s' "$_val" | sed "s/'/'\\\\''/g")'"
+    eval "value=\${$var:-}"
+    echo "export ${as}='$(printf '%s' "$value" | sed "s/'/'\\\\''/g")'"
     IFS='
 '
 done
-IFS="$_old_ifs"
+IFS="$old_ifs"

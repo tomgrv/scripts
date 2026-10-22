@@ -52,64 +52,82 @@ is_secret=0
 
 # --- functions
 
-# Single-quote a value for a sourced file, unless it is made of plain
-# characters (keeps the common `export KEY=value` form).
-shell_quote() {
-    case "$1" in
-    *[!A-Za-z0-9_./:@%+=,-]*) printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")" ;;
-    *) printf '%s' "$1" ;;
+# quote_value <value>: single-quote a value for a sourced file, unless it is
+# made of plain characters (keeps the common `export KEY=value` form).
+quote_value() {
+    local text="$1" # value to write (mandatory)
+
+    case "$text" in
+    *[!A-Za-z0-9_./:@%+=,-]*) printf "'%s'" "$(printf '%s' "$text" | sed "s/'/'\\\\''/g")" ;;
+    *) printf '%s' "$text" ;;
     esac
 }
 
-# Last value of a "prefix" line in a file ($1=file $2=prefix), if any; a
-# single-quoted value (written by shell_quote) is unquoted.
+# read_current <file> <prefix>: last value of a "prefix" line in a file, if
+# any; a single-quoted value (written by quote_value) is unquoted.
 read_current() {
-    [ ! -f "$1" ] && return 0
-    _v=$(sed -n "s/^$2//p" "$1" | tail -n1)
-    case "$_v" in
-    \'*\') printf '%s' "$_v" | sed "s/^'//;s/'\$//;s/'\\\\''/'/g" ;;
-    *) printf '%s' "$_v" ;;
+    local target="$1" # file to read (mandatory)
+    local prefix="$2" # line prefix, e.g. "KEY=" (mandatory)
+    local line
+
+    [ ! -f "$target" ] && return 0
+    line=$(sed -n "s/^$prefix//p" "$target" | tail -n1)
+    case "$line" in
+    \'*\') printf '%s' "$line" | sed "s/^'//;s/'\$//;s/'\\\\''/'/g" ;;
+    *) printf '%s' "$line" ;;
     esac
 }
 
-# A secret may only be written into a file that no one but its owner can read.
+# is_owner_only_mode <file>: a secret may only be written into a file that no
+# one but its owner can read.
 is_owner_only_mode() {
-    case "$(stat -c '%a' "$1" 2>/dev/null)" in
+    local target="$1" # file to test (mandatory)
+
+    case "$(stat -c '%a' "$target" 2>/dev/null)" in
     *00) return 0 ;;
     *) return 1 ;;
     esac
 }
 
-# Upsert "<prefix><value>" in a file: the first matching line is replaced,
-# further ones dropped, else the line is appended. awk reads both through the
-# environment so no character in the value is interpreted.
+# upsert_line <file> <prefix> <value>: upsert "<prefix><value>" in a file: the
+# first matching line is replaced, further ones dropped, else the line is
+# appended. awk reads both through the environment so no character in the
+# value is interpreted.
 upsert_line() {
-    _tmp=$(mktemp)
-    P=$2 V=$3 awk '
+    local target="$1" # file to update (mandatory)
+    local prefix="$2" # line prefix (mandatory)
+    local text="$3"   # value as it is written (mandatory)
+    local tmp
+
+    tmp=$(mktemp)
+    P=$prefix V=$text awk '
         BEGIN { p = ENVIRON["P"]; v = ENVIRON["V"] }
         index($0, p) == 1 { if (!done) print p v; done = 1; next }
         { print }
         END { if (!done) print p v }
-    ' "$1" >"$_tmp"
+    ' "$target" >"$tmp"
     # cat, not mv: keeps the target file's owner and mode.
-    cat "$_tmp" >"$1"
-    rm -f "$_tmp"
+    cat "$tmp" >"$target"
+    rm -f "$tmp"
 }
 
-# Persist one line to a target. $1=target file $2=line prefix (e.g. "$key=")
-# $3=value as it is written.
+# persist_line <file> <prefix> <value>: persist one line to a target.
 persist_line() {
-    if [ "$is_secret" = 1 ] && ! is_owner_only_mode "$1"; then
+    local target="$1" # file to write (mandatory)
+    local prefix="$2" # line prefix, e.g. "$key=" (mandatory)
+    local text="$3"   # value as it is written (mandatory)
+
+    if [ "$is_secret" = 1 ] && ! is_owner_only_mode "$target"; then
         # On a terminal, offer the fix instead of only refusing.
-        if [ -t 0 ] && [ "$(zz-prompt -c yN "$key: $1 is not owner-only; chmod 600 it?")" = y ]; then
-            chmod 600 "$1"
+        if [ -t 0 ] && [ "$(zz-prompt -c yN "$key: $target is not owner-only; chmod 600 it?")" = y ]; then
+            chmod 600 "$target"
         else
-            zz-log w "$key: {U $1} is not owner-only (mode $(stat -c '%a' "$1" 2>/dev/null)); refusing to persist secret, run {Purple chmod 600 $1} first"
+            zz-log w "$key: {U $target} is not owner-only (mode $(stat -c '%a' "$target" 2>/dev/null)); refusing to persist secret, run {Purple chmod 600 $target} first"
             return
         fi
     fi
-    upsert_line "$1" "$2" "$3"
-    [ -n "$quiet" ] || zz-log i "$key persisted to {U $1}"
+    upsert_line "$target" "$prefix" "$text"
+    [ -n "$quiet" ] || zz-log i "$key persisted to {U $target}"
 }
 
 # --- value: ask when -i, else take the argument
@@ -159,7 +177,7 @@ if [ -n "$profile" ]; then
     profile_file="$profile_dir/$profile.sh"
     [ "$is_secret" = 1 ] && umask 077
     if mkdir -p "$profile_dir" 2>/dev/null && touch "$profile_file" 2>/dev/null; then
-        persist_line "$profile_file" "export $key=" "$(shell_quote "${value:-}")"
+        persist_line "$profile_file" "export $key=" "$(quote_value "${value:-}")"
     else
         zz-log w "$key: cannot write {U $profile_file}, skipped"
     fi

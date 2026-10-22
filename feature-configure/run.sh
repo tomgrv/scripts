@@ -231,11 +231,12 @@ if [ -d $source/stubs ]; then
                 cp $file $dest && how=copied || how=failed
             elif [ $base != /dev/null ] && [ ! $file -nt $base ]; then
                 how=unchanged
-            elif [ "$(head -n1 $file)" = "---" ]; then
-                # A file opening with a `---` frontmatter block (SKILL.md,
-                # *.instructions.md) is a single-owner document, not a
-                # fragment: its frontmatter must stay on line 1, and the
-                # reconciliation below appends new lines at the end.
+            elif ! case ${dest##*/} in *.txt | *ignore | .gitattributes | *.secrets) true ;; *) false ;; esac; then
+                # Only line-list fragments (ignore files, .gitattributes,
+                # .secrets, plain .txt) can be merged: the line-set
+                # reconciliation below drops or duplicates repeated lines
+                # (`fi`, `)`), which breaks scripts, XML, Dockerfiles or
+                # frontmatter docs. Everything else is single-owner: replaced.
                 cp $file $dest
                 how=replaced
             else

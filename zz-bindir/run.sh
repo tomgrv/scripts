@@ -7,6 +7,8 @@
 # and zz-use.
 
 # ZZ_BIN_DIR (alias INSTALL_BIN_DIR) overrides the first candidate, /usr/local/bin.
+# -s skips one dir when walking PATH: zz-use passes its scratch boot dir,
+# which vanishes when it exits.
 
 . zz-colors
 
@@ -14,6 +16,7 @@
 eval "$(
     zz-args "Resolve a writable bin directory on PATH" "$0" "$@" <<help
 t target target Extra directory whose bin/ is a candidate (created if needed)
+s skip skip PATH directory never to choose (e.g. a scratch dir)
 help
 )"
 
@@ -46,6 +49,10 @@ for dir in $PATH; do
     case "$dir" in
     "" | "." | "$PWD" | */node_modules/.bin) continue ;;
     esac
+    if [ "$dir" = "$skip" ]; then
+        zz-log n "Not installing into {U $dir}: it is skipped (-s)"
+        continue
+    fi
     add_candidate "$dir"
 done
 IFS=$old_ifs

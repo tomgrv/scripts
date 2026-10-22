@@ -79,6 +79,17 @@ teardown() {
     rm -rf "$target"
 }
 
+@test "zz-bindir -s never picks the PATH dir it names, and says so" {
+    skipped=$(mktemp -d)
+    blockfile=$(mktemp)
+    home=$(mktemp -d)
+    run env INSTALL_BIN_DIR="$blockfile/bin" HOME="$home" \
+        PATH="$skipped:$TEST_BIN:/usr/bin:/bin" "$ZZ_BINDIR_BIN" -s "$skipped"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"dir='$skipped'"* ]]
+    [[ "$output" == *"Not installing into"* ]]
+}
+
 @test "zz-bindir fails with exit 1 and an error when no writable dir can be found or created" {
     # Tests run as root, so plain permission bits (chmod) don't make a
     # directory genuinely unwritable. Build a private toolbox (just the
