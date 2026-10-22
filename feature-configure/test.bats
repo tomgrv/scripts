@@ -95,7 +95,7 @@ teardown() {
     grep -q line2 frag.txt
 }
 
-@test "feature-configure replaces an existing file when the stub opens with frontmatter" {
+@test "feature-configure replaces an existing file when the stub is not a mergeable fragment type" {
     mkdir -p src/stubs
     printf -- '---\nname: skill\ndescription: d\n---\n\n# Skill\n' >src/stubs/SKILL.md
     printf '# Skill\n\nold body\n' >SKILL.md
