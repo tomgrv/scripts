@@ -6,7 +6,7 @@
 # way (an external tool like jq/curl, or a pinned/other-origin script);
 # peerDependencies declared in its own package.json are installed
 # automatically and recursively once the script itself installs (see
-# _install_peer_deps) — a script with nothing beyond that needs no
+# install_peer_deps) — a script with nothing beyond that needs no
 # zz-use call at all.
 #
 # A tool name accepts an optional origin prefix ("whatever comes before
@@ -54,15 +54,15 @@
 set -e
 
 # --- parameters: options, source and cache settings.
-FORCE=0
-EXEC_TOOL=""
+force=0
+exec_tool=""
 
 # Follow symlinks (an installed "zz-use" on PATH is a symlink to this
-# file) so SCRIPT_DIR/ROOT_DIR resolve to the real checkout.
-SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+# file) so script_dir/root_dir resolve to the real checkout.
+script_dir="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+root_dir="$(cd "${script_dir}/.." && pwd)"
 
-ZZ_USE_CONFIG="${ZZ_USE_CONFIG:-${SCRIPT_DIR}/config/zz-use.json}"
+ZZ_USE_CONFIG="${ZZ_USE_CONFIG:-${script_dir}/config/zz-use.json}"
 # Default source for any tool name that doesn't specify its own origin —
 # the same variables setup.sh uses to bootstrap, so zz-use defaults to
 # wherever this install came from.
@@ -79,23 +79,24 @@ ZZ_CACHE_DIR="${ZZ_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zz_scripts}"
 # version tag or commit sha) never expire.
 ZZ_CACHE_TTL="${ZZ_CACHE_TTL:-1440}"
 
-# --- functions: resolve a source, install scripts and tools, then _use.
+# --- functions: resolve a source, install scripts and tools, then use_tools.
 
 # Every temp dir this script creates is cleaned up through this single
 # mechanism instead of each having its own EXIT trap (which would clobber
 # each other).
 tmp_dirs=""
-_add_tmp() { tmp_dirs="${tmp_dirs} $1"; }
+# add_tmp_dir <dir>: remove <dir> on exit.
+add_tmp_dir() { tmp_dirs="${tmp_dirs} $1"; }
 # Always returns 0, so an empty $tmp_dirs (nothing to clean up) doesn't
 # turn an otherwise-successful run into a reported failure.
-_cleanup() {
+remove_tmp_dirs() {
     [ -n "$tmp_dirs" ] && rm -rf $tmp_dirs
     return 0
 }
-trap _cleanup EXIT
+trap remove_tmp_dirs EXIT
 
 # src: the resolved source tree of the origin+ref last passed to
-# _resolve_src. src_map remembers every origin+ref already resolved this
+# resolve_src. src_map remembers every origin+ref already resolved this
 # run ("<origin>@<ref>|<dir>" lines), so switching back and forth between
 # origins (a pinned script whose peers live at the default origin, say)
 # neither re-downloads under --force nor stacks another boot dir on PATH.
@@ -106,16 +107,17 @@ src=""
 src_map=""
 boot_dir=""
 
-# Every function declares its variables `local`, so _use recursing (through
-# _install_peer_deps) cannot clobber its caller's. Only the globals above
+# Every function declares its variables `local`, so use_tools recursing (through
+# install_peer_deps) cannot clobber its caller's. Only the globals above
 # are shared: src in particular changes under any call that resolves a
-# source, so read it right after the _resolve_src that set it.
+# source, so read it right after the resolve_src that set it.
 
 # True if <tool> is on PATH outside the scratch boot dir — i.e. actually
 # installed, not merely exposed for the lifetime of this process. Sets
 # have_path to where it was found.
 have_path=""
-_have() {
+has_tool() {
+    local tool="$1" # tool name to look for on PATH (mandatory)
     local dir old_ifs
 
     old_ifs=$IFS
@@ -123,9 +125,9 @@ _have() {
     for dir in $PATH; do
         [ -n "$dir" ] || continue
         [ "$dir" = "$boot_dir" ] && continue
-        if [ -f "$dir/$1" ] && [ -x "$dir/$1" ]; then
+        if [ -f "$dir/$tool" ] && [ -x "$dir/$tool" ]; then
             IFS=$old_ifs
-            have_path="$dir/$1"
+            have_path="$dir/$tool"
             return 0
         fi
     done
@@ -135,47 +137,55 @@ _have() {
 
 # Install a system package through zz-install (it picks the package manager
 # and escalates through sudo). Resolves the default source first when
-# zz-install isn't on PATH yet, like _bindir does.
-_pkg_install() {
-    command -v zz-install >/dev/null 2>&1 || _resolve_src || return 1
-    zz-install "$1"
+# zz-install isn't on PATH yet, like resolve_bindir does.
+install_package() {
+    local package="$1" # system package to install (mandatory)
+
+    command -v zz-install >/dev/null 2>&1 || resolve_src || return 1
+    zz-install "$package"
 }
 
 # jq is needed to read zz-use.json and npm registry metadata: install it
-# straight through the package manager (never through _use, which needs jq
+# straight through the package manager (never through use_tools, which needs jq
 # itself) when it's missing.
-_ensure_jq() {
+ensure_jq() {
     command -v jq >/dev/null 2>&1 && return 0
-    _pkg_install jq >/dev/null 2>&1 || true
+    install_package jq >/dev/null 2>&1 || true
     command -v jq >/dev/null 2>&1
 }
 
 # True if <ref> names something that never moves: a version tag
 # (v1.2.3 / 1.2.3) or a commit sha.
-_ref_immutable() {
-    case "$1" in
+is_ref_immutable() {
+    local ref="$1" # tag, branch or commit to classify (mandatory)
+
+    case "$ref" in
     v[0-9]* | [0-9]*.[0-9]*) return 0 ;;
     esac
-    printf '%s' "$1" | grep -Eq '^[0-9a-f]{7,40}$'
+    printf '%s' "$ref" | grep -Eq '^[0-9a-f]{7,40}$'
 }
 
 # True if <cache_dir> already holds a fetched, well-formed archive (a
 # <name>/run.sh directly under it) — shared warm-cache test for every
 # origin that downloads and caches.
-_cache_warm() {
+is_cache_warm() {
+    local cache_dir="$1" # cache directory to test (mandatory)
     local dir
 
-    for dir in "$1"/*/; do [ -f "${dir}run.sh" ] && return 0; done
+    for dir in "$cache_dir"/*/; do [ -f "${dir}run.sh" ] && return 0; done
     return 1
 }
 
 # True if <cache_dir> is warm and, for a mutable <ref>, younger than
 # ZZ_CACHE_TTL minutes.
-_cache_fresh() {
-    _cache_warm "$1" || return 1
+is_cache_fresh() {
+    local cache_dir="$1" # cache directory to test (mandatory)
+    local ref="$2"       # ref the cache holds (mandatory)
+
+    is_cache_warm "$cache_dir" || return 1
     [ "$ZZ_CACHE_TTL" -eq 0 ] && return 0
-    _ref_immutable "$2" && return 0
-    [ -n "$(find "$1" -maxdepth 0 -mmin "-${ZZ_CACHE_TTL}" 2>/dev/null)" ]
+    is_ref_immutable "$ref" && return 0
+    [ -n "$(find "$cache_dir" -maxdepth 0 -mmin "-${ZZ_CACHE_TTL}" 2>/dev/null)" ]
 }
 
 # Fetch <url> (a tar.gz archive whose single top-level dir is stripped)
@@ -184,23 +194,25 @@ _cache_fresh() {
 # a file first (sh has no pipefail, so `curl | tar` would hide a curl
 # failure). A failed refresh falls back to a stale-but-warm cache. Sets
 # src on success; <url> may be empty when fresh.
-_fetch_archive() {
-    local cache_dir url desc tmp
+fetch_archive() {
+    local cache_dir="$1" # where the archive is cached (mandatory)
+    local url="$2"       # archive to download; empty reuses the cache (mandatory)
+    local desc="$3"      # what is being fetched, for the log (mandatory)
+    local tmp
 
-    cache_dir="$1" url="$2" desc="$3"
     if [ -n "$url" ]; then
         zz-log d "Retrieving ${desc} from {U ${url}}"
         tmp="${cache_dir}.tmp.$$"
-        _add_tmp "$tmp"
+        add_tmp_dir "$tmp"
         rm -rf "$tmp"
         mkdir -p "$tmp/x"
         if curl -fsSL "$url" -o "$tmp/a.tar.gz" \
             && tar -xzf "$tmp/a.tar.gz" -C "$tmp/x" --strip-components=1 \
-            && _cache_warm "$tmp/x"; then
+            && is_cache_warm "$tmp/x"; then
             mkdir -p "$(dirname "$cache_dir")"
             rm -rf "$cache_dir"
             mv "$tmp/x" "$cache_dir"
-        elif _cache_warm "$cache_dir"; then
+        elif is_cache_warm "$cache_dir"; then
             zz-log w "Could not refresh ${desc}"
             zz-log - "Using the stale cache at {U ${cache_dir}}"
         else
@@ -217,25 +229,26 @@ _fetch_archive() {
 # Fetch (or reuse the cache for) an npm-registry origin, scoped
 # ("@scope/pkg") or unscoped ("pkg") alike. <ref> is a dist-tag or exact
 # version (default "latest"). Cached under its own origin+ref slot like a
-# GitHub archive (_fetch_archive above), just fetched from the npm
+# GitHub archive (fetch_archive above), just fetched from the npm
 # registry's tarball. Sets src on success.
-_resolve_npm() {
-    local origin="$1" ref="$2" # npm package name; dist-tag or exact version (both mandatory, ref may be empty)
+resolve_npm() {
+    local origin="$1" # npm package name, scoped or not (mandatory)
+    local ref="$2"    # dist-tag or exact version (mandatory, may be empty for "latest")
     local cache_dir meta_url npm_origin_enc npm_ref tarball
 
-    _ensure_jq || {
+    ensure_jq || {
         printf '[e] npm origin %s requires jq on PATH\n' "$origin" >&2
         return 1
     }
     npm_ref="${ref:-latest}"
     cache_dir="${ZZ_CACHE_DIR}/${origin}/${npm_ref}"
     tarball=""
-    if [ "$FORCE" -eq 1 ] || ! _cache_fresh "$cache_dir" "$npm_ref"; then
+    if [ "$force" -eq 1 ] || ! is_cache_fresh "$cache_dir" "$npm_ref"; then
         npm_origin_enc=$(printf '%s' "$origin" | sed 's#/#%2f#g')
         meta_url="https://registry.npmjs.org/${npm_origin_enc}/${npm_ref}"
         tarball=$(curl -fsSL "$meta_url" 2>/dev/null | jq -r '.dist.tarball // empty' 2>/dev/null) || tarball=""
         if [ -z "$tarball" ]; then
-            _cache_warm "$cache_dir" || {
+            is_cache_warm "$cache_dir" || {
                 zz-log e "Could not resolve the npm tarball for {Purple ${origin}@${npm_ref}}"
                 zz-log - "Looked it up at {U ${meta_url}}"
                 return 1
@@ -244,22 +257,22 @@ _resolve_npm() {
             zz-log - "Using the stale cache"
         fi
     fi
-    _fetch_archive "$cache_dir" "$tarball" "npm package ({B ${origin}@${npm_ref}})"
+    fetch_archive "$cache_dir" "$tarball" "npm package ({B ${origin}@${npm_ref}})"
 }
 
 # Resolve src for <origin> (default ZZ_ORIGIN) at <ref> (default
-# ZZ_ORIGIN_REF): a local checkout (ROOT_DIR) when running from within
+# ZZ_ORIGIN_REF): a local checkout (root_dir) when running from within
 # this repo at the default origin/ref, otherwise the local cache for
 # that origin+ref (refreshed first when missing, expired or under
 # --force). Then exposes every zz-*/run.sh in it on PATH under its bare
 # name (zz-colors, zz-log, ...) via symlinks in a scratch dir, so
 # `zz-log ...` and `. zz-colors` resolve normally from here on. Each
 # origin+ref is resolved at most once per run (src_map).
-_resolve_src() {
-    local cache_dir dir gh_ref git_root req_origin req_ref src_hit src_key sub url
+resolve_src() {
+    local req_origin="${1:-$ZZ_ORIGIN}" # org/repo, npm package or local path (optional, default ZZ_ORIGIN)
+    local req_ref="${2:-}"              # tag, branch or commit (optional, default ZZ_ORIGIN_REF)
+    local cache_dir dir gh_ref git_root src_hit src_key sub url
 
-    req_origin="${1:-$ZZ_ORIGIN}"
-    req_ref="${2:-}"
     src_key="${req_origin}@${req_ref}"
     src_hit=$(printf '%s\n' "$src_map" | awk -F'|' -v k="$src_key" '$1 == k { print $2; exit }')
     if [ -n "$src_hit" ]; then
@@ -267,8 +280,8 @@ _resolve_src() {
         return 0
     fi
 
-    if [ "$req_origin" = "$ZZ_ORIGIN" ] && [ -z "$req_ref" ] && [ -f "${ROOT_DIR}/zz-colors/run.sh" ]; then
-        src="$ROOT_DIR"
+    if [ "$req_origin" = "$ZZ_ORIGIN" ] && [ -z "$req_ref" ] && [ -f "${root_dir}/zz-colors/run.sh" ]; then
+        src="$root_dir"
     else
         case "$req_origin" in
         . | .. | ./* | ../* | /*)
@@ -301,7 +314,7 @@ _resolve_src() {
             ;;
         @*)
             # npm scheme, scoped package (e.g. "@myscope/pkg").
-            _resolve_npm "$req_origin" "$req_ref" || return 1
+            resolve_npm "$req_origin" "$req_ref" || return 1
             ;;
         */*)
             # GitHub-archive scheme: "org/repo" — always has a "/", unlike
@@ -309,24 +322,24 @@ _resolve_src() {
             gh_ref="${req_ref:-$ZZ_ORIGIN_REF}"
             cache_dir="${ZZ_CACHE_DIR}/${req_origin}/${gh_ref}"
             url=""
-            if [ "$FORCE" -eq 1 ] || ! _cache_fresh "$cache_dir" "$gh_ref"; then
+            if [ "$force" -eq 1 ] || ! is_cache_fresh "$cache_dir" "$gh_ref"; then
                 # "|" (not "/") as the sed delimiter: {ORIGIN} and {REF}
                 # can themselves contain "/" (org/repo, or a branch name
                 # like "feature/foo"), which would break s///.
                 url=$(printf '%s' "$ZZ_USE_REPO_URL" | sed -e "s|{ORIGIN}|${req_origin}|g" -e "s|{REF}|${gh_ref}|g")
             fi
-            _fetch_archive "$cache_dir" "$url" "repo scripts ({B ${req_origin}@${gh_ref}})" || return 1
+            fetch_archive "$cache_dir" "$url" "repo scripts ({B ${req_origin}@${gh_ref}})" || return 1
             ;;
         *)
             # npm scheme, unscoped package (e.g. "mypkg") — no "/" at all.
-            _resolve_npm "$req_origin" "$req_ref" || return 1
+            resolve_npm "$req_origin" "$req_ref" || return 1
             ;;
         esac
     fi
 
     if [ -z "$boot_dir" ]; then
         boot_dir=$(mktemp -d)
-        _add_tmp "$boot_dir"
+        add_tmp_dir "$boot_dir"
         export PATH="${boot_dir}:${PATH}"
     fi
     # -f: a later origin's zz-* shadows an earlier one's, as a newer dir
@@ -340,18 +353,18 @@ _resolve_src() {
 ${src_key}|${src}"
 }
 
-# _bindir runs before anything captured via $(...) could cache it, so it
+# resolve_bindir runs before anything captured via $(...) could cache it, so it
 # sets bindir (memoized for the whole run) instead of printing it, and
 # extends this script's own PATH so a tool installed just now is found by
 # later checks. Delegates to the real zz-bindir, resolving the default
 # source first if zz-bindir isn't on PATH yet — callers re-resolve their
 # own source afterwards, since that can change src.
 bindir=""
-_bindir() {
+resolve_bindir() {
     local dir
 
     [ -n "$bindir" ] && return 0
-    command -v zz-bindir >/dev/null 2>&1 || _resolve_src || return 1
+    command -v zz-bindir >/dev/null 2>&1 || resolve_src || return 1
     dir=""
     eval "$(zz-bindir -s "$boot_dir")" || return 1
     [ -n "$dir" ] || return 1
@@ -367,10 +380,11 @@ _bindir() {
 # source run.sh. Since several scripts can ship a config/ dir, merge them
 # all into one shared bindir/config/: copy in whatever isn't already
 # there, never overwrite (first script installed wins on a name clash).
-_install_script_config() {
-    local cfg_dest cfg_dir cfg_file cfg_src
+install_script_config() {
+    local cfg_src="$1" # source config/ dir (mandatory)
+    local cfg_dir="$2" # shared bindir config/ dir (mandatory)
+    local cfg_dest cfg_file
 
-    cfg_src="$1" cfg_dir="$2"
     [ -d "$cfg_src" ] || return 0
     mkdir -p "$cfg_dir"
     for cfg_file in "$cfg_src"/*; do
@@ -382,24 +396,26 @@ _install_script_config() {
 
 # Install every dependency <name> declares in its own package.json's
 # peerDependencies — sibling repo scripts and external tools alike,
-# recursively, through the ordinary _use resolution path. Runs against
+# recursively, through the ordinary use_tools resolution path. Runs against
 # the *source* package.json in the source of <origin>@<ref>. A peer that
 # exists as a script in that same source is requested from it (so a
 # pinned or other-origin script gets its siblings from the same place);
 # any other peer resolves as a plain name. npm packages a script only
 # runs through npx belong in "dependencies", which is ignored here.
 #
-# Every peer spec is computed before the first recursive _use call (which
+# Every peer spec is computed before the first recursive use_tools call (which
 # may resolve another source and change src). peer_seen guards
 # against reprocessing the same spec twice (two siblings sharing one, or
 # a glob install) and against a cycle recursing forever.
 peer_seen=""
-_install_peer_deps() {
-    local pd_name pd_origin pd_ref peer peer_json peers specs
+install_peer_deps() {
+    local name="$1"                 # script whose peerDependencies to install (mandatory)
+    local origin="${2:-$ZZ_ORIGIN}" # its origin (optional, default ZZ_ORIGIN)
+    local ref="${3:-}"              # its ref (optional)
+    local name origin ref peer peer_json peers specs
 
-    pd_name="$1" pd_origin="${2:-$ZZ_ORIGIN}" pd_ref="${3:-}"
-    _resolve_src "$pd_origin" "$pd_ref" || return 1
-    peer_json="${src}/${pd_name}/package.json"
+    resolve_src "$origin" "$ref" || return 1
+    peer_json="${src}/${name}/package.json"
     [ -f "$peer_json" ] || return 0
     if command -v jq >/dev/null 2>&1; then
         peers=$(jq -r '.peerDependencies // {} | keys[]' "$peer_json")
@@ -411,10 +427,10 @@ _install_peer_deps() {
         case "$peer" in
         "@tomgrv/scripts-"*) peer="${peer#@tomgrv/scripts-}" ;;
         esac
-        if [ "$pd_origin" != "$ZZ_ORIGIN" ] || [ -n "$pd_ref" ]; then
+        if [ "$origin" != "$ZZ_ORIGIN" ] || [ -n "$ref" ]; then
             case "$peer" in
             */* | @*) ;;
-            *) [ -f "${src}/${peer}/run.sh" ] && peer="${pd_origin}/${peer}${pd_ref:+@${pd_ref}}" ;;
+            *) [ -f "${src}/${peer}/run.sh" ] && peer="${origin}/${peer}${ref:+@${ref}}" ;;
             esac
         fi
         case " $peer_seen " in
@@ -426,35 +442,38 @@ _install_peer_deps() {
     [ -n "$specs" ] || return 0
     # Word-split on purpose: specs never contain whitespace.
     # shellcheck disable=SC2086
-    _use $specs
+    use_tools $specs
 }
 
 # Where the stamp recording which <origin>@<ref> produced an installed
 # <tool> lives: bindir/.zz_use/<tool>, next to the tool itself.
-_stamp_path() {
-    printf '%s/.zz_use/%s' "$(dirname "$1")" "$2"
+get_stamp_path() {
+    local tool_path="$1" # installed tool, whose directory holds the stamps (mandatory)
+    local name="$2"      # tool name (mandatory)
+
+    printf '%s/.zz_use/%s' "$(dirname "$tool_path")" "$name"
 }
 
 # Install a single named script from this or another repo. Returns
 # non-zero (silently) when <name> isn't a script in that repo at all, so
 # the caller can fall through to the apt/config lookup for external tools.
 # Does not install peers: the caller does, once it's done reading its own
-# variables (see _install_peer_deps).
-_install_repo_script() {
-    local dir from name origin ref
+# variables (see install_peer_deps).
+install_repo_script() {
+    local name="$1"                 # script to install (mandatory)
+    local origin="${2:-$ZZ_ORIGIN}" # its origin (optional, default ZZ_ORIGIN)
+    local ref="${3:-}"              # its ref (optional)
+    local dir from
 
-    name="$1"
-    origin="${2:-$ZZ_ORIGIN}"
-    ref="${3:-}"
-    _resolve_src "$origin" "$ref" || return 1
+    resolve_src "$origin" "$ref" || return 1
     [ -f "${src}/${name}/run.sh" ] || return 1
 
-    _bindir || {
+    resolve_bindir || {
         zz-log e "No writable bin directory found for {Purple ${name}}"
         return 1
     }
-    # _bindir may have resolved the default source: switch back.
-    _resolve_src "$origin" "$ref" || return 1
+    # resolve_bindir may have resolved the default source: switch back.
+    resolve_src "$origin" "$ref" || return 1
     dir="$bindir"
 
     # Say where it comes from: org/repo@ref, or the path for a local origin.
@@ -469,9 +488,9 @@ _install_repo_script() {
     cp "${src}/${name}/run.sh" "${dir}/.${name}.$$"
     chmod +x "${dir}/.${name}.$$"
     mv "${dir}/.${name}.$$" "${dir}/${name}"
-    _install_script_config "${src}/${name}/config" "${dir}/config"
+    install_script_config "${src}/${name}/config" "${dir}/config"
     mkdir -p "${dir}/.zz_use"
-    printf '%s@%s\n' "$origin" "$ref" >"$(_stamp_path "${dir}/${name}" "$name")"
+    printf '%s@%s\n' "$origin" "$ref" >"$(get_stamp_path "${dir}/${name}" "$name")"
     zz-log s "Installed {Purple ${name}} from {B ${from}} to {U ${dir}/${name}}"
 }
 
@@ -481,7 +500,7 @@ _install_repo_script() {
 #
 # Recursion (peers) may change src, so each iteration installs its peers as
 # its very last step, reading nothing afterwards.
-_use() {
+use_tools() {
     local apt_pkg at_sigil dir entry field g_name g_names g_origin g_ref name_part origin peers_pending ref rest_ref stamp tool tool_ref url val
 
     if [ $# -eq 0 ]; then
@@ -542,11 +561,11 @@ _use() {
         # A glob tool name (e.g. "zz-*") expands to every matching script
         # folder in the source tree. Each match installs unconditionally.
         # The match list and origin/ref are captured up front: installing
-        # a match's peers recurses into _use and may change src. A glob
+        # a match's peers recurses into use_tools and may change src. A glob
         # matching nothing warns rather than failing.
         case "$tool" in
         *\**)
-            _resolve_src "$origin" "$ref" || return 1
+            resolve_src "$origin" "$ref" || return 1
             g_origin="$origin" g_ref="$ref"
             g_names=""
             for dir in "${src}"/${tool}/; do
@@ -558,7 +577,7 @@ _use() {
                 continue
             fi
             for g_name in $g_names; do
-                _install_repo_script "$g_name" "$g_origin" "$g_ref" || return 1
+                install_repo_script "$g_name" "$g_origin" "$g_ref" || return 1
             done
             for g_name in $g_names; do
                 peer_seen="${peer_seen} ${g_name}"
@@ -566,7 +585,7 @@ _use() {
             # One peer pass once every match is installed; the matches
             # are marked seen above so their peers don't reinstall them.
             for g_name in $g_names; do
-                _install_peer_deps "$g_name" "$g_origin" "$g_ref" || return 1
+                install_peer_deps "$g_name" "$g_origin" "$g_ref" || return 1
             done
             continue
             ;;
@@ -578,17 +597,17 @@ _use() {
         # skipped only when the stamp left by its last install names the
         # same origin@ref (local and git-root origins always reinstall, so
         # edits to a sibling checkout are picked up).
-        if [ "$FORCE" -eq 0 ] || { [ "${tool#zz-}" = "$tool" ] && [ "$tool" != "zz" ]; }; then
+        if [ "$force" -eq 0 ] || { [ "${tool#zz-}" = "$tool" ] && [ "$tool" != "zz" ]; }; then
             if [ -z "$ref" ] && [ "$origin" = "$ZZ_ORIGIN" ]; then
-                if _have "$tool"; then
+                if has_tool "$tool"; then
                     zz-log d "{Purple $tool} already available"
                     continue
                 fi
-            elif [ "$FORCE" -eq 0 ] && _have "$tool"; then
+            elif [ "$force" -eq 0 ] && has_tool "$tool"; then
                 case "$origin" in
                 . | .. | ./* | ../* | /* | '$'*) ;;
                 *)
-                    stamp=$(_stamp_path "$have_path" "$tool")
+                    stamp=$(get_stamp_path "$have_path" "$tool")
                     if [ "$(cat "$stamp" 2>/dev/null)" = "${origin}@${ref}" ]; then
                         zz-log d "{Purple $tool} already installed from {B ${origin}@${ref}}"
                         continue
@@ -599,7 +618,7 @@ _use() {
         fi
 
         entry=""
-        if [ -f "$ZZ_USE_CONFIG" ] && grep -q "\"${tool}\"[[:space:]]*:" "$ZZ_USE_CONFIG" && _ensure_jq; then
+        if [ -f "$ZZ_USE_CONFIG" ] && grep -q "\"${tool}\"[[:space:]]*:" "$ZZ_USE_CONFIG" && ensure_jq; then
             entry=$(jq -c --arg t "$tool" '.[$t] // empty' "$ZZ_USE_CONFIG" 2>/dev/null)
         fi
 
@@ -609,7 +628,7 @@ _use() {
             url=$(printf '%s' "$entry" | jq -r '.url // empty')
 
             if [ -n "$apt_pkg" ]; then
-                _pkg_install "$apt_pkg" || zz-log w "Could not install {Purple $apt_pkg} as a package"
+                install_package "$apt_pkg" || zz-log w "Could not install {Purple $apt_pkg} as a package"
             elif [ -n "$url" ]; then
                 # zz-install downloads, verifies and installs the binary
                 # (sha256: one hash, or an object keyed "<os>_<arch>").
@@ -621,23 +640,23 @@ _use() {
                 val=$(printf '%s' "$entry" | jq -r '.sha256 // empty | if type == "object" then tojson else . end')
                 [ -z "$val" ] || set -- "$@" -s "$val"
                 zz-install "$@" "$tool" || zz-log w "Could not download {Purple $tool}"
-                # zz-install ran in a child: put the bin dir on our PATH for _have.
-                _bindir || true
+                # zz-install ran in a child: put the bin dir on our PATH for has_tool.
+                resolve_bindir || true
             fi
-        elif _install_repo_script "$tool" "$origin" "$ref"; then
+        elif install_repo_script "$tool" "$origin" "$ref"; then
             peers_pending=1
         else
-            _pkg_install "$tool" || true
+            install_package "$tool" || true
         fi
 
-        if ! _have "$tool"; then
+        if ! has_tool "$tool"; then
             zz-log e "Cannot provide {Purple $tool}"
             zz-log - "It is not installed, and no source could install it"
             return 1
         fi
 
         if [ "$peers_pending" -eq 1 ]; then
-            _install_peer_deps "$tool" "$origin" "$ref" || return 1
+            install_peer_deps "$tool" "$origin" "$ref" || return 1
         fi
     done
 }
@@ -650,18 +669,19 @@ _use() {
 opts=""
 tools=""
 tail=""
-_quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\''/g")"; }
+# quote_arg <string>: print <string> single-quoted, safe to eval.
+quote_arg() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\''/g")"; }
 while [ $# -gt 0 ]; do
     case "$1" in
     -x | --exec)
         shift
-        EXEC_TOOL="${1:-}"
-        if [ -z "$EXEC_TOOL" ]; then
+        exec_tool="${1:-}"
+        if [ -z "$exec_tool" ]; then
             printf '[e] -x/--exec requires a tool name\n' >&2
             exit 1
         fi
         shift
-        for arg in "$@"; do tail="$tail $(_quote "$arg")"; done
+        for arg in "$@"; do tail="$tail $(quote_arg "$arg")"; done
         break
         ;;
     --force) opts="$opts -f" ;;
@@ -671,46 +691,46 @@ while [ $# -gt 0 ]; do
         exit 1
         ;;
     -?) opts="$opts $1" ;;
-    *) tools="$tools $(_quote "$1")" ;;
+    *) tools="$tools $(quote_arg "$1")" ;;
     esac
     shift
 done
 
 # zz-args (and its zz-colors) must be on PATH: resolve the default source
-# when they are not, as _bindir does for zz-bindir.
-case " $opts " in *" -f "*) FORCE=1 ;; esac
-command -v zz-args >/dev/null 2>&1 || _resolve_src || exit 1
+# when they are not, as resolve_bindir does for zz-bindir.
+case " $opts " in *" -f "*) force=1 ;; esac
+command -v zz-args >/dev/null 2>&1 || resolve_src || exit 1
 
 # Declares the options and collects the tools back onto "$@".
-_parse() {
-    local force_flag exec_tool tools
+parse_args() {
+    local force_flag exec_arg tools
 
     eval "$(
         zz-args "Install tools on demand, only if missing" "zz-use" "$@" <<help
 f - force_flag Reinstall even when already on PATH
-x tool exec_tool Install <tool> and exec into it with the remaining arguments as its argv
+x tool exec_arg Install <tool> and exec into it with the remaining arguments as its argv
 # tools tools Tools to install: [origin/]<tool>[@ref]
 help
     )" || return 1
-    [ -z "$force_flag" ] || FORCE=1
-    _use "$@" ${EXEC_TOOL:+"$EXEC_TOOL"}
+    [ -z "$force_flag" ] || force=1
+    use_tools "$@" ${exec_tool:+"$exec_tool"}
 }
 
-# -x/--exec: install EXEC_TOOL alongside the tools, then exec into it with
+# -x/--exec: install exec_tool alongside the tools, then exec into it with
 # the saved tail as its argv.
-eval "_parse $opts $tools" || exit 1
-if [ -n "$EXEC_TOOL" ]; then
-    # Same leading-"@" vs trailing-"@ref" split as in _use: an npm-origin
+eval "parse_args $opts $tools" || exit 1
+if [ -n "$exec_tool" ]; then
+    # Same leading-"@" vs trailing-"@ref" split as in use_tools: an npm-origin
     # exec target (e.g. "@myscope/pkg/tool@1.2.3") must not have its
     # command name mangled by splitting on the scope's own "@".
-    case "$EXEC_TOOL" in
+    case "$exec_tool" in
     @*)
-        exec_rest="${EXEC_TOOL#@}"
+        exec_rest="${exec_tool#@}"
         case "$exec_rest" in *@*) exec_rest="${exec_rest%%@*}" ;; esac
         exec_name="@${exec_rest}"
         ;;
     *)
-        exec_name="${EXEC_TOOL%%@*}"
+        exec_name="${exec_tool%%@*}"
         ;;
     esac
     case "$exec_name" in */*) exec_name="${exec_name##*/}" ;; esac
@@ -725,7 +745,7 @@ if [ -n "$EXEC_TOOL" ]; then
         done
         unset IFS
         PATH="$new_path"
-        _cleanup
+        remove_tmp_dirs
     fi
     exec "$exec_name" "$@"
 fi

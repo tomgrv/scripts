@@ -70,9 +70,9 @@ Write `#!/bin/sh` scripts that run under dash and busybox. No bashisms:
 ### Naming
 
 - Script folders are `kebab-case`, `<domain>-<action>` (`json-validate`, `git-fix-up`). Shared helpers take the `zz-` prefix. The entry point is always `run.sh`.
-- Functions are `snake_case`, verb first: `is_*` and `has_*` answer yes or no, `get_*` prints a value, other verbs act (`install_package`). A helper that is not the script's purpose may take a leading `_` (`_collect`).
+- Functions are `snake_case`, verb first: `is_*` and `has_*` answer yes or no, `get_*` prints a value, other verbs act (`install_package`).
 - A function that mirrors a name from the domain keeps that name's case: `oneOf_rule` matches the JSON Schema keyword `oneOf`.
-- Variables never start with an underscore: a function-scoped one is declared with `local`, a script-wide one is a plain lowercase name.
+- Variable and function names never start with an underscore. A function-scoped variable is declared with `local`; a script-wide one is a plain lowercase name; a helper function takes a verb-first name like any other (`collect_files`).
 - Variables are lowercase and short, named for what they hold: a singular noun for one value (`json`, `schema`, `path`), a plural for a list (`props`, `items`). Say what a flag means, not how it is stored: `allow`, not `flag1`.
 - An option's long name equals its variable (`-s schema` fills `$schema`). Its short flag is the first letter, or the next free one.
 - Colour variables from `zz-colors` are Capitalised (`Yellow`, `None`). Environment variables are `UPPER_SNAKE` with the `ZZ_` prefix (`ZZ_LOG_STEP`).
