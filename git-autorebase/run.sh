@@ -1,7 +1,7 @@
 #!/bin/sh
 
 eval $(
-    zz-args "Automatically handles non-interactive rebasing with conflict resolution" $0 "$@" <<-help
+    zz-args "Automatically handles non-interactive rebasing with conflict resolution" $0 "$@" <<help
         f -             force       allow overwriting pushed history
         p -             push        push to remote after rebase
         a -             autosquash  Apply autosquash (default: off)
@@ -42,14 +42,13 @@ handle_conflicts() {
     git conflict | while read file; do
         zz-log i "Resolving conflict in: $file"
         case "$strategy" in
-            "theirs") git checkout --theirs "$file" ;;
-            "ours") git checkout --ours "$file" ;;
+        "theirs") git checkout --theirs "$file" ;;
+        "ours") git checkout --ours "$file" ;;
         esac
         git add "$file"
     done
     manage_lockfiles
 }
-
 
 current_branch=$(git branch --show-current)
 zz-log i "Rebasing '$current_branch' onto '$sha' with '$strategy' strategy"

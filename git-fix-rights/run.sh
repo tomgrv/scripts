@@ -1,9 +1,9 @@
 #!/bin/sh
 
 eval $(
-	zz-args "Fix git access rights - set appropriate permissions for files and directories" $0 "$@" <<-help
+    zz-args "Fix git access rights - set appropriate permissions for files and directories" $0 "$@" <<help
 
-	help
+help
 )
 
 cd "$(git rev-parse --show-toplevel)" >/dev/null

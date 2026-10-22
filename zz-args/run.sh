@@ -28,7 +28,7 @@ help=""
 invert=""
 
 if [ "$#" -lt 1 ]; then
-    echo "Usage: $(basename $0) <title> <caller> <<-help
+    echo "Usage: $(basename $0) <title> <caller> <<help
         ...
         <argname> <datatype> <varname> <help>
         ...

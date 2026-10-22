@@ -4,9 +4,9 @@ set -e
 . zz-colors
 
 eval $(
-    zz-args "Load json from specified source" $0 "$@" <<-help
-        s -           schema		JSON is a schema
-        - source      source		JSON file to load
+    zz-args "Load json from specified source" $0 "$@" <<help
+        s -           schema        JSON is a schema
+        - source      source        JSON file to load
 help
 )
 
@@ -14,16 +14,16 @@ help
 # block's stdout straight into sed|jq): jq exits 0 on empty stdin, so an
 # `exit 1` inside that block would otherwise be swallowed by the pipeline's
 # exit status being jq's, not the failing branch's.
-if test -n "$(echo $source | grep -E '^http')"; then
+if [ -n "$(echo $source | grep -E '^http')" ]; then
     zz-log i "Downloading file from {U $source}"
     content=$(curl -L -s $source)
     if [ $? -ne 0 ]; then
         zz-log e "Unable to download file {U $source}" && exit 1
     fi
-elif test -f "$source"; then
+elif [ -f "$source" ]; then
     zz-log i "Loading file {U $source}"
     content=$(cat $source)
-elif test -n "$source"; then
+elif [ -n "$source" ]; then
     zz-log e "File {U $source} not found" && exit 1
 else
     zz-log e "No source provided" && exit 1

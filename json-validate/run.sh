@@ -1,17 +1,17 @@
-#!/bin/bash
+#!/bin/sh
 
 . zz-colors
 
 eval $(
-    zz-args "Validate JSON according to schema" $0 "$@" <<-help
-        a -         allow	    allow additional properties at root level
-        d -         debug	    debug output
-        c -         cache	    allow caching
-        f fallback  fallback	fallback schema to use if none found locally
-        l local     local	    infer schema in <local> folder from json file name (x.y.json => <local>/y.schema.json). Use "true" to use script folder
-        i -         import	    infer on schema store if nothing found locally (x.y.json => "y" on schema store)
-        s schema	schema		schema to use to validate json
-        - json	    json		json to validate
+    zz-args "Validate JSON according to schema" $0 "$@" <<help
+        a -         allow       allow additional properties at root level
+        d -         debug       debug output
+        c -         cache       allow caching
+        f fallback  fallback    fallback schema to use if none found locally
+        l local     local       infer schema in <local> folder from json file name (x.y.json => <local>/y.schema.json). Use "true" to use script folder
+        i -         import      infer on schema store if nothing found locally (x.y.json => "y" on schema store)
+        s schema    schema      schema to use to validate json
+        - json      json        json to validate
 help
 )
 
@@ -77,7 +77,7 @@ get_keys() {
 
 get_path() {
     local path=${1:-.}
-    local raw=$(test -z "$2" && echo "-r" || echo "")
+    local raw=$([ -z "$2" ] && echo "-r" || echo "")
 
     jq -e --arg path "$path" $raw '
         def split_path:
@@ -92,7 +92,7 @@ oneOf_rule() {
     local count=$2
     local index=$3
 
-    test $count -eq 1
+    [ $count -eq 1 ]
 }
 
 allOf_rule() {
@@ -100,7 +100,7 @@ allOf_rule() {
     local count=$2
     local index=$3
 
-    test $count -eq $size
+    [ $count -eq $size ]
 }
 
 anyOf_rule() {
@@ -108,7 +108,7 @@ anyOf_rule() {
     local count=$2
     local index=$3
 
-    test "$count" -gt "0" && test $index -eq $(expr $size - 1)
+    [ "$count" -gt "0" ] && [ $index -eq $((size - 1)) ]
 }
 
 get_schema_url() {
@@ -127,20 +127,20 @@ validate() {
     local not=$6        # Not flag (optional)
     local level=$7      # Recursive level for logs (optional)
 
-    if test -f "$json" || test -n "$(echo $json | grep -E '^http')"; then
+    if [ -f "$json" ] || [ -n "$(echo $json | grep -E '^http')" ]; then
         json=$(json-load $json)
     fi
 
-    if ! is_json <<<"$json"; then
+    if ! printf '%s\n' "$json" | is_json; then
         zz-log e "Invalid json" && exit 1
     fi
 
-    if test -f "$schema" || test -n "$(echo $schema | grep -E '^http')"; then
+    if [ -f "$schema" ] || [ -n "$(echo $schema | grep -E '^http')" ]; then
         zz-log "${lvl} -" "Loading ${Yellow}${schema}${None}..."
         schema=$(json-load -s $schema)
     fi
 
-    if ! is_json <<<"$schema"; then
+    if ! printf '%s\n' "$schema" | is_json; then
         zz-log e "Invalid schema" && exit 1
     fi
 
@@ -151,12 +151,12 @@ validate() {
     local more=""
     local type=""
     local lvl=""
-    local id=$(get_path ".\$id" <<<"$schema")
+    local id=$(printf '%s\n' "$schema" | get_path ".\$id")
 
-    if test -z "$level"; then
+    if [ -z "$level" ]; then
         level=0
     else
-        level=$(expr $level + 1)
+        level=$((level + 1))
 
         for i in $(seq 1 $level); do
             lvl="$lvl   |"
@@ -167,7 +167,7 @@ validate() {
 
     for entry in '"$id"' '"not"' '"oneOf"' '"allOf"' '"anyOf"' '"type"' '"required"' '"$ref"' '"properties"' '"items"' '"additionalProperties"'; do
 
-        if ! is_existing_path "$path.$entry" <<<"$schema"; then
+        if ! printf '%s\n' "$schema" | is_existing_path "$path.$entry"; then
             continue
         fi
 
@@ -179,16 +179,16 @@ validate() {
 
             zz-log "${lvl} -" "Processing {B Id}"
 
-            id=$(get_json "$path.$entry" <<<"$schema" || echo ".")
+            id=$(printf '%s\n' "$schema" | get_json "$path.$entry" || echo ".")
 
             zz-log "${lvl} -" "Resolving ${Yellow}$id"
             ;;
 
         \"\$ref\")
 
-            local ref=$(get_path "$path.$entry" <<<"$schema")
+            local ref=$(printf '%s\n' "$schema" | get_path "$path.$entry")
 
-            if test "$ref" == "null" || test -z "$ref"; then
+            if [ "$ref" = "null" ] || [ -z "$ref" ]; then
                 zz-log e "Reference not found for $path.$entry" && exit 1
             fi
 
@@ -198,11 +198,11 @@ validate() {
             local uri=$(echo $ref | awk -F '#' '{print $1}')
             local fgt=$(echo $ref | awk -F '#' '{print $2}')
 
-            if test -n "$uri"; then
-                if test -f "$uri" || test -n "$(echo $uri | grep -E '^http')"; then
+            if [ -n "$uri" ]; then
+                if [ -f "$uri" ] || [ -n "$(echo $uri | grep -E '^http')" ]; then
                     zz-log "${lvl} -" "Loading ${Yellow}${uri}${None}..."
                     schema=$(json-load -s $uri)
-                elif test -n "$id"; then
+                elif [ -n "$id" ]; then
                     zz-log "${lvl} -" "Loading ${Yellow}$(dirname $id)/$uri${None}..."
                     schema=$(json-load -s $(dirname $id)/$uri)
                 else
@@ -210,7 +210,7 @@ validate() {
                 fi
             fi
 
-            if ! is_json <<<"$schema"; then
+            if ! printf '%s\n' "$schema" | is_json; then
                 zz-log e "Unable to load reference {U $uri}" && exit 1
             fi
 
@@ -233,47 +233,48 @@ validate() {
 
         \"oneOf\" | \"allOf\" | \"anyOf\")
 
-            if ! is_json_array "$path.$entry" <<<"$schema"; then
+            if ! printf '%s\n' "$schema" | is_json_array "$path.$entry"; then
                 zz-log e "Invalid $entry schema" && exit 1
             fi
 
-            local size=$(get_array_size "$path.$entry" <<<"$schema")
-            local last=$(expr $size - 1)
+            local size=$(printf '%s\n' "$schema" | get_array_size "$path.$entry")
+            local last=$((size - 1))
             local count=0
+            local rule=$(printf '%s' "$entry" | tr -d '"')
 
             zz-log "${lvl} -" "{Cyan Start $entry loop}"
 
             for i in $(seq 0 $last); do
                 if validate "$json" "$schema" "$path.$entry[$i]" "$real" "$path.$entry[$i]" "$not" "$level"; then
-                    count=$(expr $count + 1)
+                    count=$((count + 1))
                 fi
-                ${entry//\"/}_rule $size $count $i && break
+                ${rule}_rule $size $count $i && break
             done
 
             zz-log "${lvl} -" "{Cyan End $entry loop ($count/$size)}"
-            ${entry//\"/}_rule $size $count $last || return 1
+            ${rule}_rule $size $count $last || return 1
             ;;
 
         \"type\")
 
             zz-log "${lvl} -" "Processing {B Type}"
 
-            local type_json=$(get_json_type "$real" <<<"$json")
+            local type_json=$(printf '%s\n' "$json" | get_json_type "$real")
 
-            for type_schema in $(get_array_items "$path.$entry" <<<"$schema"); do
+            for type_schema in $(printf '%s\n' "$schema" | get_array_items "$path.$entry"); do
 
-                if test "$type_schema" == "\"integer\""; then
+                if [ "$type_schema" = "\"integer\"" ]; then
                     type_schema="\"number\""
                 fi
 
-                if test "$type_json" != "$type_schema"; then
+                if [ "$type_json" != "$type_schema" ]; then
                     continue
                 fi
 
                 type=$type_schema
             done
 
-            if test -z "$type"; then
+            if [ -z "$type" ]; then
                 zz-log "${lvl} -" "${Yellow}Property ${real:-.} is ${type_json}, not of expected type ${type_schema}"
                 return 1
             fi
@@ -288,22 +289,22 @@ validate() {
             local count=0
             local size=0
 
-            if test "$type" != "\"object\""; then
+            if [ "$type" != "\"object\"" ]; then
                 zz-log "${lvl} -" "${Yellow}Skip required not an object ($type)"
                 continue
             fi
 
-            for prop in $(get_array_items "$path.$entry" <<<"$schema"); do
+            for prop in $(printf '%s\n' "$schema" | get_array_items "$path.$entry"); do
 
-                size=$(expr $size + 1)
+                size=$((size + 1))
 
-                if is_existing_path "$real.$prop" <<<"$json"; then
-                    if test -n "$not"; then
+                if printf '%s\n' "$json" | is_existing_path "$real.$prop"; then
+                    if [ -n "$not" ]; then
                         zz-log "${lvl} -" "${Yellow}Property $prop is present but not required"
                         return 1
                     fi
                 else
-                    if test -z "$not"; then
+                    if [ -z "$not" ]; then
                         zz-log "${lvl} -" "${Yellow}Property $prop is missing but required"
                         return 1
                     fi
@@ -315,16 +316,16 @@ validate() {
 
         \"items\")
 
-            if test "$type" != "\"array\""; then
+            if [ "$type" != "\"array\"" ]; then
                 zz-log "${lvl} -" "${Yellow}Skip properties not an  ($type)"
                 continue
             fi
 
             zz-log "${lvl} -" "Processing ${BWhite}Items"
 
-            for item_index in $(seq 0 $(expr $(get_array_size "${real:-.}" <<<"$json") - 1)); do
+            for item_index in $(seq 0 $(($(printf '%s\n' "$json" | get_array_size "${real:-.}") - 1))); do
 
-                item=$(get_array_items "${real:-.}[$item_index]" <<<"$json" )
+                item=$(printf '%s\n' "$json" | get_array_items "${real:-.}[$item_index]")
 
                 zz-log "${lvl} -" "Processing item <${Purple}${real:-.}[$item_index]${None}>"
 
@@ -337,18 +338,18 @@ validate() {
 
         \"properties\")
 
-            if test "$type" != "\"object\""; then
+            if [ "$type" != "\"object\"" ]; then
                 zz-log "${lvl} -" "${Yellow}Skip properties not an object ($type)"
                 continue
             fi
 
             zz-log "${lvl} -" "Processing ${BWhite}Properties"
 
-            props=$(get_keys "$path.$entry" <<<"$schema" | tr "\n" " ")
+            props=$(printf '%s\n' "$schema" | get_keys "$path.$entry" | tr "\n" " ")
 
             for prop in $props; do
 
-                if $not is_existing_path "$real.$prop" <<<"$json"; then
+                if printf '%s\n' "$json" | $not is_existing_path "$real.$prop"; then
 
                     zz-log "${lvl} -" "Processing <${Purple}$prop${None}>"
 
@@ -365,13 +366,13 @@ validate() {
         \"additionalProperties\")
 
             zz-log "${lvl} -" "Processing ${BWhite}Additional properties"
-            if is_existing_path "$path.$entry" <<<"$schema"; then
+            if printf '%s\n' "$schema" | is_existing_path "$path.$entry"; then
 
                 zz-log "${lvl} -" "${Purple}Additional properties allowed for ${real:-.}"
 
-                for prop in $(get_keys "$real" <<<"$json" | sort); do
+                for prop in $(printf '%s\n' "$json" | get_keys "$real" | sort); do
 
-                    if ! grep -q -x "$prop" <<<"$props"; then
+                    if ! printf '%s\n' "$props" | grep -q -x "$prop"; then
                         zz-log "${lvl} -" "Adding additional property <${Purple}$real.$prop${None}>"
 
                         echo "$real.$prop"
@@ -389,7 +390,7 @@ if [ -z "$schema" ]; then
 
     schema=$(json-load $json | jq -r '."$schema" // empty')
 
-    if test -n "$schema"; then
+    if [ -n "$schema" ]; then
         zz-log i "Found schema reference in JSON file: {U $schema}"
     fi
 fi
@@ -398,7 +399,7 @@ if [ -n "$local" ] && [ -z "$schema" ]; then
 
     type=$(basename -s .json $json | sed -E 's/.*\.(.*)/\1/')
 
-    if [ "$local" == "true" ]; then
+    if [ "$local" = "true" ]; then
         local=$(dirname $(readlink -f $0))/config
     fi
 
@@ -420,7 +421,7 @@ fi
 
 if [ -n "$fallback" ] && [ -z "$schema" ]; then
 
-    if [ "$fallback" == "local" ] && [ -n "$local" ]; then
+    if [ "$fallback" = "local" ] && [ -n "$local" ]; then
         schema=$(dirname $(readlink -f $0))/config/_default.schema.json
     elif [ -f "$fallback" ]; then
         schema=$fallback
@@ -431,21 +432,21 @@ if [ -n "$fallback" ] && [ -z "$schema" ]; then
     zz-log w "Using fallback schema {UYellow $schema}"
 fi
 
-if test -z "$schema"; then
+if [ -z "$schema" ]; then
     zz-log e "Schema is missing" && exit 1
 fi
 
 schema=$(json-load -s "$schema")
 
-if test -z "$schema"; then
+if [ -z "$schema" ]; then
     zz-log e "Schema is empty" && exit 1
 fi
 
-if ! is_json <<<"$schema"; then
+if ! printf '%s\n' "$schema" | is_json; then
     zz-log e "Invalid schema" && exit 1
 fi
 
-if test -n "$allow"; then
+if [ -n "$allow" ]; then
     zz-log w "Additional properties allowed at root level"
     schema=$(echo "$schema" | jq '. + {"additionalProperties": true}' -)
 fi
@@ -459,12 +460,16 @@ hash=$(
 map=~/.cache/$hash.schema.map
 zz-log i "Hash is {B $hash}"
 
-if test -n "$cache" && test -s $map; then
+if [ -n "$cache" ] && [ -s $map ]; then
     zz-log - "Using cached validation map"
     cat $map
 else
-    validate "$json" "$schema" | sed -n -e 's/^.$//g' -e '/^$/d' -e 'G; s/\n/&&/; /^\([ -~]*\n\).*\n\1/d; s/\n//; h; P'
-    status=${PIPESTATUS[0]}
+    # validate's status is lost in a pipe under POSIX sh: run it into a file first, then dedupe
+    raw=$(mktemp)
+    validate "$json" "$schema" >"$raw"
+    status=$?
+    sed -n -e 's/^.$//g' -e '/^$/d' -e 'G; s/\n/&&/; /^\([ -~]*\n\).*\n\1/d; s/\n//; h; P' "$raw"
+    rm -f "$raw"
 
     if [ "$status" -eq 0 ]; then
         zz-log s "JSON {U $json} valid"

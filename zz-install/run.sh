@@ -16,7 +16,8 @@
 . zz-colors
 
 # --- arguments
-eval "$(zz-args "Install a tool as a system package or a downloaded binary" "$0" "$@" <<help
+eval "$(
+    zz-args "Install a tool as a system package or a downloaded binary" "$0" "$@" <<help
 u url url Download URL (switches to binary install)
 a archive archive Archive type: tar.gz, tgz, tar.xz, zip (default: raw binary)
 b binpath binpath Binary path inside the archive (default: the tool name)

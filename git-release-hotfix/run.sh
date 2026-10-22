@@ -3,7 +3,7 @@
 cd "$(git rev-parse --show-toplevel)" >/dev/null
 
 eval $(
-    zz-args "Create HotFix branch" $0 "$@" <<-help
+    zz-args "Create HotFix branch" $0 "$@" <<help
         r -         rebase      force rebase of current commits onto hotfix branch
         s -         stash       stash current staged changes before creating hotfix branch and reapply them after
 help

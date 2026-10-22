@@ -5,7 +5,7 @@
 # and full rebuilds, with buffered writing for safety.
 
 eval $(
-    zz-args "Bump changelog utility" $0 "$@" <<- help
+    zz-args "Bump changelog utility" $0 "$@" <<help
         f   version version     Force version for changelog entry
         b   -       bump        Bump version files as per commit-and-tag-version.bumpFiles in package.json
         m   -       minimal     Only bump workspace files if commit scope relates to workspace name
@@ -19,13 +19,13 @@ help
 
 file="${file:-CHANGELOG.md}"
 
-cd "$(git rev-parse --show-toplevel)" > /dev/null
+cd "$(git rev-parse --show-toplevel)" >/dev/null
 
 # Get supported commit types and their sections from package.json or use defaults
 # (feat -> Features, fix -> Bug Fixes, etc.)
 get_supported_types() {
-    [ -f "package.json" ] && command -v jq > /dev/null 2>&1 \
-        && jq -r '."bump-changelog".types[]? | select(.hidden != true) | "\(.type) \(.section)"' package.json 2> /dev/null \
+    [ -f "package.json" ] && command -v jq >/dev/null 2>&1 \
+        && jq -r '."bump-changelog".types[]? | select(.hidden != true) | "\(.type) \(.section)"' package.json 2>/dev/null \
         || echo "feat Features
 fix Bug Fixes
 docs Documentation
@@ -37,8 +37,8 @@ chore Maintenance"
 }
 
 get_repo_url() {
-    [ -f "package.json" ] && command -v jq > /dev/null 2>&1 \
-        && jq -r '.repository.url // empty' package.json 2> /dev/null | sed -e 's/^git+//' -e 's/\.git$//' || echo ""
+    [ -f "package.json" ] && command -v jq >/dev/null 2>&1 \
+        && jq -r '.repository.url // empty' package.json 2>/dev/null | sed -e 's/^git+//' -e 's/\.git$//' || echo ""
 }
 
 get_all_tags() {
@@ -59,7 +59,7 @@ list_changelog_range() {
         echo "${previous_ref}..${current_ref}"
     else
         # From repo origin (initial commit) to current ref
-        local initial_commit=$(git rev-list --max-parents=0 HEAD 2> /dev/null | head -1)
+        local initial_commit=$(git rev-list --max-parents=0 HEAD 2>/dev/null | head -1)
         if [ -n "$initial_commit" ]; then
             echo "${initial_commit}..${current_ref}"
         else
@@ -110,7 +110,7 @@ list_changelog_between() {
         zz-log w "Filtering commits to scope: $scope"
     fi
 
-    git log --oneline --format="%H|%s" "$range" 2> /dev/null \
+    git log --oneline --format="%H|%s" "$range" 2>/dev/null \
         | while IFS='|' read -r commit_hash commit_msg; do
             # Extract scope from conventional commit format: type(scope): message
             commit_scope=$(echo "$commit_msg" | sed -n 's/^[^(]*(\([^)]*\)):.*/\1/p')
@@ -327,7 +327,7 @@ else
         echo "---"
         echo "*Generated on $(date +%Y-%m-%d) by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*"
 
-    } > "$temp_changelog"
+    } >"$temp_changelog"
 
     # Validate temporary file before proceeding with replacement
     if [ -f "$temp_changelog" ] && [ -s "$temp_changelog" ]; then

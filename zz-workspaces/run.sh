@@ -11,7 +11,8 @@
 . zz-colors
 
 # --- arguments
-eval "$(zz-args "List the runnable workspaces of a package" "$0" "$@" <<help
+eval "$(
+    zz-args "List the runnable workspaces of a package" "$0" "$@" <<help
 - dir dir Package directory (default: current directory)
 help
 )"

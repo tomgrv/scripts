@@ -1,11 +1,11 @@
 #!/bin/sh
 
 eval $(
-    zz-args "List git history and asks for commit" $0 "$@" <<-help
-		    f -        force     allow overwritting pushed history
+    zz-args "List git history and asks for commit" $0 "$@" <<help
+            f -        force     allow overwritting pushed history
             p -        previous  show commit previous to the one specified
-			- sha      sha       sha commit to fix from after
-	help
+            - sha      sha       sha commit to fix from after
+help
 )
 
 cd "$(git rev-parse --show-toplevel)"
@@ -21,7 +21,6 @@ if [ -z "$sha" ]; then
     fi
     sha=$(zz-prompt "Which commit?")
 fi
-
 
 # A sha of '0' means the very first commit in the current history
 if [ "$sha" = "0" ]; then

@@ -2,7 +2,7 @@
 set -e
 
 eval $(
-    zz-args "Print the list-packages filter selecting the workspaces impacted by changed files" $0 "$@" <<-help
+    zz-args "Print the list-packages filter selecting the workspaces impacted by changed files" $0 "$@" <<help
         r   range     range       Git range whose changed files are used (default: read one path per line on stdin)
 help
 )

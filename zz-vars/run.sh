@@ -13,7 +13,8 @@
 . zz-colors
 
 # --- arguments
-eval "$(zz-args "Show, ask and resolve the inputs declared by workspaces" "$0" "$@" <<help
+eval "$(
+    zz-args "Show, ask and resolve the inputs declared by workspaces" "$0" "$@" <<help
 S - status_flag Status only: show each input, run nothing
 f file envfile Env file holding the persisted values
 P name profile Also export persisted values from <ZZ_PROFILE_DIR>/<name>.sh

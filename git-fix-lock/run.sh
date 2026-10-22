@@ -1,7 +1,7 @@
 #!/bin/sh
 
 eval $(
-	zz-args "Fix git lock files - resolve conflicts and regenerate lock files" $0 "$@" <<-help
+    zz-args "Fix git lock files - resolve conflicts and regenerate lock files" $0 "$@" <<help
 help
 )
 
@@ -24,7 +24,7 @@ for file in $conflicted_files; do
         # npm workspaces need the extra flags, or the workspace root gets dropped
         zz-log i "Regenerating package-lock.json..."
         ws=$(npm pkg get workspaces)
-        if test "$ws" = "undefined" || test "$ws" = "{}"; then
+        if [ "$ws" = "undefined" ] || [ "$ws" = "{}" ]; then
             npm install --package-lock
         else
             npm install --package-lock --ws --if-present --include-workspace-root

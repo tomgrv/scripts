@@ -8,78 +8,81 @@
 . zz-colors
 
 eval $(
-	zz-args "Git pre-commit hook" $0 "$@" <<-help
-		# refs refs  Optional refs/paths passed through to 'git diff --name-only'
-	help
+    zz-args "Git pre-commit hook" $0 "$@" <<help
+        # refs refs  Optional refs/paths passed through to 'git diff --name-only'
+help
 )
 
-toplevel=$(git rev-parse --show-toplevel) || { zz-log e "Not inside a git repository."; exit 1; }
+toplevel=$(git rev-parse --show-toplevel) || {
+    zz-log e "Not inside a git repository."
+    exit 1
+}
 cd "$toplevel"
 
 if [ -t 1 ]; then
-	exec >/dev/tty 2>&1
+    exec >/dev/tty 2>&1
 fi
 
-if test "$GIT_COMMAND" = "rebase"; then
-	zz-log s "Skip pre-commit hook during rebase"
-	exit 0
+if [ "$GIT_COMMAND" = "rebase" ]; then
+    zz-log s "Skip pre-commit hook during rebase"
+    exit 0
 fi
 
 zz-log i "Git command: {Cyan $GIT_COMMAND}"
 
 if [ "$#" -eq 0 ]; then
-	changed_files=$(git diff --name-only --cached)
+    changed_files=$(git diff --name-only --cached)
 else
-	changed_files=$(git diff --name-only "$@")
+    changed_files=$(git diff --name-only "$@")
 fi
 
 if echo "$changed_files" | grep -q "package.json"; then
 
-	zz-log i "Ensure that the package.json is valid and package-lock.json is up-to-date..."
+    zz-log i "Ensure that the package.json is valid and package-lock.json is up-to-date..."
 
-	# --package-lock-only --ignore-scripts: recompute the lockfile without
-	# installing anything or running install/postinstall lifecycle scripts.
-	# A full `npm install --ws` here runs every workspace's lifecycle
-	# scripts on every commit that touches any package.json, which can
-	# rewrite arbitrary tracked files mid-hook — lint-staged's git-stash
-	# based backup/restore of the original staged snapshot then has to
-	# reconcile that unrelated noise, and unrelated staged changes can be
-	# dropped instead of committed.
-	ws=$(npm pkg get workspaces)
-	if test "$ws" = "undefined" || test "$ws" = "{}"; then
-		npm install --package-lock-only --ignore-scripts || true
-	else
-		npm install --package-lock-only --ignore-scripts --ws --if-present --include-workspace-root || true
-	fi
+    # --package-lock-only --ignore-scripts: recompute the lockfile without
+    # installing anything or running install/postinstall lifecycle scripts.
+    # A full `npm install --ws` here runs every workspace's lifecycle
+    # scripts on every commit that touches any package.json, which can
+    # rewrite arbitrary tracked files mid-hook — lint-staged's git-stash
+    # based backup/restore of the original staged snapshot then has to
+    # reconcile that unrelated noise, and unrelated staged changes can be
+    # dropped instead of committed.
+    ws=$(npm pkg get workspaces)
+    if [ "$ws" = "undefined" ] || [ "$ws" = "{}" ]; then
+        npm install --package-lock-only --ignore-scripts || true
+    else
+        npm install --package-lock-only --ignore-scripts --ws --if-present --include-workspace-root || true
+    fi
 
-	if git diff --quiet package-lock.json; then
-		zz-log s "package-lock.json update not required"
-	else
-		git add package-lock.json && zz-log w "Updated package-lock.json"
-	fi
+    if git diff --quiet package-lock.json; then
+        zz-log s "package-lock.json update not required"
+    else
+        git add package-lock.json && zz-log w "Updated package-lock.json"
+    fi
 fi
 
 if echo "$changed_files" | grep -q "composer.json" && command -v composer >/dev/null 2>&1; then
 
-	zz-log i "Ensure that the composer.json is valid and composer.lock is up-to-date..."
-	composer_validate=$(composer validate --no-check-all --strict 2>&1)
-	composer_valid=$?
-	missing_packages=$(echo "$composer_validate" | grep -oP 'Required package "\K[^"]+')
-	if [ -n "$missing_packages" ]; then
-		echo "$missing_packages" | while read -r package; do
-			composer require --ignore-platform-reqs --with-all-dependencies --no-scripts --no-interaction --no-progress --no-install "$package"
-		done
-		# requiring packages changed composer.json's state, so re-check before deciding on a full update
-		composer validate --no-check-all --strict || composer update --lock --minimal-changes --ignore-platform-reqs --with-all-dependencies --no-scripts --no-interaction --no-progress --no-install
-	elif [ "$composer_valid" -ne 0 ]; then
-		composer update --lock --minimal-changes --ignore-platform-reqs --with-all-dependencies --no-scripts --no-interaction --no-progress --no-install
-	fi
+    zz-log i "Ensure that the composer.json is valid and composer.lock is up-to-date..."
+    composer_validate=$(composer validate --no-check-all --strict 2>&1)
+    composer_valid=$?
+    missing_packages=$(echo "$composer_validate" | grep -oP 'Required package "\K[^"]+')
+    if [ -n "$missing_packages" ]; then
+        echo "$missing_packages" | while read -r package; do
+            composer require --ignore-platform-reqs --with-all-dependencies --no-scripts --no-interaction --no-progress --no-install "$package"
+        done
+        # requiring packages changed composer.json's state, so re-check before deciding on a full update
+        composer validate --no-check-all --strict || composer update --lock --minimal-changes --ignore-platform-reqs --with-all-dependencies --no-scripts --no-interaction --no-progress --no-install
+    elif [ "$composer_valid" -ne 0 ]; then
+        composer update --lock --minimal-changes --ignore-platform-reqs --with-all-dependencies --no-scripts --no-interaction --no-progress --no-install
+    fi
 
-	if git diff --quiet composer.lock; then
-		zz-log s "composer.lock update not required"
-	else
-		git add composer.lock && zz-log w "Updated composer.lock"
-	fi
+    if git diff --quiet composer.lock; then
+        zz-log s "composer.lock update not required"
+    else
+        git add composer.lock && zz-log w "Updated composer.lock"
+    fi
 fi
 
 git-hook-installplugins '.prettier.plugins//""'

@@ -8,24 +8,27 @@
 . zz-colors
 
 eval $(
-	zz-args "Git post-merge hook" $0 "$@" <<-help
-		- squash    squash    1 if the merge was a squash merge, 0 otherwise
-	help
+    zz-args "Git post-merge hook" $0 "$@" <<help
+        - squash    squash    1 if the merge was a squash merge, 0 otherwise
+help
 )
 
-toplevel=$(git rev-parse --show-toplevel) || { zz-log e "Not inside a git repository."; exit 1; }
+toplevel=$(git rev-parse --show-toplevel) || {
+    zz-log e "Not inside a git repository."
+    exit 1
+}
 cd "$toplevel"
 
 if [ -t 1 ]; then
-	exec >/dev/tty 2>&1
+    exec >/dev/tty 2>&1
 fi
 
 isChanged() {
-	git diff --name-only HEAD@{1} HEAD | grep "^$1" >/dev/null 2>&1
+    git diff --name-only HEAD@{1} HEAD | grep "^$1" >/dev/null 2>&1
 }
 
 if isChanged 'composer.lock' || isChanged 'package-lock.json'; then
-	git checkout --theirs composer.lock package-lock.json && git add composer.lock package-lock.json
-	zz-log s "Files <package-lock.json> or <composer.lock> changed."
-	zz-log s "Run composer/npm install to bring your dependencies up to date."
+    git checkout --theirs composer.lock package-lock.json && git add composer.lock package-lock.json
+    zz-log s "Files <package-lock.json> or <composer.lock> changed."
+    zz-log s "Run composer/npm install to bring your dependencies up to date."
 fi
