@@ -141,6 +141,27 @@ teardown() {
     [ "$status" -eq 7 ]
 }
 
+@test "zz-use installs the core set into ~/.local/bin as a non-root user with an unwritable bin dir" {
+    # The .husky/install.sh bootstrap in a devcontainer: no write access to
+    # /usr/local/bin and no ~/.local/bin yet, so the only writable PATH dir
+    # is zz-use's own scratch dir, which must never be the install target.
+    [ "$(id -u)" -eq 0 ] || skip "needs root to drop privileges"
+    command -v setpriv >/dev/null 2>&1 || skip "setpriv not available"
+    id nobody >/dev/null 2>&1 || skip "no nobody user"
+    home=$(mktemp -d)
+    cache=$(mktemp -d)
+    chown nobody "$home" "$cache"
+    # The real file: the TEST_BIN symlink sits in a root-only dir.
+    zz_use_bin=$(readlink -f "$(command -v zz-use)")
+    run setpriv --reuid=nobody --regid="$(id -g nobody)" --clear-groups \
+        env -i HOME="$home" PATH="/usr/bin:/bin" ZZ_CACHE_DIR="$cache" \
+        sh "$zz_use_bin" 'zz-*' zz
+    [ "$status" -eq 0 ]
+    [ -x "$home/.local/bin/zz" ]
+    [ -x "$home/.local/bin/zz-use" ]
+    rm -rf "$home" "$cache"
+}
+
 @test "zz-use -x hands the exec'd tool a PATH without its scratch boot dir" {
     # A tool run via -x may call zz-use again; an inherited boot dir would
     # look like an ordinary writable PATH dir to that nested zz-bindir.
