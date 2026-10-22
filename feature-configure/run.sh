@@ -231,11 +231,12 @@ if [ -d $source/stubs ]; then
                 cp $file $dest && how=copied || how=failed
             elif [ $base != /dev/null ] && [ ! $file -nt $base ]; then
                 how=unchanged
-            elif [ "$(head -n1 $file)" = "---" ]; then
+            elif [ "$(head -n1 $file)" = "---" ] || [ "$(head -c2 $file)" = "#!" ]; then
                 # A file opening with a `---` frontmatter block (SKILL.md,
-                # *.instructions.md) is a single-owner document, not a
-                # fragment: its frontmatter must stay on line 1, and the
-                # reconciliation below appends new lines at the end.
+                # *.instructions.md) or a `#!` shebang (scripts) is a
+                # single-owner document, not a fragment: its first line must
+                # stay first, and the line-set reconciliation below would
+                # drop or duplicate repeated lines (`fi`, `)`) and break it.
                 cp $file $dest
                 how=replaced
             else

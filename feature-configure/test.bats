@@ -106,6 +106,17 @@ teardown() {
     cmp -s src/stubs/SKILL.md SKILL.md
 }
 
+@test "feature-configure replaces an existing file when the stub is a shebang script" {
+    mkdir -p src/stubs
+    printf '#!/bin/sh\nif a; then\n    if b; then\n        c\n    fi\nfi\n' >src/stubs/run.sh
+    printf '#!/bin/sh\nif a; then\n    old\nfi\n' >run.sh
+
+    run feature-configure -s "$WORK_DIR/src" myfeature
+    [ "$status" -eq 0 ]
+    cmp -s src/stubs/run.sh run.sh
+    sh -n run.sh
+}
+
 @test "feature-configure strips a leading underscore prefix from stub filenames" {
     mkdir -p src/stubs
     echo "content" >src/stubs/_prefix.actual.txt
