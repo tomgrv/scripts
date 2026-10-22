@@ -11,12 +11,12 @@ set -e
 
 # --- arguments
 eval "$(
-     zz-args "Dispatch Utility" $0 "$@" <<- help
-		-   caller caller     Caller script path
+     zz-args "Dispatch Utility" $0 "$@" <<help
+        -   caller caller     Caller script path
         -   subcmd subcmd     Target script to execute
         d   debug  debug      Enable debug mode
         #   params params     Remaining arguments passed to the target script
-	help
+help
 )"
 
 # --- parameters: the counterpart is <caller dir>/<name>-<subcommand>.

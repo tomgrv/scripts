@@ -1,5 +1,20 @@
 # Changelog
 
+## 4.5.0 (2026-10-22)
+
+*Commits from: v4.4.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v4.4.0' into develop
+### 📦 scripts-zz changes
+
+#### Other changes
+
+- 📚️ 📝 formalise POSIX sh style rules from json-validate (#84)
+
 ## 4.4.0 (2026-10-21)
 
 *Commits from: v4.3.0..HEAD*
@@ -814,5 +829,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-10-21 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-10-22 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
