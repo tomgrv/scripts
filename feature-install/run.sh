@@ -18,6 +18,8 @@ help
 # spec has no -i flag of its own here.
 set -- ${source:+-s "$source"} ${target:+-t "$target"} ${arg:+"$arg"}
 
+# --- parameters: feature-context derives the feature, source and target
+# directories; the feature name is mandatory
 eval $(
     feature-context "$@"
 )
@@ -27,45 +29,62 @@ if [ -z "$feature" ]; then
     exit 1
 fi
 
+# --- step: install the feature
 zz-log i "Installing feature {Purple $feature}"
 
+# --- step: copy stubs, config and bin scripts into the target, and make the
+# shell scripts executable
 if [ -d $source/stubs ]; then
-    zz-log i "Copying stubs to {U $target}"
     cp -a $source/stubs $target
-    zz-log s "Copied stubs"
+    zz-log - "Copied stubs to {U $target}"
 else
     zz-log w "No stubs found in {U $source}"
 fi
 
 if [ -d $source/config ]; then
-    zz-log i "Copying config to {U $target}"
     cp -a $source/config $target
-    zz-log s "Copied config"
+    zz-log - "Copied config to {U $target}"
 fi
 
 if [ -d $source/bin ]; then
-    zz-log i "Copying bin scripts to {U $target}"
     cp -a $source/bin $target
-    zz-log s "Copied bin scripts"
+    zz-log - "Copied bin scripts to {U $target}"
 fi
 
 find $source -maxdepth 1 -name "configure-*.sh" -type f -exec cp {} $target \;
 find $target -type f -name "*.sh" -exec chmod +x {} \;
 
-find $source -maxdepth 1 -type f -name "install-*.sh" | while read script; do
+# --- step: run the feature's install-*.sh lifecycle scripts
+scripts=$(find $source -maxdepth 1 -type f -name "install-*.sh")
+if [ -n "$scripts" ]; then
+    zz-log i "Running install scripts"
+fi
+printf '%s\n' "$scripts" | while read script; do
+    [ -n "$script" ] || continue
     # Invoke via `sh "$script" "$@"` (not `sh -c "$script $@"`) so a
     # multi-element "$@" forwards correctly regardless of element count.
-    zz-log i "Running {U $script}"
-    sh "$script" "$@" && zz-log s "Ran {U $script}" || zz-log e "Failed {U $script}"
+    sh "$script" "$@" && zz-log - "Ran {U $script}" || zz-log e "Failed {U $script}"
 done
+if [ -n "$scripts" ]; then
+    zz-log s "Ran install scripts"
+fi
 
+# --- step: link the bin scripts onto a writable PATH directory
 eval "$(zz-bindir -t "$target")"
 link_dir="$dir"
 
-find "$target/bin" -type f -name "*.sh" 2>/dev/null | while IFS= read -r file; do
+bins=$(find "$target/bin" -type f -name "*.sh" 2>/dev/null)
+if [ -n "$bins" ]; then
+    zz-log i "Linking bin scripts"
+fi
+printf '%s\n' "$bins" | while IFS= read -r file; do
+    [ -n "$file" ] || continue
     link="$link_dir/$(basename "$file" | sed 's/.sh$//')"
-    zz-log i "Linking {U $file} to {U $link}"
-    ln -sf "$file" "$link" && zz-log s "Linked {U $link}"
+    ln -sf "$file" "$link" && zz-log - "Linked {U $file} to {U $link}"
 done
+if [ -n "$bins" ]; then
+    zz-log s "Linked bin scripts"
+fi
 
+# --- step: done
 zz-log s "Installed feature {Purple $feature}"
