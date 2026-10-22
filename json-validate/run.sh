@@ -464,8 +464,12 @@ if [ -n "$cache" ] && [ -s $map ]; then
     zz-log - "Using cached validation map"
     cat $map
 else
-    validate "$json" "$schema" | sed -n -e 's/^.$//g' -e '/^$/d' -e 'G; s/\n/&&/; /^\([ -~]*\n\).*\n\1/d; s/\n//; h; P'
-    status=${PIPESTATUS[0]}
+    # validate's status is lost in a pipe under POSIX sh: run it into a file first, then dedupe
+    raw=$(mktemp)
+    validate "$json" "$schema" >"$raw"
+    status=$?
+    sed -n -e 's/^.$//g' -e '/^$/d' -e 'G; s/\n/&&/; /^\([ -~]*\n\).*\n\1/d; s/\n//; h; P' "$raw"
+    rm -f "$raw"
 
     if [ "$status" -eq 0 ]; then
         zz-log s "JSON {U $json} valid"
