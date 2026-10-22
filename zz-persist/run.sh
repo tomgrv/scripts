@@ -13,7 +13,7 @@ set -e
 
 # --- arguments
 eval "$(
-    zz-args "Persist a key=value pair durably" $0 "$@" <<-help
+    zz-args "Persist a key=value pair durably" $0 "$@" <<help
         f file      file        Upsert KEY=VALUE into this .env-style file
         p name      profile     Export KEY=VALUE from <ZZ_PROFILE_DIR>/<profile>.sh
         i question  question    Ask for the value with this prompt (terminal only, else the default is used)

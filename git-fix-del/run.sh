@@ -1,7 +1,7 @@
 #!/bin/sh
 
 eval $(
-    zz-args "Delete a specified commit and rebase subsequent history" $0 "$@" <<-help
+    zz-args "Delete a specified commit and rebase subsequent history" $0 "$@" <<help
         f -         force       allow overwriting pushed history
         p -         push        push to remote after deletion
         a -         auto        fully automatic mode - no prompts
@@ -27,9 +27,9 @@ fi
 
 zz-log i "Deleting commit: $sha"
 
-if ! git autorebase ${auto:+-a} -s "$strategy" -o "$sha^" "$sha"  ; then
-        zz-log e "Failed to delete commit $sha. Please resolve conflicts manually."
-        exit 1
+if ! git autorebase ${auto:+-a} -s "$strategy" -o "$sha^" "$sha"; then
+    zz-log e "Failed to delete commit $sha. Please resolve conflicts manually."
+    exit 1
 else
     zz-log s "Commit deleted with conflict resolution"
 fi

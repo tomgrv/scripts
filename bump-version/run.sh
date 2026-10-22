@@ -8,7 +8,7 @@
 set -e
 
 eval $(
-    zz-args "Bump version files utility" $0 "$@" <<- help
+    zz-args "Bump version files utility" $0 "$@" <<help
         m   -         minimal     Only bump workspace files if commit scope relates to workspace name
         r   range     range       Git range to check for affected workspaces (required for minimal mode)
         d   -         dry_run     Show what would be updated without making changes
@@ -16,7 +16,7 @@ eval $(
 help
 )
 
-cd "$(git rev-parse --show-toplevel)" > /dev/null
+cd "$(git rev-parse --show-toplevel)" >/dev/null
 
 get_latest_tag() {
     git tag -l --sort=-version:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | head -1
@@ -51,16 +51,16 @@ format_version() {
 
     # Auto-complete partial versions
     case "$clean_version" in
-        [0-9]*.[0-9]*)
-            echo "${clean_version}.0"
-            ;;
-        [0-9]*)
-            echo "${clean_version}.0.0"
-            ;;
-        *)
-            zz-log e "Invalid version format: $raw_version"
-            return 1
-            ;;
+    [0-9]*.[0-9]*)
+        echo "${clean_version}.0"
+        ;;
+    [0-9]*)
+        echo "${clean_version}.0.0"
+        ;;
+    *)
+        zz-log e "Invalid version format: $raw_version"
+        return 1
+        ;;
     esac
 }
 
@@ -73,10 +73,10 @@ update_json_file() {
         return 0
     fi
 
-    if command -v jq > /dev/null 2>&1; then
-        jq --arg version "$version" '.version = $version' "$filepath" > "${filepath}.tmp" && mv "${filepath}.tmp" "$filepath"
+    if command -v jq >/dev/null 2>&1; then
+        jq --arg version "$version" '.version = $version' "$filepath" >"${filepath}.tmp" && mv "${filepath}.tmp" "$filepath"
         # Only add to git if the file is not ignored
-        if git check-ignore "$filepath" > /dev/null 2>&1; then
+        if git check-ignore "$filepath" >/dev/null 2>&1; then
             zz-log w "File $filepath is ignored by git, not staging"
         else
             git add "$filepath"
@@ -97,9 +97,9 @@ update_text_file() {
         return 0
     fi
 
-    echo "$version" > "$filepath"
+    echo "$version" >"$filepath"
     # Only add to git if the file is not ignored
-    if git check-ignore "$filepath" > /dev/null 2>&1; then
+    if git check-ignore "$filepath" >/dev/null 2>&1; then
         zz-log w "File $filepath is ignored by git, not staging"
     else
         git add "$filepath"
@@ -172,7 +172,7 @@ bump_version_files() {
         return 0
     fi
 
-    if ! command -v jq > /dev/null 2>&1; then
+    if ! command -v jq >/dev/null 2>&1; then
         zz-log w "jq not available - skipping version file bumping"
         return 0
     fi
@@ -200,15 +200,15 @@ bump_version_files() {
         fi
 
         case "$type" in
-            "json")
-                update_version_files "$range" "$filename" "$version" "$is_workspace" "update_json_file"
-                ;;
-            "plain-text")
-                update_version_files "$range" "$filename" "$version" "$is_workspace" "update_text_file"
-                ;;
-            *)
-                zz-log w "Unsupported file type: $type for $filename"
-                ;;
+        "json")
+            update_version_files "$range" "$filename" "$version" "$is_workspace" "update_json_file"
+            ;;
+        "plain-text")
+            update_version_files "$range" "$filename" "$version" "$is_workspace" "update_text_file"
+            ;;
+        *)
+            zz-log w "Unsupported file type: $type for $filename"
+            ;;
         esac
     done
 

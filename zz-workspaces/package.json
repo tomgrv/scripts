@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz-workspaces",
-  "version": "4.3.0",
+  "version": "4.6.0",
   "description": "List the runnable workspaces of a package",
   "bin": {
     "zz-workspaces": "run.sh"

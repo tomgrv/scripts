@@ -6,7 +6,7 @@
 . zz-colors
 
 eval $(
-    zz-args "Configure a feature" $0 "$@" <<-help
+    zz-args "Configure a feature" $0 "$@" <<help
     s source    source      Force source directory
     - arg       arg         Feature name
 help
@@ -91,8 +91,8 @@ clean_key() {
 
     zz-log - "Removing key {U $ck_path} from {U $ck_file}..."
     if [ "$ck_type" = yaml ]; then
-        CK_PATHS="[$ck_resolved]" yq -i -I "${tabSize:-2}" 'delpaths(env(CK_PATHS))' "$ck_file" ||
-            zz-log w "Could not remove key {U $ck_path} from {U $ck_file}"
+        CK_PATHS="[$ck_resolved]" yq -i -I "${tabSize:-2}" 'delpaths(env(CK_PATHS))' "$ck_file" \
+            || zz-log w "Could not remove key {U $ck_path} from {U $ck_file}"
     else
         ck_tmp=$(mktemp)
         if jq --indent "${tabSize:-4}" --argjson r "$ck_resolved" 'delpaths([$r])' "$ck_file" >"$ck_tmp"; then
@@ -199,7 +199,7 @@ if [ -d $source/stubs ]; then
             # fragment) snapshot of what was last deployed and diff the
             # incoming file against it.
             snapshot_dir=$(git rev-parse --git-path info 2>/dev/null || echo .git/info)/configure-feature/state
-            snapshot=$snapshot_dir/$(echo -n "$feature/${file#$source/stubs/}" | sha1sum | cut -d' ' -f1)
+            snapshot=$snapshot_dir/$(printf '%s' "$feature/${file#$source/stubs/}" | sha1sum | cut -d' ' -f1)
             mkdir -p $snapshot_dir
             base=$snapshot
             [ -f $base ] || base=/dev/null

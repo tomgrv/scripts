@@ -5,7 +5,7 @@
 # change marker, most common type), and optionally pushes to remote.
 
 eval $(
-    zz-args "Release squashed current branch to develop branch" $0 "$@" <<-help
+    zz-args "Release squashed current branch to develop branch" $0 "$@" <<help
         m  msg     msg      Message to use for the squash merge commit
         o  -       occ      Override the commit message to use the most occurring commit type
         p  -       push     Push the changes to the remote repository after merging
@@ -92,9 +92,9 @@ git stash list | grep -q "$stash" && git stash pop
 
 if [ -n "$push" ]; then
     zz-log i "Pushing changes to remote repository..."
-    git push origin develop &&
-        zz-log s "Changes pushed to remote repository successfully" ||
-        zz-log e "Failed to push changes to remote repository"
+    git push origin develop \
+        && zz-log s "Changes pushed to remote repository successfully" \
+        || zz-log e "Failed to push changes to remote repository"
 fi
 
 git checkout "$current_branch"

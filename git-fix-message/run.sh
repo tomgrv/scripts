@@ -1,12 +1,12 @@
 #!/bin/sh
 
 eval $(
-	zz-args "Rewrite an arbitrary commit message" $0 "$@" <<-help
-			f -        force     allow overwritting pushed history
-			p -        push      push to remote
-			m msg      msg       new commit message
-			- sha      sha       sha commit to rewrite message
-	help
+    zz-args "Rewrite an arbitrary commit message" $0 "$@" <<help
+            f -        force     allow overwritting pushed history
+            p -        push      push to remote
+            m msg      msg       new commit message
+            - sha      sha       sha commit to rewrite message
+help
 )
 
 cd "$(git rev-parse --show-toplevel)" >/dev/null
@@ -14,34 +14,34 @@ cd "$(git rev-parse --show-toplevel)" >/dev/null
 git fetch --progress --prune --recurse-submodules=no origin >/dev/null
 
 if ! git diff-index --quiet HEAD --; then
-	zz-log e "You have uncommitted changes. Please commit or stash them before running this script."
-	exit 1
+    zz-log e "You have uncommitted changes. Please commit or stash them before running this script."
+    exit 1
 fi
 
 if git isRebase >/dev/null 2>&1; then
-	zz-log e "A rebase is in progress. Please finish or abort it before running this script."
-	exit 1
+    zz-log e "A rebase is in progress. Please finish or abort it before running this script."
+    exit 1
 fi
 
 sha=$(git getcommit $force $sha)
 
 if ! git rev-parse --verify --quiet "$sha^{commit}" >/dev/null; then
-	zz-log e "Invalid commit: $sha"
-	exit 1
+    zz-log e "Invalid commit: $sha"
+    exit 1
 fi
 
 if ! git merge-base --is-ancestor "$sha" HEAD; then
-	zz-log e "Commit $(echo "$sha" | cut -c1-7) is not in the current branch history."
-	exit 1
+    zz-log e "Commit $(echo "$sha" | cut -c1-7) is not in the current branch history."
+    exit 1
 fi
 
 if [ -z "$msg" ]; then
-	msg=$(zz-prompt "New commit message:")
+    msg=$(zz-prompt "New commit message:")
 fi
 
 if [ -z "$msg" ]; then
-	zz-log e "Commit message cannot be empty."
-	exit 1
+    zz-log e "Commit message cannot be empty."
+    exit 1
 fi
 
 old_msg=$(git log -1 --pretty=%s "$sha")
@@ -51,23 +51,23 @@ zz-log - "New message: $msg"
 zz-log w "This will rewrite git history. Make sure you understand the consequences."
 
 if [ "$(zz-prompt -c Yn "Do you want to proceed?")" != "y" ]; then
-	zz-log i "Operation cancelled by user."
-	exit 1
+    zz-log i "Operation cancelled by user."
+    exit 1
 fi
 
 # A minimal range including target commit and descendants speeds up the rewrite over --all
 if [ -n "$(git rev-list --parents -n 1 "$sha" | cut -d' ' -f2)" ]; then
-	range="$sha^..HEAD"
+    range="$sha^..HEAD"
 else
-	range="--all"
+    range="--all"
 fi
 
 TARGET_SHA="$sha" NEW_MESSAGE="$msg" git filter-branch --msg-filter '
-	if [ "$GIT_COMMIT" = "$TARGET_SHA" ]; then
-		printf "%s\n" "$NEW_MESSAGE"
-	else
-		cat
-	fi
+    if [ "$GIT_COMMIT" = "$TARGET_SHA" ]; then
+        printf "%s\n" "$NEW_MESSAGE"
+    else
+        cat
+    fi
 ' --tag-name-filter cat -- $range
 
 # filter-branch leaves rewritten refs behind; purge them so the old history is unreachable
@@ -76,16 +76,16 @@ git reflog expire --expire=now --all
 git gc --prune=now
 
 if [ -n "$push" ]; then
-	if git rev-parse --verify --quiet origin/HEAD >/dev/null; then
-		zz-log i "Pushing to remote..."
-		if [ -n "$force" ]; then
-			git push --force origin HEAD
-		else
-			git push --force-with-lease origin HEAD
-		fi
-	else
-		zz-log i "Branch not pushed, skipping push..."
-	fi
+    if git rev-parse --verify --quiet origin/HEAD >/dev/null; then
+        zz-log i "Pushing to remote..."
+        if [ -n "$force" ]; then
+            git push --force origin HEAD
+        else
+            git push --force-with-lease origin HEAD
+        fi
+    else
+        zz-log i "Branch not pushed, skipping push..."
+    fi
 fi
 
 zz-log s "Commit message rewritten successfully."

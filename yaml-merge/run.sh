@@ -4,10 +4,10 @@ set -e
 . zz-colors
 
 eval $(
-    zz-args "Merge 2 yaml files" $0 "$@" <<-help
+    zz-args "Merge 2 yaml files" $0 "$@" <<help
         i indent      indent    indent size (default: 2)
-        - target      target		Target YAML file to merge into
-        - source      source		Source YAML file to merge from
+        - target      target        Target YAML file to merge into
+        - source      source        Source YAML file to merge from
 help
 )
 

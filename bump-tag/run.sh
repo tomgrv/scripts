@@ -1,12 +1,12 @@
 #!/bin/sh
 
 eval $(
-    zz-args "Manage tag & following tags" $0 "$@" <<-help
+    zz-args "Manage tag & following tags" $0 "$@" <<help
             f -        force      Force tag creation even if it exists
             p -        prefix     Prefix to use for the tag (default: v)
             b blame    blame      Tag the last commit where the version field in the specified JSON file was changed to the current version
-		    - tag      tag        Tag to create or follow
-	help
+            - tag      tag        Tag to create or follow
+help
 )
 
 if [ -z "$prefix" ]; then

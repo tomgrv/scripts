@@ -1,7 +1,7 @@
 #!/bin/sh
 
 eval $(
-    zz-args "Edit the last commit message and content" $0 "$@" <<-help
+    zz-args "Edit the last commit message and content" $0 "$@" <<help
         m   msg     msg     New commit message
 help
 )

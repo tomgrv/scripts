@@ -36,7 +36,8 @@ set -e
 # --- arguments: the repository first (getopts stops there), then everything
 # else untouched in "$@". The workspace options are declared further down,
 # once the checkout says which workspaces exist.
-eval "$(zz-args "Fetch a GitHub org/repo, propose its workspaces and inputs, then run them" "$0" "$@" <<help
+eval "$(
+    zz-args "Fetch a GitHub org/repo, propose its workspaces and inputs, then run them" "$0" "$@" <<help
 - repo spec <org>/<repo>[@<ref>]: the repository to fetch and run
 # args rest Options for its workspaces (zz-setup <repo> -h), or arguments for its entrypoint
 help
@@ -233,7 +234,8 @@ done
 
 # --- workspace options: declared here, not with the first zz-args call,
 # because the help and the accepted names depend on the checkout.
-eval "$(zz-args "$spec workspaces: $(printf '%s' "$names" | tr '\n' ' ')" "zz-setup $spec" "$@" <<help
+eval "$(
+    zz-args "$spec workspaces: $(printf '%s' "$names" | tr '\n' ' ')" "zz-setup $spec" "$@" <<help
 w names with_list Enable workspaces (space/comma-separated)
 s names skip_list Skip workspaces
 d names down_list Bring workspaces down

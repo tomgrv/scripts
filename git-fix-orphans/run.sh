@@ -3,11 +3,11 @@
 set -e
 
 eval $(
-    zz-args "Prefix remote branches that do not follow the gitflow config and have no pull request" $0 "$@" <<-help
-		p -      push       apply the renames on the remote (default: dry run, only list)
-		x prefix prefix     prefix to prepend (default: orphan/)
-		- remote remote     remote to inspect (default: origin)
-	help
+    zz-args "Prefix remote branches that do not follow the gitflow config and have no pull request" $0 "$@" <<help
+        p -      push       apply the renames on the remote (default: dry run, only list)
+        x prefix prefix     prefix to prepend (default: orphan/)
+        - remote remote     remote to inspect (default: origin)
+help
 )
 
 cd "$(git rev-parse --show-toplevel)" >/dev/null
@@ -70,8 +70,11 @@ for ref in $(git for-each-ref --format='%(refname:short)' "refs/remotes/$remote/
     fi
 
     if [ -n "$push" ]; then
-        git push --atomic "$remote" "refs/remotes/$remote/$branch:refs/heads/$target" ":refs/heads/$branch" ||
-            { zz-log w "Failed to rename $branch"; continue; }
+        git push --atomic "$remote" "refs/remotes/$remote/$branch:refs/heads/$target" ":refs/heads/$branch" \
+            || {
+                zz-log w "Failed to rename $branch"
+                continue
+            }
     fi
     # Machine-readable result on stdout, logs stay on stderr.
     printf '%s -> %s\n' "$branch" "$target"

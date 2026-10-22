@@ -6,10 +6,10 @@ if [ "$#" -lt 1 ]; then
 fi
 
 eval $(
-    zz-args "Clone and degit a repository" $0 "$@" <<-help
-		    - repo      repo        repository to clone
-			- directory directory   directory to degit into
-	help
+    zz-args "Clone and degit a repository" $0 "$@" <<help
+            - repo      repo        repository to clone
+            - directory directory   directory to degit into
+help
 )
 
 host=$(echo "${repo}" | sed -E 's/https?:\/\/([^/]+)\/.*/\1/')
@@ -28,16 +28,16 @@ mkdir -p "${directory}"
 
 case $host in
 "gitlab.com")
-    curl --location "https://gitlab.com/${repo}/-/archive/master/${repo}-master.tar.gz" |
-        tar --extract --ungzip --strip-components=1 --directory "${directory}"
+    curl --location "https://gitlab.com/${repo}/-/archive/master/${repo}-master.tar.gz" \
+        | tar --extract --ungzip --strip-components=1 --directory "${directory}"
     ;;
 "bitbucket.org")
-    curl --location "https://bitbucket.org/${repo}/get/master.tar.gz" |
-        tar --extract --ungzip --strip-components=1 --directory "${directory}"
+    curl --location "https://bitbucket.org/${repo}/get/master.tar.gz" \
+        | tar --extract --ungzip --strip-components=1 --directory "${directory}"
     ;;
 "github.com")
-    curl --location "https://api.github.com/repos/${repo}/tarball" |
-        tar --extract --ungzip --strip-components=1 --directory "${directory}"
+    curl --location "https://api.github.com/repos/${repo}/tarball" \
+        | tar --extract --ungzip --strip-components=1 --directory "${directory}"
     ;;
 *)
     zz-log e "Unsupported host: {U ${host}}"

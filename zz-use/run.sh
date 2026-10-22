@@ -181,7 +181,7 @@ _cache_fresh() {
 _fetch_archive() {
     _cache_dir="$1" _url="$2" _desc="$3"
     if [ -n "$_url" ]; then
-        zz-log i "Retrieving ${_desc} from {U ${_url}}"
+        zz-log d "Retrieving ${_desc} from {U ${_url}}"
         _tmp="${_cache_dir}.tmp.$$"
         _add_tmp "$_tmp"
         rm -rf "$_tmp"
@@ -212,7 +212,10 @@ _fetch_archive() {
 # GitHub archive (_fetch_archive above), just fetched from the npm
 # registry's tarball. Sets _SRC on success.
 _resolve_npm() {
-    _ensure_jq || { printf '[e] npm origin %s requires jq on PATH\n' "$_req_origin" >&2; return 1; }
+    _ensure_jq || {
+        printf '[e] npm origin %s requires jq on PATH\n' "$_req_origin" >&2
+        return 1
+    }
     _npm_ref="${_req_ref:-latest}"
     _cache_dir="${ZZ_CACHE_DIR}/${_req_origin}/${_npm_ref}"
     _tarball=""
@@ -260,18 +263,27 @@ _resolve_src() {
             # absolute), no cache/download. Plain stderr, not zz-log: this
             # can be the very first thing zz-use resolves, before zz-log
             # is on PATH.
-            _SRC=$(cd "$_req_origin" 2>/dev/null && pwd) || { printf '[e] Local repo path %s not found\n' "$_req_origin" >&2; return 1; }
+            _SRC=$(cd "$_req_origin" 2>/dev/null && pwd) || {
+                printf '[e] Local repo path %s not found\n' "$_req_origin" >&2
+                return 1
+            }
             ;;
         '$'*)
             # Git-root scheme ("$" or "$<subpath>"): same no-cache handling
             # as a local path, anchored at the repo root instead of cwd.
-            _git_root=$(git rev-parse --show-toplevel 2>/dev/null) || { printf '[e] %s: not inside a git repository\n' "$_req_origin" >&2; return 1; }
+            _git_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
+                printf '[e] %s: not inside a git repository\n' "$_req_origin" >&2
+                return 1
+            }
             _sub="${_req_origin#\$}"
             case "$_sub" in /*) _sub="${_sub#/}" ;; esac
             if [ -z "$_sub" ]; then
                 _SRC="$_git_root"
             else
-                _SRC=$(cd "${_git_root}/${_sub}" 2>/dev/null && pwd) || { printf '[e] Git-root path %s not found (root: %s)\n' "$_req_origin" "$_git_root" >&2; return 1; }
+                _SRC=$(cd "${_git_root}/${_sub}" 2>/dev/null && pwd) || {
+                    printf '[e] Git-root path %s not found (root: %s)\n' "$_req_origin" "$_git_root" >&2
+                    return 1
+                }
             fi
             ;;
         @*)
@@ -413,7 +425,10 @@ _install_repo_script() {
     _resolve_src "$_origin" "$_ref" || return 1
     [ -f "${_SRC}/${_name}/run.sh" ] || return 1
 
-    _bindir || { zz-log e "No writable bin directory found for {Purple ${_name}}"; return 1; }
+    _bindir || {
+        zz-log e "No writable bin directory found for {Purple ${_name}}"
+        return 1
+    }
     # _bindir may have resolved the default source: switch back.
     _resolve_src "$_origin" "$_ref" || return 1
     _dir="$_ZZ_BINDIR"
@@ -423,8 +438,6 @@ _install_repo_script() {
     ./* | ../* | /* | \$*) _from="$_origin" ;;
     *) _from="${_origin}@${_ref:-$ZZ_ORIGIN_REF}" ;;
     esac
-    zz-log i "Installing {Purple ${_name}} from {B ${_from}}"
-    zz-log d "Source {U ${_SRC}/${_name}}, target {U ${_dir}}"
     # Write to a temp file and `mv` into place rather than `cp` over the
     # target directly: <_name> can be zz-use itself (e.g. under
     # zz-update), and an in-place cp can truncate a script the shell is
@@ -435,7 +448,7 @@ _install_repo_script() {
     _install_script_config "${_SRC}/${_name}/config" "${_dir}/config"
     mkdir -p "${_dir}/.zz_use"
     printf '%s@%s\n' "$_origin" "$_ref" >"$(_stamp_path "${_dir}/${_name}" "$_name")"
-    zz-log s "Installed {Purple ${_name}} to {U ${_dir}/${_name}}"
+    zz-log s "Installed {Purple ${_name}} from {B ${_from}} to {U ${_dir}/${_name}}"
 }
 
 # The activator itself: resolve every requested tool, one at a time.
@@ -644,12 +657,13 @@ command -v zz-args >/dev/null 2>&1 || _resolve_src || exit 1
 
 # Declares the options and collects the tools back onto "$@".
 _parse() {
-    eval "$(zz-args "Install tools on demand, only if missing" "zz-use" "$@" <<help
+    eval "$(
+        zz-args "Install tools on demand, only if missing" "zz-use" "$@" <<help
 f - force_flag Reinstall even when already on PATH
 x tool exec_tool Install <tool> and exec into it with the remaining arguments as its argv
 # tools tools Tools to install: [origin/]<tool>[@ref]
 help
-)" || return 1
+    )" || return 1
     [ -z "$force_flag" ] || FORCE=1
     _use "$@" ${EXEC_TOOL:+"$EXEC_TOOL"}
 }

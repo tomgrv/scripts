@@ -8,21 +8,24 @@
 . zz-colors
 
 eval $(
-	zz-args "Git commit-msg hook" $0 "$@" <<-help
-		- msgfile   msgfile   Path to the commit message file (as passed by git)
-	help
+    zz-args "Git commit-msg hook" $0 "$@" <<help
+        - msgfile   msgfile   Path to the commit message file (as passed by git)
+help
 )
 
-toplevel=$(git rev-parse --show-toplevel) || { zz-log e "Not inside a git repository."; exit 1; }
+toplevel=$(git rev-parse --show-toplevel) || {
+    zz-log e "Not inside a git repository."
+    exit 1
+}
 cd "$toplevel"
 
 if [ -t 1 ]; then
-	exec >/dev/tty 2>&1
+    exec >/dev/tty 2>&1
 fi
 
 if [ -z "$msgfile" ]; then
-	zz-log e "No commit message file provided."
-	exit 1
+    zz-log e "No commit message file provided."
+    exit 1
 fi
 
 git-hook-installplugins -g '[.config.commitizen.path // "", .commitlint.extends // ""]'
