@@ -267,8 +267,15 @@ run_step() {
 # print_summaries: ask every workspace declaring "config.summary" for its
 # "summary" action and print each non-empty block as is.
 print_summaries() {
-    local n out
+    local n out pkgs=""
 
+    # The summaries read their steps' inputs (ports, credential files): resolved
+    # as for a run - environment, env file, default - but never asked.
+    for n in $names; do
+        [ "$(get_field "$n" 9)" = true ] || continue
+        pkgs="$pkgs${pkgs:+:}$(get_dir "$n")/package.json"
+    done
+    [ -z "$pkgs" ] || eval "$(zz-call -n -f "$envfile" -p "$pkgs")"
     for n in $names; do
         [ "$(get_field "$n" 9)" = true ] || continue
         out=$(exec_bin "$n" summary) || true
@@ -343,7 +350,7 @@ force_down=0 status_only=0 only=
 [ -z "$status_flag" ] || status_only=1
 nflags=$(printf '%s' "$with_list$skip_list$down_list$only_list$down_all$force_flag$status_flag$summary_flag$action_name" | wc -c)
 
-# --- summary: -m prints the summaries (no inputs resolved) and stops.
+# --- summary: -m prints the summaries (inputs resolved, never asked) and stops.
 if [ -n "$summary_flag" ]; then
     print_summaries
     exit 0

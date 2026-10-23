@@ -31,7 +31,7 @@ Never write inline `apt-get`/`apk`/`sudo` branching. Install system packages wit
 
 ### Source only `zz-*` scripts
 
-A managed script (anything installed or run through `zz-use`/`zz-setup`) sources nothing but `zz-*` scripts: `. zz-colors`. Shared logic never travels through `.`, because a sourced file shares the caller's shell (variables, `set -e`, traps, `$0`) and breaks the moment the two drift apart. Put it in a command on `PATH` and call it (`vps-network public-ip`, `zz-persist -r KEY`), with its own `zz-use` line and arguments. A script that is itself sourced by `zz-setup` (see below) is the one exception, and `zz-setup` does the sourcing.
+A managed script (anything installed or run through `zz-use`/`zz-setup`) sources nothing but `zz-*` scripts: `. zz-colors`. Shared logic never travels through `.`, because a sourced file shares the caller's shell (variables, `set -e`, traps, `$0`) and breaks the moment the two drift apart. Put it in a command on `PATH` and call it (`vps-network public-ip`, `zz-persist -r KEY`), with its own `zz-use` line and arguments. Two things may still be sourced: a data file in shell syntax that is not a script of the repo (`/etc/os-release`, a settings file the user provides, read under a comment saying so), and a `config.functions` step, which `zz-setup` sources (see below).
 
 ### Logging
 

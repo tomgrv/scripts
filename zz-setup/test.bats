@@ -441,3 +441,14 @@ make_functions_remote() {
     run zz-setup acme/fn -a check
     [ "$status" -ne 0 ]
 }
+
+@test "zz-setup summaries see the inputs of their steps (defaults, never asked)" {
+    make_summary_remote
+    echo '{"name":"@x/s","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":1,"summary":true,"inputs":{"S_FILE":{"default":"/etc/s.env"}}}}' >"$WORK/sm/s/package.json"
+    printf '#!/bin/sh\n[ "$1" = summary ] && echo "s-file:${S_FILE:-unset}" || echo "s-ran:$1"\n' >"$WORK/sm/s/run.sh"
+    git -C "$WORK/sm" commit -q -am input
+    git -C "$WORK/sm" push -q "$WORK/remote/acme/sm.git" main
+    run zz-setup acme/sm -m </dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"s-file:/etc/s.env"* ]]
+}
