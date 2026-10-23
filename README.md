@@ -255,6 +255,11 @@ flowchart TD
 | `json-merge`        | recursively merge one JSON file into another (arrays deduped, unioned)     |
 | `json-render`       | fill the `${NAME}` placeholders of a JSON file, values JSON-escaped         |
 | `yaml-render`       | fill the `${NAME}` placeholders of a YAML file (chart values, manifest)    |
+| `kube-progress`     | run a command, logging the pod status of a namespace while it works |
+| `kube-diagnose`     | show what is stuck in a Kubernetes namespace |
+| `kube-teardown`     | uninstall a Helm release and delete its namespace |
+| `kube-service-port` | change the port of a Service's named port |
+| `kube-cert-manager` | install cert-manager unless it is already installed |
 | `feature`           | dispatch to `feature-<subcommand>` (`install`, `configure`, `context`)     |
 | `feature-context`   | resolve a feature's source/target dirs from the calling script             |
 | `edit-script`       | copy an installed script locally and open it for editing                   |
