@@ -13,6 +13,9 @@
 # after every run (its blocks printed as is, in order), and alone from
 # `zz-setup <repo> -m`, which runs nothing else.
 #
+# "config.requires" ({"root": true, "os": "ubuntu"}) is checked for every selected
+# workspace before the first one runs (zz-require).
+#
 # Runnable workspace: has a "bin" and an "engines.zz-setup" field in its
 # package.json (the run context, any value such as "*"). Its optional "config"
 # holds the settings: "order" sorts, "default" preselects, "conflicts" lists
@@ -377,6 +380,17 @@ if [ "$status_only" -ne 1 ]; then
             zz-log - "Skip one of them: -s $c, or -s $n"
             exit 1
         done
+    done
+fi
+
+# What the selected workspaces need from the host (config.requires: root,
+# os=<id>), checked before any of them starts.
+if [ "$status_only" -ne 1 ]; then
+    for n in $names; do
+        [ "$(get_state "$n")" = skip ] && continue
+        req=$(get_field "$n" 10 | tr ',' ' ')
+        # shellcheck disable=SC2086
+        [ -z "$req" ] || zz-require -n "$n" $req || exit 1
     done
 fi
 

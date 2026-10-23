@@ -1,0 +1,17 @@
+{
+  "name": "@tomgrv/scripts-zz-step",
+  "version": "4.9.0",
+  "description": "Run the up, down or summary function of a zz-setup step (to be sourced)",
+  "bin": {
+    "zz-step": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*",
+    "@tomgrv/scripts-zz-require": "*"
+  },
+  "private": true
+}

@@ -15,7 +15,7 @@ zz-workspaces [<dir>]
 ```
 
 One row per workspace, fields separated by `\037` (a tab would collapse empty
-fields): `order name dir description default deps conflicts bin summary`. Names have
+fields): `order name dir description default deps conflicts bin summary requires`. Names have
 their `@scope/` removed; `deps` and `conflicts` are comma-separated. One `jq`
 call per workspace. Prints nothing without a `package.json` or runnable
 workspace.

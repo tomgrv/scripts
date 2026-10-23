@@ -382,3 +382,16 @@ make_summary_remote() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"ref:main"* ]]
 }
+
+@test "zz-setup checks config.requires of the selected workspaces before running any" {
+    make_summary_remote
+    echo '{"name":"@x/n","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":2,"requires":{"os":"notanos"}}}' >"$WORK/sm/n/package.json"
+    git -C "$WORK/sm" commit -q -am req
+    git -C "$WORK/sm" push -q "$WORK/remote/acme/sm.git" main
+    run zz-setup acme/sm -o n
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"n targets notanos only"* ]]
+    [[ "$output" != *"n-ran:"* ]]
+    run zz-setup acme/sm -o s
+    [ "$status" -eq 0 ]
+}

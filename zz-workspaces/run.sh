@@ -1,11 +1,12 @@
 #!/bin/sh
 # zz-workspaces [<dir>] — list the runnable workspaces of the package in <dir>
 # (default: the current directory), sorted by config.order, one per line:
-#   order US name US dir US description US default US deps US conflicts US bin US summary
+#   order US name US dir US description US default US deps US conflicts US bin US summary US requires
 # (US = \037, which keeps empty fields: a tab would collapse them). name has
 # its @scope/ removed; dir is relative to <dir>; deps and conflicts are
 # comma-separated names; default is true|false; bin is the first bin file;
-# summary is true|false (config.summary: the bin has a "summary" action).
+# summary is true|false (config.summary: the bin has a "summary" action);
+# requires is comma-separated (config.requires: root, os=<id>; see zz-require).
 # Runnable = has a "bin" that exists and an "engines.zz-setup" field.
 # Prints nothing when there is no package.json or no runnable workspace.
 
@@ -41,7 +42,8 @@ for w in $all; do
           (((.dependencies // {}) + (.peerDependencies // {})) | keys | map(sub("^@[^/]*/"; "")) | join(",")),
           ((.config.conflicts // []) | map(sub("^@[^/]*/"; "")) | join(",")),
           (.bin | if type == "string" then . else (to_entries[0].value // "") end),
-          ((.config.summary // false) | tostring) ]
+          ((.config.summary // false) | tostring),
+          ((.config.requires // {}) | to_entries | map(if .value == true then .key else "\(.key)=\(.value)" end) | join(",")) ]
       | join("\u001f")' "$w/package.json")
     [ -n "$row" ] || continue
     bin=$(printf '%s' "$row" | cut -d"$us" -f8)

@@ -50,6 +50,8 @@
     "zz-persist",
     "zz-call",
     "zz-install",
+    "zz-require",
+    "zz-step",
     "zz-fetch",
     "zz-workspaces",
     "zz-vars",
