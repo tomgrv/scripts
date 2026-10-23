@@ -397,39 +397,37 @@ make_summary_remote() {
     [ "$status" -eq 0 ]
 }
 
-# "f" is a config.functions workspace: it only defines up/down/summary/check.
-make_functions_remote() {
+# "f" answers up/down/summary and a custom check action.
+make_actions_remote() {
     rm -rf "$WORK/fn" "$WORK/remote/acme/fn.git"
-    mkdir -p "$WORK/fn/f" "$WORK/fn/g"
+    mkdir -p "$WORK/fn/f"
     cd "$WORK/fn"
     git init -q -b main
     git config user.email t@t
     git config user.name t
-    echo '{"name":"fn","workspaces":["f","g"]}' >package.json
-    echo '{"name":"@x/f","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":1,"functions":true,"summary":true}}' >f/package.json
-    echo '{"name":"@x/g","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":2}}' >g/package.json
-    printf '#!/bin/sh\nset -eu\nhere=$(dirname "$0")\nup() { echo "f-up in $here"; }\ndown() { echo f-down; }\nsummary() { echo f-summary; }\ncheck() { echo f-check; }\n' >f/run.sh
-    printf '#!/bin/sh\nup() { echo g-up; }\n' >g/run.sh
-    chmod +x f/run.sh g/run.sh
+    echo '{"name":"fn","workspaces":["f"]}' >package.json
+    echo '{"name":"@x/f","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":1,"summary":true}}' >f/package.json
+    printf '#!/bin/sh\ncase "$1" in\n    up) echo f-up ;;\n    down) echo f-down ;;\n    summary) echo f-summary ;;\n    check) echo f-check ;;\n    *) echo "no $1 action"; exit 1 ;;\nesac\n' >f/run.sh
+    chmod +x f/run.sh
     git add -A
     git commit -q -m init
     git clone -q --bare "$WORK/fn" "$WORK/remote/acme/fn.git"
     cd "$BATS_TEST_DIRNAME"
 }
 
-@test "zz-setup sources a config.functions bin and calls up()/down() itself, with its own directory as \$0" {
-    make_functions_remote
+@test "zz-setup runs a bin with up/down and prints the summary of a config.summary workspace" {
+    make_actions_remote
     run zz-setup acme/fn -o f
     [ "$status" -eq 0 ]
-    [[ "$output" == *"f-up in ."* ]]
+    [[ "$output" == *"f-up"* ]]
     [[ "$output" == *"f-summary"* ]]
     run zz-setup acme/fn -d f
     [ "$status" -eq 0 ]
     [[ "$output" == *"f-down"* ]]
 }
 
-@test "zz-setup -a calls any function of a config.functions workspace, and refuses other workspaces" {
-    make_functions_remote
+@test "zz-setup -a runs another action of the -o workspaces instead of up, and fails on an unknown one" {
+    make_actions_remote
     run zz-setup acme/fn -o f -a check
     [ "$status" -eq 0 ]
     [[ "$output" == *"f-check"* ]]
@@ -437,10 +435,6 @@ make_functions_remote() {
     run zz-setup acme/fn -o f -a nothing
     [ "$status" -ne 0 ]
     [[ "$output" == *"no nothing action"* ]]
-    run zz-setup acme/fn -o g -a check
-    [ "$status" -ne 0 ]
-    run zz-setup acme/fn -a check
-    [ "$status" -ne 0 ]
 }
 
 @test "zz-setup summaries see the inputs of their steps (defaults, never asked)" {

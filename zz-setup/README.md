@@ -30,7 +30,7 @@ zz-setup acme/tool -o a            # run only a
    ```
 
    `order` sorts, `default` preselects, `inputs` (or `config.input`) declares
-   the variables resolved by `zz-call` (`config.functions: true` makes the bin a set of functions: `zz-setup` sources it from its own directory and calls `up()`, `down()`, `summary()` or the action asked with `-a`, so the bin has no dispatch code of its own; `config.requires`, e.g. `{"root": true, "os": "ubuntu"}`, is checked with `zz-require` for every selected workspace before the first one runs; `config.ports`, a list of `{name, port, access}`, also gives each port a `<NAME>_PORT` input defaulting to the port; `summary: true` marks a bin that answers a `summary` action for `-m`) (environment, then env file, then
+   the variables resolved by `zz-call` (`config.requires`, e.g. `{"root": true, "os": "ubuntu"}`, is checked with `zz-require` for every selected workspace before the first one runs; `config.ports`, a list of `{name, port, access}`, also gives each port a `<NAME>_PORT` input defaulting to the port; `summary: true` marks a bin that answers a `summary` action for `-m`) (environment, then env file, then
    default; required ones abort the run). Workspaces listed in
    `dependencies` / `peerDependencies` are enabled automatically.
    `conflicts` (names of other workspaces) marks workspaces that cannot run on
@@ -58,7 +58,7 @@ Lists are space- or comma-separated workspace names.
 | `-D`         | bring every workspace down                         |
 | `-F`         | allow `-d` while a dependent stays enabled         |
 | `-S`         | show workspace states and inputs, run nothing      |
-| `-a <action>` | with `-o`: call this action (a function of a `config.functions` workspace) instead of `up` |
+| `-a <action>` | with `-o`: run this action (any argument the bin understands) instead of `up` |
 | `-m`         | print the `summary` of each workspace declaring `config.summary: true`, run nothing (a normal run prints them after the last step, under a `<repo> summary` header line) |
 | `-h`         | help (lists the workspaces)                        |
 
