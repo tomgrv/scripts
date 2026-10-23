@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-kube-teardown",
-  "version": "4.9.0",
+  "version": "4.10.0",
   "description": "Uninstall a Helm release and delete its namespace",
   "bin": {
     "kube-teardown": "run.sh"

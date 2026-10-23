@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-json-render",
-  "version": "4.9.0",
+  "version": "4.10.0",
   "description": "Fill the ${NAME} placeholders of a JSON file, values JSON-escaped",
   "bin": {
     "json-render": "run.sh"

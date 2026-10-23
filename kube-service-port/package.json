@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-kube-service-port",
-  "version": "4.9.0",
+  "version": "4.10.0",
   "description": "Change the port of a Service's named port",
   "bin": {
     "kube-service-port": "run.sh"
