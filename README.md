@@ -122,7 +122,7 @@ zz-use zz-log jq -x json-validate some-file.json
 - **Core** folders keep the `zz-` prefix — each atomic function is its own
   dedicated script: `zz-use`, `zz-update`, `zz-colors`, `zz-log`, `zz-args`,
   `zz-prompt`, `zz-menu`, `zz-input`, `zz-bindir`, `zz-dispatch`, `zz-npx`,
-  `zz-persist`, `zz-call`, `zz-install`, `zz-fetch`, `zz-workspaces`, `zz-vars`, `zz-require`, `zz-setup`.
+  `zz-persist`, `zz-call`, `zz-install`, `zz-fetch`, `zz-vars`, `zz-require`, `zz-setup`.
 - **Functional** folders use `<verb>-<topic>` naming: `json-validate`,
   `json-normalize`, `json-merge`, `json-load`, `feature-context`,
   `edit-script`, `distribute-utils`, `feature-install`,
@@ -241,7 +241,6 @@ flowchart TD
 | `zz-install [-u url ...] <name> [<manager>=<name>...]`                                | install a system package via apt/apk/dnf/yum/brew/pacman/zypper/winget (per-manager name overrides), or with `-u` a downloaded binary into the `zz-bindir` dir |
 | `zz-fetch [-r ref] -d <dir> <url>`                                                    | shallow clone or fast-forward a git repository into a directory                                                                                                |
 | `zz-require [-n name] <root \| os=<id>>...`                                           | check what a step needs from its host (root, OS id); exit 1 naming the first unmet requirement                                                                  |
-| `zz-workspaces [<dir>]`                                                               | list a package's runnable workspaces (bin + `engines.zz-setup`), sorted, one row each                                                                          |
 | `zz-vars [-S] -f <envfile> <name>=<dir>...`                                           | show, ask and resolve the inputs workspaces declare; prints `export` lines                                                                                     |
 | `zz-setup <org>/<repo>[@<ref>] [args...]`                                             | clone/update a GitHub repo, propose its runnable workspaces, offer their declared inputs, then run them (else its setup entrypoint)                            |
 
@@ -273,7 +272,7 @@ See each folder's own `README.md` for its usage line.
 
 | Script        | Purpose                                                                       |
 | ------------- | ----------------------------------------------------------------------------- |
-| `ws-list`     | list workspace directories and affected workspaces                            |
+| `ws-list`     | list workspace directories, filter (`-b`, `-e`), order (`-o`) or restrict to affected (`-r`) |
 | `ws-impacted` | print the `list-packages` filter for the workspaces impacted by changed files |
 | `ws-test`     | run a workspace's `.scripts.test` entry as its test suite                     |
 
