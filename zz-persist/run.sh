@@ -25,6 +25,7 @@ eval "$(
         g length    generate    Value of this many random letters/digits when none is given or stored (printed on stdout)
         r -         show        Print the stored value of the key (no write)
         u -         remove      Remove the key (no write)
+        l -         line        The key is a whole line: append it to the file unless it is already there
         - key       key         Variable name
         - value     value       Variable value
 help
@@ -36,6 +37,17 @@ profile_dir=${ZZ_PROFILE_DIR:-/etc/profile.d}
 if [ -z "$key" ]; then
     zz-log e "Usage: zz-persist [-f file] [-p profile] [-s] [-i question [-v default]] [-g length] [-r | -u] <key> [value]"
     exit 1
+fi
+
+# -l: the "key" is a whole line (an export, an authorized key...), added once.
+if [ -n "$line" ]; then
+    [ -n "$file" ] || {
+        zz-log e "-l needs -f <file>"
+        exit 1
+    }
+    [ -e "$file" ] || touch "$file"
+    grep -qxF -- "$key" "$file" || printf '%s\n' "$key" >>"$file"
+    exit 0
 fi
 
 # A name is letters, digits and underscores, not starting with a digit

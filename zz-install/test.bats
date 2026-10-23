@@ -105,6 +105,19 @@ set_uid() {
     [ "$status" -ne 0 ]
 }
 
+@test "zz-install -u -x runs the downloaded script with the given shell, installing nothing" {
+    payload=$(mktemp)
+    printf 'echo ran-installer\n' >"$payload"
+    bindir=$(mktemp -d)
+    run env INSTALL_BIN_DIR="$bindir" zz-install -u "file://$payload" -x sh get-it
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"ran-installer"* ]]
+    [ -z "$(ls "$bindir")" ]
+    run zz-install -x sh get-it
+    [ "$status" -ne 0 ]
+    rm -rf "$payload" "$bindir"
+}
+
 @test "zz-install keys apt-get overrides as apt" {
     stub apt-get
     run_install git-flow apt=gitflow-x

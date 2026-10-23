@@ -26,6 +26,7 @@ zz-persist [-f file] [-p profile] [-s] -i "question" [-v default] <key>
 | `-g length`   | no value given or stored: generate `length` letters/digits, keep it once stored, print it on stdout |
 | `-r`          | print the stored value of the key (empty when unset); nothing is written |
 | `-u`          | remove the key from the file / profile                                 |
+| `-l`          | the argument is a whole line to append to the `-f` file unless already there |
 
 At least one of `-f`/`-p` is required. Both are idempotent: running twice
 replaces the existing entry instead of duplicating it.

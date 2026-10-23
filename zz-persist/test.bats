@@ -277,3 +277,16 @@ teardown() {
     grep -q '^B=two$' "$tmp"
     rm -f "$tmp"
 }
+
+@test "zz-persist -l adds a whole line once, keeping the file's other lines" {
+    tmp=$(mktemp)
+    printf 'first\n' >"$tmp"
+    run zz-persist -l -f "$tmp" 'export KUBECONFIG=/etc/k.yaml'
+    [ "$status" -eq 0 ]
+    run zz-persist -l -f "$tmp" 'export KUBECONFIG=/etc/k.yaml'
+    [ "$(grep -c '^export KUBECONFIG=/etc/k.yaml$' "$tmp")" -eq 1 ]
+    grep -q '^first$' "$tmp"
+    run zz-persist -l 'no file'
+    [ "$status" -ne 0 ]
+    rm -f "$tmp"
+}

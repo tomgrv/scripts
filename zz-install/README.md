@@ -23,6 +23,8 @@ zz-install git-flow apk=gitflow-avh dnf=gitflow yum=gitflow \
 instead (apt purges, so its configuration goes too), with the same
 `<manager>=<name>` overrides.
 
+`-x <shell>` with `-u` runs the downloaded file with that shell instead of installing it (an installer script such as `get-helm-3`; curl retries the download five times).
+
 With `-u <url>` it installs a downloaded binary instead, into the directory
 `zz-bindir` resolves: `[-a tar.gz|tgz|tar.xz|zip] [-b binpath] [-v version] [-s sha256]`;
 `{VERSION}`, `{OS}`, `{ARCH}` are expanded in `url`/`binpath`, and `sha256` is a

@@ -1,5 +1,5 @@
 #!/bin/sh
-# zz-install [-m] [-r] [-u url [-a archive] [-b binpath] [-v version] [-s sha256]] <name>
+# zz-install [-m] [-r] [-x shell] [-u url [-a archive] [-b binpath] [-v version] [-s sha256]] <name>
 #            [<manager>=<name>...] — install a tool, either
 #   - as a system package with whichever package manager is available
 #     (apt-get, apk, dnf, yum, brew, pacman, zypper, winget), escalating
@@ -25,6 +25,7 @@ v version version Value for {VERSION} in url/binpath
 s sha256 sha256 Expected sha256 (hash, or JSON object keyed <os>_<arch>)
 m - minimal Skip recommended packages (apt, dnf; other managers ignore it)
 r - remove Remove the system package instead of installing it
+x shell run_with With -u: run the downloaded file with this shell (an installer script) instead of installing it
 - pkg pkg Tool name (default package name)
 # more more More package names, or <manager>=<name> package name overrides
 help
@@ -206,11 +207,17 @@ install_download() {
     # Double quotes: $tmp is local, gone when the trap fires at exit.
     trap "rm -rf '$tmp'" EXIT
     mkdir -p "$tmp/x"
-    curl -fsSL "$download_url" -o "$tmp/dl" || {
+    curl -fsSL --retry 5 --retry-delay 3 --retry-connrefused "$download_url" -o "$tmp/dl" || {
         zz-log e "Download of {U $download_url} failed"
         return 1
     }
     verify_sha256 "$tmp/dl" "$sha256" || return 1
+
+    # -x: an installer script, run as is (its output forwarded), nothing installed.
+    if [ -n "$run_with" ]; then
+        run_op "$run_with" "$tmp/dl"
+        return $?
+    fi
 
     case "$archive" in
     tar.gz | tgz) tar -xzf "$tmp/dl" -C "$tmp/x" || return 1 ;;
@@ -262,6 +269,9 @@ if [ -n "$remove" ]; then
 elif [ -n "$url" ]; then
     install_download
     exit $?
+elif [ -n "$run_with" ]; then
+    zz-log e "-x runs a downloaded file: give its URL with -u"
+    exit 1
 fi
 
 rc=0
