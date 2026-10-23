@@ -61,6 +61,7 @@
     "json-merge",
     "yaml",
     "yaml-merge",
+    "helm-render",
     "feature",
     "feature-context",
     "edit-script",
