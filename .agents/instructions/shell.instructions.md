@@ -77,3 +77,16 @@ Write `#!/bin/sh` scripts that run under dash and busybox. No bashisms:
 - An option's long name equals its variable (`-s schema` fills `$schema`). Its short flag is the first letter, or the next free one.
 - Colour variables from `zz-colors` are Capitalised (`Yellow`, `None`). Environment variables are `UPPER_SNAKE` with the `ZZ_` prefix (`ZZ_LOG_STEP`).
 - Avoid abbreviations unless they are standard (`dir`, `tmp`, `url`). Do not introduce a second name for something that already has one in the script.
+
+### zz-setup compatibility
+
+A repository run by `zz-setup <org>/<repo>` is a set of workspaces, one folder per step. A step's `run.sh` follows the rules above and also these:
+
+- **Runnable step**: the folder holds `package.json` and `run.sh`. `package.json` declares `bin: {"<folder>": "run.sh"}` and `engines: {"zz-setup": "*"}`; without `engines.zz-setup` the folder is a library, never proposed as a step. The folder is a root `workspaces` entry. Order comes from `config.order`, never from the folder name.
+- **Actions**: `zz-setup` runs the bin with `up` (default) or `down`; a repo may add `summary`. Define `up()`, `down()` and `summary()`, and end the file with the repo's shared dispatcher (`dispatch_action "$@"`) that picks one. `up` and `down` are idempotent: a re-run repairs, never fails on what already exists. `down` undoes only what `up` created. `zz-setup` runs `down` steps in reverse order, then `up` steps in order.
+- **Inputs**: declare every variable in `config.inputs` (`description`, `required`, `default`, `secret`). Read it from the environment; `zz-setup` resolves environment, then env file, then default. A step never prompts: it runs without a terminal and `sudo` drops the environment. Document each input in the step README.
+- **Secrets**: generate once, then reuse. Store with `zz-persist -s` (owner-only env file), never echo to a log line other than the final summary, and mark the input `"secret": true`.
+- **Dependencies**: list other steps in `dependencies` or `peerDependencies`; `zz-setup` enables them. Steps that cannot share a host name each other in `config.conflicts`. Shared helpers live in a library workspace sourced with `zz-use <lib>` then `. <lib>`; the library is POSIX too, so every step can source it.
+- **No self-bootstrap**: a step never installs `zz-setup` or `zz-use`. It starts with `set -eu`, then `zz-use` for the helpers it sources.
+- **Local state**: derive paths from `$0` (the step being run), not from `$PWD` or a hard-coded checkout path; `zz-setup` may run a local path in place or a fresh clone.
+- **Check**: `dash -n run.sh` passes, and the step has a `test.bats` that covers its syntax and shape.
