@@ -1,5 +1,10 @@
 #!/bin/sh
 
+eval $(
+    zz-args "Start a beta release branch from the computed version" $0 "$@" <<help
+help
+)
+
 cd "$(git rev-parse --show-toplevel)" >/dev/null
 
 GBV=$(gv -showvariable MajorMinorPatch)

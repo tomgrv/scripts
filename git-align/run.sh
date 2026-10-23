@@ -1,5 +1,10 @@
 #!/bin/sh
 
+eval $(
+    zz-args "Realign local branch on its remote counterpart, discarding local commits" $0 "$@" <<help
+help
+)
+
 branch=$(git rev-parse --abbrev-ref HEAD)
 origin=$(git config --get branch.$branch.remote)
 

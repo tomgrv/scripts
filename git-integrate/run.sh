@@ -1,5 +1,10 @@
 #!/bin/sh
 
+eval $(
+    zz-args "Stage working tree changes that differ from HEAD beyond whitespace, discard the rest" $0 "$@" <<help
+help
+)
+
 cd "$(git rev-parse --show-toplevel)"
 
 pwd
