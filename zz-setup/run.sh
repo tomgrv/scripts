@@ -9,6 +9,9 @@
 #   3. otherwise (or with ZZ_SETUP_ENTRY) exec the repo's own installer with
 #      the remaining arguments: <repo>-setup/run.sh, setup.sh, run.sh.
 #
+# The "summary" action is opt-in: a workspace with "config.summary": true gets it
+# from `zz-setup <repo> -m`, which prints each block and runs nothing else.
+#
 # Runnable workspace: has a "bin" and an "engines.zz-setup" field in its
 # package.json (the run context, any value such as "*"). Its optional "config"
 # holds the settings: "order" sorts, "default" preselects, "conflicts" lists
@@ -20,7 +23,7 @@
 #
 # Options (parsed with zz-args, after the repository; names are space- or
 # comma-separated): -w enable, -s skip, -d down, -o only these, -D down all,
-# -F force down, -S status only, -h. No options on a terminal opens the menu.
+# -F force down, -S status only, -m summaries, -h. No options on a terminal opens the menu.
 #
 # Env: ZZ_SETUP_REF (default main; "@<ref>" wins), ZZ_SETUP_DIR (parent of the
 # checkout; default /opt as root, else ~/.local/share), ZZ_SETUP_URL_BASE
@@ -269,6 +272,7 @@ o names only_list Run ONLY these workspaces (overrides -w/-s/-d)
 D - down_all Bring every workspace down
 F - force_flag Allow -d while a dependent stays enabled
 S - status_flag Show each workspace's state and inputs, run nothing
+m - summary_flag Print the summary of each workspace that declares config.summary, run nothing
 # extra extra Unknown arguments (rejected)
 help
 )"
@@ -281,7 +285,18 @@ help
 force_down=0 status_only=0 only=
 [ -z "$force_flag" ] || force_down=1
 [ -z "$status_flag" ] || status_only=1
-nflags=$(printf '%s' "$with_list$skip_list$down_list$only_list$down_all$force_flag$status_flag" | wc -c)
+nflags=$(printf '%s' "$with_list$skip_list$down_list$only_list$down_all$force_flag$status_flag$summary_flag" | wc -c)
+
+# --- summary: -m asks every workspace declaring "config.summary" for its
+# "summary" action (printed as is, no inputs resolved), then stops.
+if [ -n "$summary_flag" ]; then
+    for n in $names; do
+        [ "$(get_field "$n" 9)" = true ] || continue
+        out=$(sh -c 'cd "$1" && if [ -x "$2" ]; then "./$2" $3; else bash "$2" $3; fi' sh "$(get_dir "$n")" "$(get_field "$n" 8)" summary) || true
+        [ -z "$out" ] || printf '%s\n\n' "$out"
+    done
+    exit 0
+fi
 
 apply_state up "$with_list"
 apply_state skip "$skip_list"

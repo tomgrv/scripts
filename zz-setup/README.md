@@ -30,7 +30,7 @@ zz-setup acme/tool -o a            # run only a
    ```
 
    `order` sorts, `default` preselects, `inputs` (or `config.input`) declares
-   the variables resolved by `zz-call` (environment, then env file, then
+   the variables resolved by `zz-call` (`config.ports`, a list of `{name, port, access}`, also gives each port a `<NAME>_PORT` input defaulting to the port; `summary: true` marks a bin that answers a `summary` action for `-m`) (environment, then env file, then
    default; required ones abort the run). Workspaces listed in
    `dependencies` / `peerDependencies` are enabled automatically.
    `conflicts` (names of other workspaces) marks workspaces that cannot run on
@@ -58,6 +58,7 @@ Lists are space- or comma-separated workspace names.
 | `-D`         | bring every workspace down                         |
 | `-F`         | allow `-d` while a dependent stays enabled         |
 | `-S`         | show workspace states and inputs, run nothing      |
+| `-m`         | print the `summary` of each workspace declaring `config.summary: true`, run nothing |
 | `-h`         | help (lists the workspaces)                        |
 
 No options on a terminal opens the menu, preselected with the states of the last

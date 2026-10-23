@@ -1,7 +1,8 @@
 #!/bin/sh
 # zz-vars [-S] -f <envfile> [-P profile] <name>=<dir>... — the inputs the
 # given workspaces declare in their package.json ("config.inputs", keyed by
-# variable, and "config.input", the zz-call array).
+# variable, "config.input", the zz-call array, and "config.ports": each
+# port is the input <NAME>_PORT, defaulting to its port).
 #   -S  status only: print each input as set / required / optional, run nothing
 #   (default) on a terminal, offer to set the unset ones (zz-menu, then
 #   zz-persist, secrets masked), resolve all of them with zz-call (caller's
@@ -48,7 +49,9 @@ get_inputs() {
       ((.config.inputs // {}) | to_entries[]
          | [.key, (.value.description // ""), ((.value.required // false) | tostring), (.value.default // ""), $n, ((.value.secret // false) | tostring)] | join("\u001f")),
       ((.config.input // [])[]
-         | [.var, (.question // ""), "false", (.default // ""), $n, "false"] | join("\u001f"))' "$dir/package.json"
+         | [.var, (.question // ""), "false", (.default // ""), $n, "false"] | join("\u001f")),
+      ((.config.ports // [])[]
+         | [((.name | ascii_upcase) + "_PORT"), (.name + " port (" + (.access // "public") + ")"), "false", (.port | tostring), $n, "false"] | join("\u001f"))' "$dir/package.json"
 }
 
 # get_input_status <name> <required>: set / required / optional for a variable.

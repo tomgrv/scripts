@@ -335,3 +335,31 @@ make_conflict_remote() {
     plain=$(printf '%s\n' "$output" | sed 's/\x1b\[[0-9;]*m//g')
     [[ "$plain" == *"|  Available: "* ]]
 }
+
+# "s" declares config.summary and answers the "summary" action; "n" does not.
+make_summary_remote() {
+    rm -rf "$WORK/sm" "$WORK/remote/acme/sm.git"
+    mkdir -p "$WORK/sm/s" "$WORK/sm/n"
+    cd "$WORK/sm"
+    git init -q -b main
+    git config user.email t@t
+    git config user.name t
+    echo '{"name":"sm","workspaces":["s","n"]}' >package.json
+    echo '{"name":"@x/s","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":1,"summary":true}}' >s/package.json
+    echo '{"name":"@x/n","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":2}}' >n/package.json
+    printf '#!/bin/sh\n[ "$1" = summary ] && echo "s-summary" || echo "s-ran:$1"\n' >s/run.sh
+    printf '#!/bin/sh\necho "n-ran:$1"\n' >n/run.sh
+    chmod +x s/run.sh n/run.sh
+    git add -A
+    git commit -q -m init
+    git clone -q --bare "$WORK/sm" "$WORK/remote/acme/sm.git"
+    cd "$BATS_TEST_DIRNAME"
+}
+
+@test "zz-setup -m prints the summary of workspaces declaring one and runs nothing else" {
+    make_summary_remote
+    run zz-setup acme/sm -m
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"s-summary"* ]]
+    [[ "$output" != *"ran:"* ]]
+}
