@@ -13,10 +13,6 @@
 # after every run (its blocks printed as is, in order), and alone from
 # `zz-setup <repo> -m`, which runs nothing else.
 #
-# "config.functions": true makes the bin a set of functions: up(), down(), summary()
-# and any action asked with -a are called by zz-setup after sourcing it from its
-# own directory (so the bin ends with no dispatch code of its own).
-#
 # "config.requires" ({"root": true, "os": "ubuntu"}) is checked for every selected
 # workspace before the first one runs (zz-require).
 #
@@ -211,30 +207,13 @@ apply_state() {
 
 # --- run: down in reverse order first, then up in order.
 # The workspace's own zz-log lines and its stdout hang under the "running" line.
-# exec_bin <name> <action>: run a workspace's bin for <action>. A bin of a
-# "config.functions" workspace only defines up(), down() and summary() (and any
-# other action): it is sourced here, from its own directory, and the function
-# named <action> is called (summary may be absent; anything else must exist).
-# Any other bin is run with <action> as its argument.
+# exec_bin <name> <action>: run a workspace's bin from its own directory with
+# <action> as its argument.
 exec_bin() {
     local name="$1"   # workspace name (mandatory)
     local action="$2" # up, down, summary... (mandatory)
 
-    if [ "$(get_field "$name" 11)" = true ]; then
-        sh -c '
-cd "$1" || exit 1
-action=$2
-shift 2
-. "$0"
-if command -v "$action" >/dev/null 2>&1; then
-    "$action"
-elif [ "$action" != summary ]; then
-    zz-log e "This workspace has no $action action"
-    exit 1
-fi' "./$(get_field "$name" 8)" "$(get_dir "$name")" "$action"
-    else
-        sh -c 'cd "$1" && if [ -x "$2" ]; then "./$2" $3; else bash "$2" $3; fi' sh "$(get_dir "$name")" "$(get_field "$name" 8)" "$action"
-    fi
+    sh -c 'cd "$1" && if [ -x "$2" ]; then "./$2" $3; else bash "$2" $3; fi' sh "$(get_dir "$name")" "$(get_field "$name" 8)" "$action"
 }
 
 # run_step <name> <action>: run a workspace's bin with <action> (up|down, or any
@@ -338,7 +317,7 @@ o names only_list Run ONLY these workspaces (overrides -w/-s/-d)
 D - down_all Bring every workspace down
 F - force_flag Allow -d while a dependent stays enabled
 S - status_flag Show each workspace's state and inputs, run nothing
-a action action_name Call this action (a function of a config.functions workspace) on the -o workspaces instead of up
+a action action_name Run this action (any argument the bin understands) on the -o workspaces instead of up
 m - summary_flag Print the summary of each workspace that declares config.summary, run nothing
 # extra extra Unknown arguments (rejected)
 help
@@ -492,10 +471,6 @@ fi
 # --- -a: one custom action on the selected workspaces, nothing else.
 if [ -n "$action_name" ]; then
     for n in $up_names; do
-        [ "$(get_field "$n" 11)" = true ] || {
-            zz-log e "{Purple $n} is not a config.functions workspace: it has no $action_name action"
-            exit 1
-        }
         run_step "$n" "$action_name"
     done
     exit 0

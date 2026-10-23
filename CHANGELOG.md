@@ -1,5 +1,20 @@
 # Changelog
 
+## 4.11.0 (2026-10-23)
+
+*Commits from: v4.10.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v4.10.0' into develop
+### 📦 scripts-zz-setup changes
+
+#### Other changes
+
+- ♻️ remove config.functions, steps are plain scripts (#95)
+
 ## 4.10.0 (2026-10-23)
 
 *Commits from: v4.9.0..HEAD*
@@ -907,6 +922,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 
