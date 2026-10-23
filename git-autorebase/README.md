@@ -8,6 +8,23 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-autorebase` (invoke via `git autorebase`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git autorebase [-f] [-p] [-a] [-n] [-s <strategy>] [-o <onto>] [-b <branch>] <sha>
+```
+
+| Argument        | Effect                                              |
+| --------------- | --------------------------------------------------- |
+| `-f`            | allow overwriting pushed history                    |
+| `-p`            | push to remote after rebase                         |
+| `-a`            | Apply autosquash (default: off)                     |
+| `-n`            | don't automatically manage lock files               |
+| `-s <strategy>` | strategy for conflicts (default: theirs)            |
+| `-o <onto>`     | rebase onto (default: origin/main)                  |
+| `-b <branch>`   | branch to rebase (default: current branch)          |
+| `<sha>`         | commit/branch to rebase onto (default: origin/main) |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

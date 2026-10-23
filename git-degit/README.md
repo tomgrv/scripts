@@ -8,6 +8,17 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-degit` (invoke via `git degit`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git degit <repo> <directory>
+```
+
+| Argument      | Effect                  |
+| ------------- | ----------------------- |
+| `<repo>`      | repository to clone     |
+| `<directory>` | directory to degit into |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

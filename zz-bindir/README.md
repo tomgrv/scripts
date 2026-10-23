@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # zz-bindir
 
 Resolve (and create if needed) a writable bin directory on PATH.

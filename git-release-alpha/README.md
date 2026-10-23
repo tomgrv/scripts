@@ -8,6 +8,18 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-release-alpha` (invoke via `git release-alpha`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git release-alpha [-m <msg>] [-o] [-p]
+```
+
+| Argument   | Effect                                                            |
+| ---------- | ----------------------------------------------------------------- |
+| `-m <msg>` | Message to use for the squash merge commit                        |
+| `-o`       | Override the commit message to use the most occurring commit type |
+| `-p`       | Push the changes to the remote repository after merging           |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

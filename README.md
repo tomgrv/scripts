@@ -4,7 +4,7 @@
 
 Reusable shell scripts shared across
 [`tomgrv/devcontainer-features`](https://github.com/tomgrv/devcontainer-features)
-(`common-utils` feature) and [`tomgrv/vps`](https://github.com/tomgrv/vps).
+(`common-utils` feature) and [`perspikapps/vps`](https://github.com/perspikapps/vps).
 Every core `zz-*` script and most functional scripts are POSIX `sh`; a
 few functional scripts ported from the original bash implementation
 (`json-validate`, `json-normalize`) keep `#!/bin/bash` for now, since
@@ -226,7 +226,7 @@ flowchart TD
 | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `zz <name> [args...]`                                                                 | front door: runs `zz-<name>` if installed, else `zz-use -x <name>` (install on demand, then run)                                                               |
 | `zz-use <tool>[@ref]`                                                                 | the activator: resolve/install a dependency, if and only if missing (see below)                                                                                |
-| `zz-update`                                                                           | force a fresh download of the zz-* bundle, bypassing the local cache                                                                                           |
+| `zz-update`                                                                           | force a fresh download of the zz-\* bundle, bypassing the local cache                                                                                          |
 | `zz-colors`                                                                           | ANSI color vars (`$Red` `$Green` ... `$End`); source it: `. zz-colors`                                                                                         |
 | `zz-log <lvl> <msg...>`                                                               | colored, leveled log line on stderr (`i`/`w`/`e`/`s`/`-`)                                                                                                      |
 | `zz-args <title> <caller> <<-help ...`                                                | parse `$@` per a spec; `eval $(zz-args ...)` to bind the vars                                                                                                  |
@@ -240,7 +240,7 @@ flowchart TD
 | `zz-call [-p package.json] [command...]`                                              | resolve a caller's declared env vars (`config.input`/`config.output` in `package.json`; ask + persist if missing), then run a command                          |
 | `zz-install [-u url ...] <name> [<manager>=<name>...]`                                | install a system package via apt/apk/dnf/yum/brew/pacman/zypper/winget (per-manager name overrides), or with `-u` a downloaded binary into the `zz-bindir` dir |
 | `zz-fetch [-r ref] -d <dir> <url>`                                                    | shallow clone or fast-forward a git repository into a directory                                                                                                |
-| `zz-require [-n name] <root \| os=<id>>...`                                           | check what a step needs from its host (root, OS id); exit 1 naming the first unmet requirement                                                                  |
+| `zz-require [-n name] <root \| os=<id>>...`                                           | check what a step needs from its host (root, OS id); exit 1 naming the first unmet requirement                                                                 |
 | `zz-vars [-S] -f <envfile> <name>=<dir>...`                                           | show, ask and resolve the inputs workspaces declare; prints `export` lines                                                                                     |
 | `zz-setup <org>/<repo>[@<ref>] [args...]`                                             | clone/update a GitHub repo, propose its runnable workspaces, offer their declared inputs, then run them (else its setup entrypoint)                            |
 
@@ -253,12 +253,12 @@ flowchart TD
 | `json-validate`     | validate JSON against a (local/inferred/remote) JSON Schema                |
 | `json-normalize`    | sort JSON keys per schema + alphabetically, optional in-place write        |
 | `json-merge`        | recursively merge one JSON file into another (arrays deduped, unioned)     |
-| `json-render`       | fill the `${NAME}` placeholders of a JSON file, values JSON-escaped         |
+| `json-render`       | fill the `${NAME}` placeholders of a JSON file, values JSON-escaped        |
 | `yaml-render`       | fill the `${NAME}` placeholders of a YAML file (chart values, manifest)    |
-| `kube-progress`     | run a command, logging the pod status of a namespace while it works |
-| `kube-diagnose`     | show what is stuck in a Kubernetes namespace |
-| `kube-teardown`     | uninstall a Helm release and delete its namespace |
-| `kube-service-port` | change the port of a Service's named port |
+| `kube-progress`     | run a command, logging the pod status of a namespace while it works        |
+| `kube-diagnose`     | show what is stuck in a Kubernetes namespace                               |
+| `kube-teardown`     | uninstall a Helm release and delete its namespace                          |
+| `kube-service-port` | change the port of a Service's named port                                  |
 | `feature`           | dispatch to `feature-<subcommand>` (`install`, `configure`, `context`)     |
 | `feature-context`   | resolve a feature's source/target dirs from the calling script             |
 | `edit-script`       | copy an installed script locally and open it for editing                   |
@@ -270,11 +270,11 @@ See each folder's own `README.md` for its usage line.
 
 ## Workspace scripts (`ws-*`)
 
-| Script        | Purpose                                                                       |
-| ------------- | ----------------------------------------------------------------------------- |
+| Script        | Purpose                                                                                      |
+| ------------- | -------------------------------------------------------------------------------------------- |
 | `ws-list`     | list workspace directories, filter (`-b`, `-e`), order (`-o`) or restrict to affected (`-r`) |
-| `ws-impacted` | print the `list-packages` filter for the workspaces impacted by changed files |
-| `ws-test`     | run a workspace's `.scripts.test` entry as its test suite                     |
+| `ws-impacted` | print the `list-packages` filter for the workspaces impacted by changed files                |
+| `ws-test`     | run a workspace's `.scripts.test` entry as its test suite                                    |
 
 ## Git utilities
 

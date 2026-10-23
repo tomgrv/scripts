@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # yaml-merge
 
 Recursively merge one YAML file into another, arrays deduped and unioned.

@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # feature-context
 
 Resolve a feature's source/target directories from the calling script.

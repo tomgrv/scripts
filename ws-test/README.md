@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # ws-test
 
 Run a workspace's `.scripts.test` entry (from each root `*.json` file) as its
@@ -20,9 +22,9 @@ runs it from within `<workspace>`:
 - **`*.json` present but no `.scripts.test` entry** → warns and continues
   (exits `0` unless another file in the workspace fails).
 - **`.scripts.test` present** → runs it, capturing combined output.
-  - non-zero exit → propagated as a failure.
-  - zero exit but no output at all → treated as a failure (a silently-empty
-    test run, e.g. a test runner matching zero files, is a false green).
+    - non-zero exit → propagated as a failure.
+    - zero exit but no output at all → treated as a failure (a silently-empty
+      test run, e.g. a test runner matching zero files, is a false green).
 
 ## Dependencies
 

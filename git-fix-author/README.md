@@ -8,6 +8,16 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-fix-author` (invoke via `git fix-author`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git fix-author <sha>
+```
+
+| Argument | Effect                                |
+| -------- | ------------------------------------- |
+| `<sha>`  | SHA of the commit to copy author from |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

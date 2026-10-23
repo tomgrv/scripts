@@ -8,6 +8,18 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-fix-children` (invoke via `git fix-children`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git fix-children [-p] [-f] <sha>
+```
+
+| Argument | Effect                           |
+| -------- | -------------------------------- |
+| `-p`     | push to remote                   |
+| `-f`     | allow overwriting pushed history |
+| `<sha>`  | sha commit to start from         |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

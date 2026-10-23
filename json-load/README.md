@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # json-load
 
 Load JSON from a file or URL, tagging it with $id.

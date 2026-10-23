@@ -1,6 +1,8 @@
+<!-- @format -->
+
 # feature-configure
 
-Deploy a feature's stubs into the cwd (merging), run configure-*.sh.
+Deploy a feature's stubs into the cwd (merging), run configure-\*.sh.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `feature-configure`.

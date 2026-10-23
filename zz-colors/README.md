@@ -1,6 +1,8 @@
+<!-- @format -->
+
 # zz-colors
 
-ANSI color variables, sourced by other zz-* scripts and functional scripts.
+ANSI color variables, sourced by other zz-\* scripts and functional scripts.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `zz-colors`.

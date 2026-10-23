@@ -8,6 +8,17 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-pick` (invoke via `git pick`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git pick [-c <commit>] <path>
+```
+
+| Argument      | Effect                                                 |
+| ------------- | ------------------------------------------------------ |
+| `-c <commit>` | commit sha to pick from (if not provided, will prompt) |
+| `<path>`      | path to restore (default: current directory)           |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand
