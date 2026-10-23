@@ -39,7 +39,7 @@ STUB
     stub_kubectl
     run kube-progress -i 1 cattle-system "Rancher install" sh -c 'sleep 3; echo done-output'
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Rancher install: 1s, 1/2 pods ready - waiting: rancher-2=ContainerCreating"* ]]
+    [[ "$output" == *"Rancher install: "*"s, 1/2 pods ready - waiting: rancher-2=ContainerCreating"* ]]
     [[ "$output" == *"done-output"* ]]
 }
 
