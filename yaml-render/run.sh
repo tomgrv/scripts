@@ -4,7 +4,7 @@ set -e
 . zz-colors
 
 eval $(
-    zz-args "Render a YAML/Helm values file: fill its \${NAME} placeholders" $0 "$@" <<help
+    zz-args "Render a YAML/values file: fill its \${NAME} placeholders" $0 "$@" <<help
         - file        file          YAML file holding \${NAME} placeholders
         # vars        NAME[=value]  names to fill; the value comes from the environment when omitted
 help
@@ -12,7 +12,7 @@ help
 
 # --- parameters
 if [ -z "$file" ]; then
-    zz-log e "Usage: helm-render <file> [NAME[=value]]..."
+    zz-log e "Usage: yaml-render <file> [NAME[=value]]..."
     exit 1
 fi
 if [ ! -f "$file" ]; then

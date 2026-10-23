@@ -253,7 +253,7 @@ flowchart TD
 | `json-validate`     | validate JSON against a (local/inferred/remote) JSON Schema                |
 | `json-normalize`    | sort JSON keys per schema + alphabetically, optional in-place write        |
 | `json-merge`        | recursively merge one JSON file into another (arrays deduped, unioned)     |
-| `helm-render`       | fill the `${NAME}` placeholders of a YAML/Helm values file                 |
+| `yaml-render`       | fill the `${NAME}` placeholders of a YAML file (chart values, manifest)    |
 | `feature`           | dispatch to `feature-<subcommand>` (`install`, `configure`, `context`)     |
 | `feature-context`   | resolve a feature's source/target dirs from the calling script             |
 | `edit-script`       | copy an installed script locally and open it for editing                   |

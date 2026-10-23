@@ -1,20 +1,20 @@
 <!-- @format -->
 
-# helm-render
+# yaml-render
 
-Fill the `${NAME}` placeholders of a YAML file (Helm values, a manifest) and
+Fill the `${NAME}` placeholders of a YAML file (Helm values, a Kubernetes manifest) and
 print the result, so chart values live in a `.yaml` file instead of a heredoc.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
-and linked onto `PATH` as `helm-render`.
+and linked onto `PATH` as `yaml-render`.
 
 ## Usage
 
 ```sh
-helm-render <file> [NAME[=value]]...
+yaml-render <file> [NAME[=value]]...
 
-helm-render values.yaml host=app.example.com port=8080 | kubectl apply -f -
-helm-render values.yaml host port     # values taken from the environment
+yaml-render values.yaml host=app.example.com port=8080 | kubectl apply -f -
+yaml-render values.yaml host port     # values taken from the environment
 ```
 
 Only the listed names are replaced; any other `${...}` in the file is left

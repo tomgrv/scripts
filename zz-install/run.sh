@@ -1,5 +1,5 @@
 #!/bin/sh
-# zz-install [-u url [-a archive] [-b binpath] [-v version] [-s sha256]] <name>
+# zz-install [-m] [-u url [-a archive] [-b binpath] [-v version] [-s sha256]] <name>
 #            [<manager>=<name>...] — install a tool, either
 #   - as a system package with whichever package manager is available
 #     (apt-get, apk, dnf, yum, brew, pacman, zypper, winget), escalating
@@ -23,6 +23,7 @@ a archive archive Archive type: tar.gz, tgz, tar.xz, zip (default: raw binary)
 b binpath binpath Binary path inside the archive (default: the tool name)
 v version version Value for {VERSION} in url/binpath
 s sha256 sha256 Expected sha256 (hash, or JSON object keyed <os>_<arch>)
+m - minimal Skip recommended packages (apt, dnf; other managers ignore it)
 - pkg pkg Tool name (default package name)
 # overrides overrides <manager>=<name> package name overrides
 help
@@ -100,9 +101,9 @@ install_package() {
         zz-log - "Installing {Purple $name} via {B $key}"
 
         case "$key" in
-        apt) update_apt && run_op run_as_root apt-get install -y -qq "$name" ;;
+        apt) update_apt && run_op run_as_root apt-get install -y -qq ${minimal:+--no-install-recommends} "$name" ;;
         apk) run_op run_as_root apk add --no-cache -q "$name" ;;
-        dnf) run_op run_as_root dnf install -y -q "$name" ;;
+        dnf) run_op run_as_root dnf install -y -q ${minimal:+--setopt=install_weak_deps=False} "$name" ;;
         yum) run_op run_as_root yum install -y -q "$name" ;;
         brew) run_op brew install -q "$name" ;;
         pacman) run_op run_as_root pacman -S --noconfirm --needed "$name" ;;

@@ -1,9 +1,9 @@
 {
-  "name": "@tomgrv/scripts-helm-render",
+  "name": "@tomgrv/scripts-yaml-render",
   "version": "4.9.0",
-  "description": "Fill the ${NAME} placeholders of a YAML/Helm values file",
+  "description": "Fill the ${NAME} placeholders of a YAML file",
   "bin": {
-    "helm-render": "run.sh"
+    "yaml-render": "run.sh"
   },
   "scripts": {
     "test": "bats test.bats"

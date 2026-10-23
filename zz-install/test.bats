@@ -69,6 +69,13 @@ set_uid() {
     [ "$(cat "$CALLS")" = "apk add --no-cache -q git-flow" ]
 }
 
+@test "zz-install -m skips recommended packages (apt, dnf)" {
+    stub apt-get
+    run_install -m jq
+    [ "$status" -eq 0 ]
+    [[ "$(cat "$CALLS")" == *"apt-get install -y -qq --no-install-recommends jq" ]]
+}
+
 @test "zz-install keys apt-get overrides as apt" {
     stub apt-get
     run_install git-flow apt=gitflow-x
