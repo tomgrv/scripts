@@ -4,7 +4,7 @@ set -e
 . zz-colors
 
 eval $(
-    zz-args "Render a YAML/values file: fill its \${NAME} placeholders" $0 "$@" <<help
+    zz-args "Render a YAML file: fill its \${NAME} placeholders" $0 "$@" <<help
         - file        file          YAML file holding \${NAME} placeholders
         # vars        NAME[=value]  names to fill; the value comes from the environment when omitted
 help

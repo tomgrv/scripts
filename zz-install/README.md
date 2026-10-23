@@ -11,12 +11,17 @@ and linked onto `PATH` as `zz-install`.
 ## Usage
 
 ```sh
-zz-install <pkg> [<manager>=<name>...]
+zz-install [-m] [-r] <pkg> [<manager>=<name>...]
 
 zz-install jq
 zz-install git-flow apk=gitflow-avh dnf=gitflow yum=gitflow \
     brew=git-flow-avh pacman=gitflow-avh
 ```
+
+`-m` skips recommended packages (apt `--no-install-recommends`, dnf
+`install_weak_deps=False`; other managers ignore it). `-r` removes the package
+instead (apt purges, so its configuration goes too), with the same
+`<manager>=<name>` overrides.
 
 With `-u <url>` it installs a downloaded binary instead, into the directory
 `zz-bindir` resolves: `[-a tar.gz|tgz|tar.xz|zip] [-b binpath] [-v version] [-s sha256]`;

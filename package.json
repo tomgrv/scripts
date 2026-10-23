@@ -59,6 +59,7 @@
     "json-validate",
     "json-normalize",
     "json-merge",
+    "json-render",
     "yaml",
     "yaml-merge",
     "yaml-render",

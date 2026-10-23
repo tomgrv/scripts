@@ -1,5 +1,5 @@
 #!/bin/sh
-# zz-install [-m] [-u url [-a archive] [-b binpath] [-v version] [-s sha256]] <name>
+# zz-install [-m] [-r] [-u url [-a archive] [-b binpath] [-v version] [-s sha256]] <name>
 #            [<manager>=<name>...] — install a tool, either
 #   - as a system package with whichever package manager is available
 #     (apt-get, apk, dnf, yum, brew, pacman, zypper, winget), escalating
@@ -24,6 +24,7 @@ b binpath binpath Binary path inside the archive (default: the tool name)
 v version version Value for {VERSION} in url/binpath
 s sha256 sha256 Expected sha256 (hash, or JSON object keyed <os>_<arch>)
 m - minimal Skip recommended packages (apt, dnf; other managers ignore it)
+r - remove Remove the system package instead of installing it
 - pkg pkg Tool name (default package name)
 # overrides overrides <manager>=<name> package name overrides
 help
@@ -84,6 +85,37 @@ run_op() {
 update_apt() {
     find /var/lib/apt/lists -maxdepth 1 -type f -mmin -60 2>/dev/null | grep -q . && return 0
     run_op run_as_root apt-get update -qq
+}
+
+# remove_package [<manager>=<name>...]: remove the system package through the
+# first manager found (apt purges, so its configuration goes too). Overrides
+# are keyed like install_package's.
+remove_package() {
+    local key bin name
+
+    for key in apt apk dnf yum brew pacman zypper winget; do
+        bin=$key
+        [ "$key" = apt ] && bin=apt-get
+        command -v "$bin" >/dev/null 2>&1 || continue
+
+        name=$(get_package_name "$key" "$@")
+        zz-log - "Removing {Purple $name} via {B $key}"
+
+        case "$key" in
+        apt) run_op run_as_root apt-get purge -y -qq "$name" ;;
+        apk) run_op run_as_root apk del -q "$name" ;;
+        dnf) run_op run_as_root dnf remove -y -q "$name" ;;
+        yum) run_op run_as_root yum remove -y -q "$name" ;;
+        brew) run_op brew uninstall -q "$name" ;;
+        pacman) run_op run_as_root pacman -Rns --noconfirm "$name" ;;
+        zypper) run_op run_as_root zypper --non-interactive --quiet remove "$name" ;;
+        winget) run_op winget uninstall -e --name "$name" ;;
+        esac
+        return $?
+    done
+
+    zz-log e "No supported package manager found to remove {Purple $pkg}"
+    return 1
 }
 
 # install_package [<manager>=<name>...]: install the system package through
@@ -203,7 +235,13 @@ install_download() {
 }
 
 # --- run
-if [ -n "$url" ]; then
+if [ -n "$remove" ]; then
+    [ -z "$url" ] || {
+        zz-log e "-r removes a system package, not a downloaded binary (-u)"
+        exit 1
+    }
+    remove_package "$@"
+elif [ -n "$url" ]; then
     install_download
 else
     install_package "$@"

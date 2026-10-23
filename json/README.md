@@ -2,7 +2,7 @@
 
 # json
 
-Dispatch to json-<subcommand> utilities (json-load, json-validate, json-normalize, json-merge).
+Dispatch to json-<subcommand> utilities (json-load, json-validate, json-normalize, json-merge, json-render).
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `json`, e.g. `json merge target.json source.json`

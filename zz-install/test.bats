@@ -76,6 +76,18 @@ set_uid() {
     [[ "$(cat "$CALLS")" == *"apt-get install -y -qq --no-install-recommends jq" ]]
 }
 
+@test "zz-install -r removes the package (apt purges, dnf removes)" {
+    stub apt-get
+    run_install -r jq
+    [ "$status" -eq 0 ]
+    [[ "$(cat "$CALLS")" == *"apt-get purge -y -qq jq" ]]
+    rm -f "$STUBS/apt-get" "$CALLS"
+    stub dnf
+    run_install -r git-flow dnf=gitflow
+    [ "$status" -eq 0 ]
+    [ "$(cat "$CALLS")" = "dnf remove -y -q gitflow" ]
+}
+
 @test "zz-install keys apt-get overrides as apt" {
     stub apt-get
     run_install git-flow apt=gitflow-x
