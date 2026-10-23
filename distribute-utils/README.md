@@ -1,6 +1,8 @@
+<!-- @format -->
+
 # distribute-utils
 
-Copy zz-*/utility scripts into a project's local scripts directory.
+Copy zz-\*/utility scripts into a project's local scripts directory.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `distribute-utils`.

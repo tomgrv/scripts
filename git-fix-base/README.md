@@ -8,6 +8,19 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-fix-base` (invoke via `git fix-base`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git fix-base [-p] [-n] <target> <source>
+```
+
+| Argument   | Effect                                                       |
+| ---------- | ------------------------------------------------------------ |
+| `-p`       | push changes to remote                                       |
+| `-n`       | show what would be done without making changes               |
+| `<target>` | target branch to rebase commits onto                         |
+| `<source>` | source branch to take commits from (default: current branch) |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

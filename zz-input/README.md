@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # zz-input
 
 Read from a literal argument, a file argument, or stdin.

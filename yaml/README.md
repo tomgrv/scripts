@@ -8,6 +8,13 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `yaml`, e.g. `yaml merge target.yaml source.yaml`
 runs `yaml-merge target.yaml source.yaml`.
 
+## Usage
+
+```sh
+yaml <subcommand> [args...]
+yaml merge target.yaml source.yaml   # runs yaml-merge
+```
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

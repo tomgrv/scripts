@@ -8,6 +8,24 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-fix-secrets` (invoke via `git fix-secrets`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git fix-secrets [-f] [-p] [-d] [-g <glob>] [-s <secret>] [-r <repl>] [-m] [-t] <sha>
+```
+
+| Argument      | Effect                                                   |
+| ------------- | -------------------------------------------------------- |
+| `-f`          | allow overwriting pushed history                         |
+| `-p`          | push to remote                                           |
+| `-d`          | list matching commits/files without rewriting history    |
+| `-g <glob>`   | glob pattern of files to search (e.g. "\*_/_.env")       |
+| `-s <secret>` | secret value to redact                                   |
+| `-r <repl>`   | replacement string (default: \*\*\*\*)                   |
+| `-m`          | also redact the secret from commit messages              |
+| `-t`          | also redact the secret from tag annotation messages      |
+| `<sha>`       | sha commit to fix from (use 0 for the very first commit) |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

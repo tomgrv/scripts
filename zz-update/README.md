@@ -1,8 +1,10 @@
+<!-- @format -->
+
 # zz-update
 
-Force a fresh download of the zz-* bundle, bypassing the local cache
+Force a fresh download of the zz-_ bundle, bypassing the local cache
 (`ZZ_CACHE_DIR`, default `~/.cache/zz_scripts`), and re-link the core
-`zz-*` scripts from it. Equivalent to `zz-use --force <core zz-*>`.
+`zz-_`scripts from it. Equivalent to`zz-use --force <core zz-\*>`.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `zz-update`.
@@ -23,6 +25,6 @@ disk there, ignoring the cache entirely.
 bats test.bats
 ```
 
-- re-links the zz-* bundle from a local checkout without touching the network
-- force re-installs every core zz-* script, bypassing the already-available skip
+- re-links the zz-\* bundle from a local checkout without touching the network
+- force re-installs every core zz-\* script, bypassing the already-available skip
 - makes no `curl` call at all when run from a local checkout

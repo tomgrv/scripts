@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # json-normalize
 
 Sort JSON object keys per schema and alphabetically, optional in-place write.

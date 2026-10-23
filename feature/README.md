@@ -9,6 +9,13 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `feature`, e.g. `feature install src/foo` runs
 `feature-install src/foo`.
 
+## Usage
+
+```sh
+feature <subcommand> [args...]
+feature install src/foo     # runs feature-install src/foo
+```
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

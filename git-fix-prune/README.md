@@ -8,6 +8,16 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-fix-prune` (invoke via `git fix-prune`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git fix-prune <remote>
+```
+
+| Argument   | Effect                                 |
+| ---------- | -------------------------------------- |
+| `<remote>` | remote to prune (default: all remotes) |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

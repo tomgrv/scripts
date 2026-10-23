@@ -8,6 +8,19 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-fix-up` (invoke via `git fix-up`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git fix-up [-f] [-e] [-p] <sha>
+```
+
+| Argument | Effect                            |
+| -------- | --------------------------------- |
+| `-f`     | allow overwritting pushed history |
+| `-e`     | edit commit message               |
+| `-p`     | push to remote                    |
+| `<sha>`  | sha commit to fixup               |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

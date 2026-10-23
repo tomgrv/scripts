@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # zz-npx
 
 Run a local `node_modules/.bin` binary, falling back to `npx`.

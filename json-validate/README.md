@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # json-validate
 
 Validate JSON against a local/inferred/remote JSON Schema.

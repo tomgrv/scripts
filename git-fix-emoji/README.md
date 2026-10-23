@@ -8,6 +8,18 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-fix-emoji` (invoke via `git fix-emoji`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git fix-emoji [-f] [-p] <sha>
+```
+
+| Argument | Effect                               |
+| -------- | ------------------------------------ |
+| `-f`     | allow overwritting pushed history    |
+| `-p`     | push changes after rewriting history |
+| `<sha>`  | sha commit to fix from after         |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

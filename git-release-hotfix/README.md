@@ -8,6 +8,17 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-release-hotfix` (invoke via `git release-hotfix`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git release-hotfix [-r] [-s]
+```
+
+| Argument | Effect                                                                            |
+| -------- | --------------------------------------------------------------------------------- |
+| `-r`     | force rebase of current commits onto hotfix branch                                |
+| `-s`     | stash current staged changes before creating hotfix branch and reapply them after |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand
