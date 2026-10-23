@@ -122,7 +122,7 @@ zz-use zz-log jq -x json-validate some-file.json
 - **Core** folders keep the `zz-` prefix — each atomic function is its own
   dedicated script: `zz-use`, `zz-update`, `zz-colors`, `zz-log`, `zz-args`,
   `zz-prompt`, `zz-menu`, `zz-input`, `zz-bindir`, `zz-dispatch`, `zz-npx`,
-  `zz-persist`, `zz-call`, `zz-install`, `zz-fetch`, `zz-workspaces`, `zz-vars`, `zz-require`, `zz-step`, `zz-setup`.
+  `zz-persist`, `zz-call`, `zz-install`, `zz-fetch`, `zz-workspaces`, `zz-vars`, `zz-require`, `zz-setup`.
 - **Functional** folders use `<verb>-<topic>` naming: `json-validate`,
   `json-normalize`, `json-merge`, `json-load`, `feature-context`,
   `edit-script`, `distribute-utils`, `feature-install`,
@@ -241,7 +241,6 @@ flowchart TD
 | `zz-install [-u url ...] <name> [<manager>=<name>...]`                                | install a system package via apt/apk/dnf/yum/brew/pacman/zypper/winget (per-manager name overrides), or with `-u` a downloaded binary into the `zz-bindir` dir |
 | `zz-fetch [-r ref] -d <dir> <url>`                                                    | shallow clone or fast-forward a git repository into a directory                                                                                                |
 | `zz-require [-n name] <root \| os=<id>>...`                                           | check what a step needs from its host (root, OS id); exit 1 naming the first unmet requirement                                                                  |
-| `. zz-step`                                                                           | source at the end of a zz-setup step: runs its `up()`/`down()`/`summary()` per `$1`, after checking `config.requires`                                            |
 | `zz-workspaces [<dir>]`                                                               | list a package's runnable workspaces (bin + `engines.zz-setup`), sorted, one row each                                                                          |
 | `zz-vars [-S] -f <envfile> <name>=<dir>...`                                           | show, ask and resolve the inputs workspaces declare; prints `export` lines                                                                                     |
 | `zz-setup <org>/<repo>[@<ref>] [args...]`                                             | clone/update a GitHub repo, propose its runnable workspaces, offer their declared inputs, then run them (else its setup entrypoint)                            |
@@ -261,7 +260,6 @@ flowchart TD
 | `kube-diagnose`     | show what is stuck in a Kubernetes namespace |
 | `kube-teardown`     | uninstall a Helm release and delete its namespace |
 | `kube-service-port` | change the port of a Service's named port |
-| `kube-cert-manager` | install cert-manager unless it is already installed |
 | `feature`           | dispatch to `feature-<subcommand>` (`install`, `configure`, `context`)     |
 | `feature-context`   | resolve a feature's source/target dirs from the calling script             |
 | `edit-script`       | copy an installed script locally and open it for editing                   |

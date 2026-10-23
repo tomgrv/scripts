@@ -5,7 +5,7 @@
 Check what a step needs from its host before it changes anything.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
-and linked onto `PATH` as `zz-require`. Used by `zz-step` and `zz-setup`.
+and linked onto `PATH` as `zz-require`. Used by `zz-setup`.
 
 ## Usage
 
