@@ -335,3 +335,121 @@ make_conflict_remote() {
     plain=$(printf '%s\n' "$output" | sed 's/\x1b\[[0-9;]*m//g')
     [[ "$plain" == *"|  Available: "* ]]
 }
+
+# "s" declares config.summary and answers the "summary" action; "n" does not.
+make_summary_remote() {
+    rm -rf "$WORK/sm" "$WORK/remote/acme/sm.git"
+    mkdir -p "$WORK/sm/s" "$WORK/sm/n"
+    cd "$WORK/sm"
+    git init -q -b main
+    git config user.email t@t
+    git config user.name t
+    echo '{"name":"sm","workspaces":["s","n"]}' >package.json
+    echo '{"name":"@x/s","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":1,"summary":true}}' >s/package.json
+    echo '{"name":"@x/n","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":2}}' >n/package.json
+    printf '#!/bin/sh\n[ "$1" = summary ] && echo "s-summary" || echo "s-ran:$1"\n' >s/run.sh
+    printf '#!/bin/sh\necho "n-ran:$1"\n' >n/run.sh
+    chmod +x s/run.sh n/run.sh
+    git add -A
+    git commit -q -m init
+    git clone -q --bare "$WORK/sm" "$WORK/remote/acme/sm.git"
+    cd "$BATS_TEST_DIRNAME"
+}
+
+@test "zz-setup -m prints the summary of workspaces declaring one and runs nothing else" {
+    make_summary_remote
+    run zz-setup acme/sm -m
+    [ "$status" -eq 0 ]
+    [[ "$output" == *" summary"*"s-summary"* ]]
+    [[ "$output" == *"s-summary"* ]]
+    [[ "$output" != *"ran:"* ]]
+}
+
+@test "zz-setup prints the summaries of workspaces declaring one after a run" {
+    make_summary_remote
+    run zz-setup acme/sm -o n
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"n-ran:up"* ]]
+    [[ "$output" == *"s-summary"* ]]
+    [[ "$output" != *"s-ran:"* ]]
+}
+
+@test "zz-setup exports the ref it runs (also when given as @ref) to the workspaces" {
+    make_workspace_remote
+    printf '#!/bin/sh\necho "ref:$ZZ_SETUP_REF"\n' >"$WORK/ws/a/run.sh"
+    git -C "$WORK/ws" commit -q -am ref
+    git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
+    run zz-setup acme/ws@main -o a
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"ref:main"* ]]
+}
+
+@test "zz-setup checks config.requires of the selected workspaces before running any" {
+    make_summary_remote
+    echo '{"name":"@x/n","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":2,"requires":{"os":"notanos"}}}' >"$WORK/sm/n/package.json"
+    git -C "$WORK/sm" commit -q -am req
+    git -C "$WORK/sm" push -q "$WORK/remote/acme/sm.git" main
+    run zz-setup acme/sm -o n
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"n targets notanos only"* ]]
+    [[ "$output" != *"n-ran:"* ]]
+    run zz-setup acme/sm -o s
+    [ "$status" -eq 0 ]
+}
+
+# "f" is a config.functions workspace: it only defines up/down/summary/check.
+make_functions_remote() {
+    rm -rf "$WORK/fn" "$WORK/remote/acme/fn.git"
+    mkdir -p "$WORK/fn/f" "$WORK/fn/g"
+    cd "$WORK/fn"
+    git init -q -b main
+    git config user.email t@t
+    git config user.name t
+    echo '{"name":"fn","workspaces":["f","g"]}' >package.json
+    echo '{"name":"@x/f","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":1,"functions":true,"summary":true}}' >f/package.json
+    echo '{"name":"@x/g","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":2}}' >g/package.json
+    printf '#!/bin/sh\nset -eu\nhere=$(dirname "$0")\nup() { echo "f-up in $here"; }\ndown() { echo f-down; }\nsummary() { echo f-summary; }\ncheck() { echo f-check; }\n' >f/run.sh
+    printf '#!/bin/sh\nup() { echo g-up; }\n' >g/run.sh
+    chmod +x f/run.sh g/run.sh
+    git add -A
+    git commit -q -m init
+    git clone -q --bare "$WORK/fn" "$WORK/remote/acme/fn.git"
+    cd "$BATS_TEST_DIRNAME"
+}
+
+@test "zz-setup sources a config.functions bin and calls up()/down() itself, with its own directory as \$0" {
+    make_functions_remote
+    run zz-setup acme/fn -o f
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"f-up in ."* ]]
+    [[ "$output" == *"f-summary"* ]]
+    run zz-setup acme/fn -d f
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"f-down"* ]]
+}
+
+@test "zz-setup -a calls any function of a config.functions workspace, and refuses other workspaces" {
+    make_functions_remote
+    run zz-setup acme/fn -o f -a check
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"f-check"* ]]
+    [[ "$output" != *"f-up"* ]]
+    run zz-setup acme/fn -o f -a nothing
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"no nothing action"* ]]
+    run zz-setup acme/fn -o g -a check
+    [ "$status" -ne 0 ]
+    run zz-setup acme/fn -a check
+    [ "$status" -ne 0 ]
+}
+
+@test "zz-setup summaries see the inputs of their steps (defaults, never asked)" {
+    make_summary_remote
+    echo '{"name":"@x/s","bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":1,"summary":true,"inputs":{"S_FILE":{"default":"/etc/s.env"}}}}' >"$WORK/sm/s/package.json"
+    printf '#!/bin/sh\n[ "$1" = summary ] && echo "s-file:${S_FILE:-unset}" || echo "s-ran:$1"\n' >"$WORK/sm/s/run.sh"
+    git -C "$WORK/sm" commit -q -am input
+    git -C "$WORK/sm" push -q "$WORK/remote/acme/sm.git" main
+    run zz-setup acme/sm -m </dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"s-file:/etc/s.env"* ]]
+}

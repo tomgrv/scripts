@@ -1,0 +1,17 @@
+{
+  "name": "@tomgrv/scripts-zz-require",
+  "version": "4.10.0",
+  "description": "Check what a step needs from its host: root, os=<id>",
+  "bin": {
+    "zz-require": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*"
+  },
+  "private": true
+}

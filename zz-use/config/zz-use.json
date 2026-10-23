@@ -14,6 +14,18 @@
     "git": {
         "apt": "git"
     },
+    "helm": {
+        "archive": "tar.gz",
+        "binpath": "{OS}-{ARCH}/helm",
+        "sha256": {
+            "linux_amd64": "9318379b847e333460d33d291d4c088156299a26cd93d570a7f5d0c36e50b5bb",
+            "linux_arm64": "1888301aeb7d08a03b6d9f4d2b73dcd09b89c41577e80e3455c113629fc657a4",
+            "darwin_amd64": "33efd48492f2358a49a231873e8baf41f702b5ab059333ae9c31e5517633c16e",
+            "darwin_arm64": "56413c7fbb496d2789881039cab61d849727c7b35db00826fae7a2685a403344"
+        },
+        "url": "https://get.helm.sh/helm-v{VERSION}-{OS}-{ARCH}.tar.gz",
+        "version": "3.16.2"
+    },
     "jq": {
         "apt": "jq"
     },

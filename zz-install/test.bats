@@ -69,6 +69,55 @@ set_uid() {
     [ "$(cat "$CALLS")" = "apk add --no-cache -q git-flow" ]
 }
 
+@test "zz-install -m skips recommended packages (apt, dnf)" {
+    stub apt-get
+    run_install -m jq
+    [ "$status" -eq 0 ]
+    [[ "$(cat "$CALLS")" == *"apt-get install -y -qq --no-install-recommends jq" ]]
+}
+
+@test "zz-install -r removes the package (apt purges, dnf removes)" {
+    stub apt-get
+    run_install -r jq
+    [ "$status" -eq 0 ]
+    [[ "$(cat "$CALLS")" == *"apt-get purge -y -qq jq" ]]
+    rm -f "$STUBS/apt-get" "$CALLS"
+    stub dnf
+    run_install -r git-flow dnf=gitflow
+    [ "$status" -eq 0 ]
+    [ "$(cat "$CALLS")" = "dnf remove -y -q gitflow" ]
+}
+
+@test "zz-install installs several packages in one call, and removes them with -r" {
+    stub apt-get
+    run_install -m curl wget jq
+    [ "$status" -eq 0 ]
+    [ "$(grep -c 'apt-get install -y -qq --no-install-recommends' "$CALLS")" -eq 3 ]
+    grep -q 'apt-get install -y -qq --no-install-recommends wget$' "$CALLS"
+    : >"$CALLS"
+    run_install -r curl wget
+    [ "$(grep -c 'apt-get purge -y -qq' "$CALLS")" -eq 2 ]
+}
+
+@test "zz-install refuses overrides mixed with several packages" {
+    stub apt-get
+    run_install curl wget apt=wget2
+    [ "$status" -ne 0 ]
+}
+
+@test "zz-install -u -x runs the downloaded script with the given shell, installing nothing" {
+    payload=$(mktemp)
+    printf 'echo ran-installer\n' >"$payload"
+    bindir=$(mktemp -d)
+    run env INSTALL_BIN_DIR="$bindir" zz-install -u "file://$payload" -x sh get-it
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"ran-installer"* ]]
+    [ -z "$(ls "$bindir")" ]
+    run zz-install -x sh get-it
+    [ "$status" -ne 0 ]
+    rm -rf "$payload" "$bindir"
+}
+
 @test "zz-install keys apt-get overrides as apt" {
     stub apt-get
     run_install git-flow apt=gitflow-x

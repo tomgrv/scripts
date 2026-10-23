@@ -1,0 +1,17 @@
+{
+  "name": "@tomgrv/scripts-json-render",
+  "version": "4.10.0",
+  "description": "Fill the ${NAME} placeholders of a JSON file, values JSON-escaped",
+  "bin": {
+    "json-render": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*"
+  },
+  "private": true
+}

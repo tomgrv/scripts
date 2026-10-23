@@ -46,3 +46,15 @@ teardown() {
     [ "$status" -eq 1 ]
     [[ "$output" == *"Usage"* ]]
 }
+
+@test "zz-vars treats config.ports as <NAME>_PORT inputs defaulting to the port" {
+    mkdir "$WORK/p"
+    echo '{"name":"p","config":{"ports":[{"name":"web_http","port":8080,"access":"private"}]}}' >"$WORK/p/package.json"
+    run zz-vars -S -f "$WORK/env" p=p
+    [[ "$output" == *"WEB_HTTP_PORT"*"[optional]"* ]]
+    run zz-vars -f "$WORK/env" p=p </dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"WEB_HTTP_PORT"*"8080"* ]]
+    run env WEB_HTTP_PORT=9090 zz-vars -f "$WORK/env" p=p </dev/null
+    [[ "$output" == *"9090"* ]]
+}

@@ -23,8 +23,8 @@ teardown() {
     [ "$status" -eq 0 ]
     [ "$(printf '%s\n' "$output" | wc -l)" -eq 2 ]
     us=$(printf '\037')
-    [ "$(printf '%s\n' "$output" | sed -n 1p)" = "10${us}b${us}b${us}${us}false${us}${us}${us}run.sh" ]
-    [ "$(printf '%s\n' "$output" | sed -n 2p)" = "20${us}a${us}a${us}Alpha${us}true${us}b${us}b${us}run.sh" ]
+    [ "$(printf '%s\n' "$output" | sed -n 1p)" = "10${us}b${us}b${us}${us}false${us}${us}${us}run.sh${us}false${us}${us}false" ]
+    [ "$(printf '%s\n' "$output" | sed -n 2p)" = "20${us}a${us}a${us}Alpha${us}true${us}b${us}b${us}run.sh${us}false${us}${us}false" ]
 }
 
 @test "zz-workspaces skips a workspace whose bin file is missing" {
