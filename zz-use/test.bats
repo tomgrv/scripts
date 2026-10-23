@@ -337,23 +337,11 @@ EOF
     _npm_resolve_test "*'registry.npmjs.org/@myscope%2fpkg/1.2.3'*" "@myscope/pkg/some-tool@1.2.3"
 }
 
-@test "zz-use reads <scope>/<pkg> as the npm package @scope/pkg, the tool being pkg" {
-    _npm_resolve_test "*'registry.npmjs.org/@myscope%2fsome-tool/latest'*" "@myscope/some-tool"
-}
-
-@test "zz-use reads <org>/<repo>[@ref] as that GitHub repo, the tool being repo" {
-    src=$(mktemp -d)
-    mkdir -p "$src/repo-v1/some-tool"
-    printf '#!/bin/sh\necho from-repo\n' >"$src/repo-v1/some-tool/run.sh"
-    tarball="$src/repo.tar.gz"
-    tar -C "$src" -czf "$tarball" repo-v1
-    cache=$(mktemp -d)
-    bindir=$(mktemp -d)
-    zz_use_bin=$(command -v zz-use)
-    run env ZZ_USE_REPO_URL="file://$tarball" ZZ_CACHE_DIR="$cache" INSTALL_BIN_DIR="$bindir" PATH="$TEST_BIN:/usr/bin:/bin" "$zz_use_bin" someorg/some-tool@v1
-    [ "$status" -eq 0 ]
-    [[ "$("$bindir/some-tool")" == "from-repo" ]]
-    rm -rf "$src" "$cache" "$bindir"
+@test "zz-use resolves an unscoped npm origin (no @, no /)" {
+    # npm's other valid package-name shape: a bare "mypkg", no leading "@"
+    # and no "/" of its own — the case a GitHub "org/repo" origin, which
+    # always has a "/", can never collide with.
+    _npm_resolve_test "*'registry.npmjs.org/mypkg/latest'*" "mypkg/some-tool"
 }
 
 @test "zz-use -x strips an npm scope's own @ from the exec target's command name, keeping a real @ref" {

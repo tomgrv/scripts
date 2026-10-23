@@ -16,9 +16,8 @@
 #   zz-use someorg/otherscripts/some-tool@v1
 #   zz-use ./some-dir/some-tool     # local path, relative to caller's cwd
 #   zz-use $some-dir/some-tool      # relative to the git repo's top level
-#   zz-use someorg/some-tool[@v1]   # GitHub repo someorg/some-tool, its some-tool script
 #   zz-use @myscope/pkg/some-tool   # scoped npm package
-#   zz-use @myscope/some-tool       # npm package @myscope/some-tool, its some-tool script
+#   zz-use mypkg/some-tool          # unscoped npm package
 # A pinned or non-default-origin request always (re)installs, since an
 # already-installed script carries no record of which origin/ref produced
 # it; each origin+ref gets its own cache slot (ZZ_CACHE_DIR) so pinning
@@ -552,12 +551,6 @@ use_tools() {
         */*)
             origin="${name_part%/*}"
             tool="${name_part##*/}"
-            # Like zz-setup's spec, "<org>/<repo>" and "@<scope>/<pkg>" name an
-            # origin on their own: the tool is the repo (or package) name.
-            case "$origin" in
-            */* | '' | . | .. | '$'*) ;;
-            *) origin="$name_part" ;;
-            esac
             ;;
         *)
             origin="$ZZ_ORIGIN"
@@ -716,7 +709,7 @@ parse_args() {
         zz-args "Install tools on demand, only if missing" "zz-use" "$@" <<help
 f - force_flag Reinstall even when already on PATH
 x tool exec_arg Install <tool> and exec into it with the remaining arguments as its argv
-# tools tools Tools to install: [origin/]<tool>[@ref], <org>/<repo>[@ref] or @<scope>/<pkg>
+# tools tools Tools to install: [origin/]<tool>[@ref]
 help
     )" || return 1
     [ -z "$force_flag" ] || force=1
