@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-ws-list",
-  "version": "4.6.0",
+  "version": "4.12.0",
   "description": "List workspace directories and affected workspaces",
   "bin": {
     "ws-list": "run.sh"
@@ -9,7 +9,10 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "@tomgrv/scripts-zz-args": "*"
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-install": "*",
+    "@tomgrv/scripts-zz-log": "*"
   },
   "private": true
 }
