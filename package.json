@@ -43,7 +43,7 @@
     "zz-args",
     "zz-prompt",
     "zz-menu",
-    "zz-input",
+    "zz-load",
     "zz-bindir",
     "zz-dispatch",
     "zz-npx",

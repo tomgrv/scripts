@@ -1,5 +1,5 @@
 #!/bin/sh
-# Usage: zz-input [input] [description]
+# Usage: zz-load [file|literal]
 
 # --- parameters
 input="$1"
