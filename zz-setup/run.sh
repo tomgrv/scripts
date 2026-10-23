@@ -290,10 +290,28 @@ fi
 cd "$dir"
 [ -z "$ZZ_SETUP_ENTRY" ] && [ -f package.json ] || run_entry "$@"
 
-# --- select: zz-workspaces lists the runnable workspaces, one row each:
-# order US name US dir US description US default US deps US conflicts US bin.
+# --- select: ws-list picks the runnable workspaces (bin + engines.zz-setup, by
+# config.order); one row each:
+# order US name US dir US description US default US deps US conflicts US bin
+# US summary US requires. name has its @scope/ removed; deps and
+# conflicts are comma-separated names; requires is comma-separated
+# (config.requires: root, os=<id>; see zz-require); summary is
+# true|false (config.summary).
 us=$(printf '\037')
-list=$(zz-workspaces)
+list=$(ws-list -b -e zz-setup -o . | while IFS= read -r w; do
+    jq -r --arg d "${w#./}" '
+      [ (.config.order // 1000 | tostring),
+        (.name | sub("^@[^/]*/"; "")),
+        $d,
+        ((.description // "") | gsub("[\n\r]"; " ")),
+        ((.config.default // false) | tostring),
+        (((.dependencies // {}) + (.peerDependencies // {})) | keys | map(sub("^@[^/]*/"; "")) | join(",")),
+        ((.config.conflicts // []) | map(sub("^@[^/]*/"; "")) | join(",")),
+        (.bin | if type == "string" then . else (to_entries[0].value // "") end),
+        ((.config.summary // false) | tostring),
+        ((.config.requires // {}) | to_entries | map(if .value == true then .key else "\(.key)=\(.value)" end) | join(",")) ]
+      | join("\u001f")' "$w/package.json"
+done)
 [ -n "$list" ] || run_entry "$@"
 names=$(printf '%s\n' "$list" | cut -d"$us" -f2)
 

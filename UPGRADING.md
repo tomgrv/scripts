@@ -226,3 +226,22 @@ Lessons it added to the catalogue:
   discards the merge base of every consumer.
 - **A front door should have no dependencies** (`zz` does not even call
   `zz-log`): it is what you run when nothing else is installed yet.
+
+### 7.3 Third example: `zz-workspaces` → `ws-list`
+
+| Old                                      | New                                                                           |
+| ---------------------------------------- | ----------------------------------------------------------------------------- |
+| `zz-workspaces [<dir>]` (11-field rows)  | `ws-list -b -e zz-setup -o [<dir>]` (`./<dir>` per line, ordered by `config.order`) |
+| `@tomgrv/scripts-zz-workspaces` peer     | `@tomgrv/scripts-ws-list`                                                     |
+
+Order: merge `tomgrv/scripts` first, then `perspikapps/vps` (`vps-network` calls
+`ws-list`; `zz-setup` rebuilds its metadata rows itself). Consumers: replace
+`zz-workspaces` calls, drop its peer dependency, run `zz-update`.
+
+Lessons it added to the catalogue:
+
+- **Merge a second enumerator into the first** instead of keeping two: add
+  filter flags (`-b`, `-e`, `-o`) to the generic one, and let the specific
+  consumer read its own fields.
+- **A test stub must never write through a symlinked PATH entry:** use
+  `stub_script` (`tests/helpers.bash`), which removes the link first.

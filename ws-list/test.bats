@@ -95,3 +95,41 @@ EOF
     [ "$status" -eq 0 ]
     [ -z "$output" ]
 }
+
+# -b / -e / -o: filter by bin / engines.<name>, order by config.order
+make_modules() {
+    mkdir -p a b c
+    echo '{"workspaces":["a","b","c"]}' >package.json
+    echo '{"name":"a","bin":{"a":"run.sh"},"engines":{"zz-setup":"*"},"config":{"order":20}}' >a/package.json
+    echo '{"name":"b","bin":"run.sh","engines":{"zz-setup":"*"},"config":{"order":10}}' >b/package.json
+    echo '{"name":"c","bin":"run.sh"}' >c/package.json
+    touch a/run.sh b/run.sh c/run.sh
+}
+
+@test "ws-list -b -e zz-setup keeps the runnable workspaces" {
+    make_modules
+    run ws-list -b -e zz-setup
+    [ "$status" -eq 0 ]
+    [ "$(printf '%s\n' "$output" | sort | tr '\n' ' ')" = "./a ./b " ]
+}
+
+@test "ws-list -b skips a workspace whose bin file is missing" {
+    make_modules
+    rm b/run.sh
+    run ws-list -b
+    [ "$(printf '%s\n' "$output" | sort | tr '\n' ' ')" = "./a ./c " ]
+}
+
+@test "ws-list -o sorts by config.order" {
+    make_modules
+    run ws-list -b -e zz-setup -o
+    [ "$output" = "$(printf './b\n./a')" ]
+}
+
+@test "ws-list accepts a directory and the workspaces.packages form" {
+    make_modules
+    echo '{"workspaces":{"packages":["a"]}}' >package.json
+    cd /
+    run ws-list "$WORK_DIR"
+    [ "$output" = "./a" ]
+}

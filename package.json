@@ -52,7 +52,6 @@
     "zz-install",
     "zz-require",
     "zz-fetch",
-    "zz-workspaces",
     "zz-vars",
     "zz-setup",
     "json",

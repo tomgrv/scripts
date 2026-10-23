@@ -17,8 +17,9 @@
     "@tomgrv/scripts-zz-log": "*",
     "@tomgrv/scripts-zz-menu": "*",
     "@tomgrv/scripts-zz-persist": "*",
+    "@tomgrv/scripts-zz-require": "*",
     "@tomgrv/scripts-zz-vars": "*",
-    "@tomgrv/scripts-zz-workspaces": "*"
+    "@tomgrv/scripts-ws-list": "*"
   },
   "private": true
 }
