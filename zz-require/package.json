@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz-require",
-  "version": "4.9.0",
+  "version": "4.10.0",
   "description": "Check what a step needs from its host: root, os=<id>",
   "bin": {
     "zz-require": "run.sh"

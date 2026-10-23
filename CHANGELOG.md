@@ -1,5 +1,20 @@
 # Changelog
 
+## 4.10.0 (2026-10-23)
+
+*Commits from: v4.9.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v4.9.0' into develop
+### 📦 scripts-yaml-render changes
+
+#### Features
+
+- ✨ yaml/json-render, kube-*, zz-require, zz-setup functions (#93)
+
 ## 4.9.0 (2026-10-22)
 
 *Commits from: v4.8.0..HEAD*
@@ -918,5 +933,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-10-22 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-10-23 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*

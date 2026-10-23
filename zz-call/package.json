@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz-call",
-  "version": "4.9.0",
+  "version": "4.10.0",
   "description": "Resolve a caller's declared env vars (ask + persist if missing), then run a command",
   "bin": {
     "zz-call": "run.sh"
