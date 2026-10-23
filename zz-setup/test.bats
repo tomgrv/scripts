@@ -372,3 +372,13 @@ make_summary_remote() {
     [[ "$output" == *"s-summary"* ]]
     [[ "$output" != *"s-ran:"* ]]
 }
+
+@test "zz-setup exports the ref it runs (also when given as @ref) to the workspaces" {
+    make_workspace_remote
+    printf '#!/bin/sh\necho "ref:$ZZ_SETUP_REF"\n' >"$WORK/ws/a/run.sh"
+    git -C "$WORK/ws" commit -q -am ref
+    git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
+    run zz-setup acme/ws@main -o a
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"ref:main"* ]]
+}

@@ -26,7 +26,7 @@
 # comma-separated): -w enable, -s skip, -d down, -o only these, -D down all,
 # -F force down, -S status only, -m summaries, -h. No options on a terminal opens the menu.
 #
-# Env: ZZ_SETUP_REF (default main; "@<ref>" wins), ZZ_SETUP_DIR (parent of the
+# Env: ZZ_SETUP_REF (default main; "@<ref>" wins; exported to the workspaces), ZZ_SETUP_DIR (parent of the
 # checkout; default /opt as root, else ~/.local/share), ZZ_SETUP_URL_BASE
 # (default https://github.com), ZZ_SETUP_ENTRY, ZZ_SETUP_ENV_FILE (inputs; default
 # <ZZ_ETC_DIR, default /etc>/<repo>.env as root, else <checkout>/.env, read
@@ -85,6 +85,10 @@ case "$spec" in
 esac
 
 repo=${spec#*/}
+# The workspaces run for this ref: the one given as @<ref> too, so a step that
+# fetches a shared library of the same repository (zz-use <org>/<repo>/lib@${ZZ_SETUP_REF})
+# gets the same version as the checkout, not main.
+[ -n "$local" ] || export ZZ_SETUP_REF="$ref"
 url="${ZZ_SETUP_URL_BASE:-https://github.com}/$spec.git"
 
 if [ -n "$ZZ_SETUP_DIR" ]; then
