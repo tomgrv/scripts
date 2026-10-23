@@ -10,7 +10,8 @@
 #      the remaining arguments: <repo>-setup/run.sh, setup.sh, run.sh.
 #
 # The "summary" action is opt-in: a workspace with "config.summary": true gets it
-# from `zz-setup <repo> -m`, which prints each block and runs nothing else.
+# after every run (its blocks printed as is, in order), and alone from
+# `zz-setup <repo> -m`, which runs nothing else.
 #
 # Runnable workspace: has a "bin" and an "engines.zz-setup" field in its
 # package.json (the run context, any value such as "*"). Its optional "config"
@@ -221,6 +222,18 @@ run_step() {
     zz-persist -q -f "$envfile" "$(get_state_key "$name")" "$remember"
 }
 
+# print_summaries: ask every workspace declaring "config.summary" for its
+# "summary" action and print each non-empty block as is.
+print_summaries() {
+    local n out
+
+    for n in $names; do
+        [ "$(get_field "$n" 9)" = true ] || continue
+        out=$(sh -c 'cd "$1" && if [ -x "$2" ]; then "./$2" $3; else bash "$2" $3; fi' sh "$(get_dir "$n")" "$(get_field "$n" 8)" summary) || true
+        [ -z "$out" ] || printf '%s\n\n' "$out"
+    done
+}
+
 # --- code
 zz-log i "Setting up {Purple $spec} at {B $ref} in {U $dir}"
 if [ -z "$local" ] && [ -z "$ZZ_SETUP_REF" ] && [ "$ref" = main ] && [ "${spec#*@}" = "$spec" ]; then
@@ -287,14 +300,9 @@ force_down=0 status_only=0 only=
 [ -z "$status_flag" ] || status_only=1
 nflags=$(printf '%s' "$with_list$skip_list$down_list$only_list$down_all$force_flag$status_flag$summary_flag" | wc -c)
 
-# --- summary: -m asks every workspace declaring "config.summary" for its
-# "summary" action (printed as is, no inputs resolved), then stops.
+# --- summary: -m prints the summaries (no inputs resolved) and stops.
 if [ -n "$summary_flag" ]; then
-    for n in $names; do
-        [ "$(get_field "$n" 9)" = true ] || continue
-        out=$(sh -c 'cd "$1" && if [ -x "$2" ]; then "./$2" $3; else bash "$2" $3; fi' sh "$(get_dir "$n")" "$(get_field "$n" 8)" summary) || true
-        [ -z "$out" ] || printf '%s\n\n' "$out"
-    done
+    print_summaries
     exit 0
 fi
 
@@ -419,4 +427,7 @@ done
 for n in $names; do
     [ "$(get_state "$n")" = up ] && run_step "$n" up
 done
+
+# --- summary: what the workspaces declaring config.summary report, once all ran.
+print_summaries
 exit 0

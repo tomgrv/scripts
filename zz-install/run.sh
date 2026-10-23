@@ -26,7 +26,7 @@ s sha256 sha256 Expected sha256 (hash, or JSON object keyed <os>_<arch>)
 m - minimal Skip recommended packages (apt, dnf; other managers ignore it)
 r - remove Remove the system package instead of installing it
 - pkg pkg Tool name (default package name)
-# overrides overrides <manager>=<name> package name overrides
+# more more More package names, or <manager>=<name> package name overrides
 help
 )"
 
@@ -235,14 +235,44 @@ install_download() {
 }
 
 # --- run
+# Further names without "=" are more packages (default names, no override
+# applies to them); "<manager>=<name>" tokens override the first package's name.
+extra=""
+overrides=""
+for arg in "$@"; do
+    case "$arg" in
+    *=*) overrides="$overrides $arg" ;;
+    *) extra="$extra $arg" ;;
+    esac
+done
+[ -z "$extra" ] || [ -z "$overrides" ] || {
+    zz-log e "<manager>=<name> overrides apply to a single package; do not mix them with several"
+    exit 1
+}
+[ -z "$url" ] || [ -z "$extra" ] || {
+    zz-log e "-u installs a single tool"
+    exit 1
+}
+
 if [ -n "$remove" ]; then
     [ -z "$url" ] || {
         zz-log e "-r removes a system package, not a downloaded binary (-u)"
         exit 1
     }
-    remove_package "$@"
 elif [ -n "$url" ]; then
     install_download
-else
-    install_package "$@"
+    exit $?
 fi
+
+rc=0
+first="$pkg"
+for pkg in $first $extra; do
+    if [ -n "$remove" ]; then
+        # shellcheck disable=SC2086
+        remove_package $overrides || rc=$?
+    else
+        # shellcheck disable=SC2086
+        install_package $overrides || rc=$?
+    fi
+done
+exit "$rc"

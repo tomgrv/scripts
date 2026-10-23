@@ -88,6 +88,23 @@ set_uid() {
     [ "$(cat "$CALLS")" = "dnf remove -y -q gitflow" ]
 }
 
+@test "zz-install installs several packages in one call, and removes them with -r" {
+    stub apt-get
+    run_install -m curl wget jq
+    [ "$status" -eq 0 ]
+    [ "$(grep -c 'apt-get install -y -qq --no-install-recommends' "$CALLS")" -eq 3 ]
+    grep -q 'apt-get install -y -qq --no-install-recommends wget$' "$CALLS"
+    : >"$CALLS"
+    run_install -r curl wget
+    [ "$(grep -c 'apt-get purge -y -qq' "$CALLS")" -eq 2 ]
+}
+
+@test "zz-install refuses overrides mixed with several packages" {
+    stub apt-get
+    run_install curl wget apt=wget2
+    [ "$status" -ne 0 ]
+}
+
 @test "zz-install keys apt-get overrides as apt" {
     stub apt-get
     run_install git-flow apt=gitflow-x

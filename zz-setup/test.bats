@@ -363,3 +363,12 @@ make_summary_remote() {
     [[ "$output" == *"s-summary"* ]]
     [[ "$output" != *"ran:"* ]]
 }
+
+@test "zz-setup prints the summaries of workspaces declaring one after a run" {
+    make_summary_remote
+    run zz-setup acme/sm -o n
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"n-ran:up"* ]]
+    [[ "$output" == *"s-summary"* ]]
+    [[ "$output" != *"s-ran:"* ]]
+}

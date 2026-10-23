@@ -11,7 +11,7 @@ and linked onto `PATH` as `zz-install`.
 ## Usage
 
 ```sh
-zz-install [-m] [-r] <pkg> [<manager>=<name>...]
+zz-install [-m] [-r] <pkg>... | <pkg> [<manager>=<name>...]
 
 zz-install jq
 zz-install git-flow apk=gitflow-avh dnf=gitflow yum=gitflow \
@@ -29,7 +29,7 @@ With `-u <url>` it installs a downloaded binary instead, into the directory
 hash or a JSON object keyed `<os>_<arch>`. This is what `zz-use` calls for the
 tools it downloads.
 
-`<pkg>` is the default package name; append `<manager>=<name>` pairs where a
+Several `<pkg>` may follow each other (`zz-install -m curl wget jq`); `<manager>=<name>` overrides apply to a single package. `<pkg>` is the default package name; append `<manager>=<name>` pairs where a
 manager names it differently. Managers, tried in order: `apt` (`apt-get`),
 `apk`, `dnf`, `yum`, `brew`, `pacman`, `zypper`, `winget` (Git Bash on Windows, no root needed). Exits 1 when none is found,
 or when root is needed and neither root nor `sudo` is available.

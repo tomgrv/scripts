@@ -58,7 +58,7 @@ Lists are space- or comma-separated workspace names.
 | `-D`         | bring every workspace down                         |
 | `-F`         | allow `-d` while a dependent stays enabled         |
 | `-S`         | show workspace states and inputs, run nothing      |
-| `-m`         | print the `summary` of each workspace declaring `config.summary: true`, run nothing |
+| `-m`         | print the `summary` of each workspace declaring `config.summary: true`, run nothing (a normal run prints them after the last step) |
 | `-h`         | help (lists the workspaces)                        |
 
 No options on a terminal opens the menu, preselected with the states of the last
