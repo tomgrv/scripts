@@ -9,6 +9,17 @@
 #   3. otherwise (or with ZZ_SETUP_ENTRY) exec the repo's own installer with
 #      the remaining arguments: <repo>-setup/run.sh, setup.sh, run.sh.
 #
+# The "summary" action is opt-in: a workspace with "config.summary": true gets it
+# after every run (its blocks printed as is, in order), and alone from
+# `zz-setup <repo> -m`, which runs nothing else.
+#
+# "config.functions": true makes the bin a set of functions: up(), down(), summary()
+# and any action asked with -a are called by zz-setup after sourcing it from its
+# own directory (so the bin ends with no dispatch code of its own).
+#
+# "config.requires" ({"root": true, "os": "ubuntu"}) is checked for every selected
+# workspace before the first one runs (zz-require).
+#
 # Runnable workspace: has a "bin" and an "engines.zz-setup" field in its
 # package.json (the run context, any value such as "*"). Its optional "config"
 # holds the settings: "order" sorts, "default" preselects, "conflicts" lists
@@ -20,9 +31,9 @@
 #
 # Options (parsed with zz-args, after the repository; names are space- or
 # comma-separated): -w enable, -s skip, -d down, -o only these, -D down all,
-# -F force down, -S status only, -h. No options on a terminal opens the menu.
+# -F force down, -S status only, -m summaries, -h. No options on a terminal opens the menu.
 #
-# Env: ZZ_SETUP_REF (default main; "@<ref>" wins), ZZ_SETUP_DIR (parent of the
+# Env: ZZ_SETUP_REF (default main; "@<ref>" wins; exported to the workspaces), ZZ_SETUP_DIR (parent of the
 # checkout; default /opt as root, else ~/.local/share), ZZ_SETUP_URL_BASE
 # (default https://github.com), ZZ_SETUP_ENTRY, ZZ_SETUP_ENV_FILE (inputs; default
 # <ZZ_ETC_DIR, default /etc>/<repo>.env as root, else <checkout>/.env, read
@@ -81,6 +92,10 @@ case "$spec" in
 esac
 
 repo=${spec#*/}
+# The workspaces run for this ref: the one given as @<ref> too, so a step that
+# fetches a shared library of the same repository (zz-use <org>/<repo>/lib@${ZZ_SETUP_REF})
+# gets the same version as the checkout, not main.
+[ -n "$local" ] || export ZZ_SETUP_REF="$ref"
 url="${ZZ_SETUP_URL_BASE:-https://github.com}/$spec.git"
 
 if [ -n "$ZZ_SETUP_DIR" ]; then
@@ -196,17 +211,44 @@ apply_state() {
 
 # --- run: down in reverse order first, then up in order.
 # The workspace's own zz-log lines and its stdout hang under the "running" line.
-# run_step <name> <action>: run a workspace's bin with <action> (up|down).
+# exec_bin <name> <action>: run a workspace's bin for <action>. A bin of a
+# "config.functions" workspace only defines up(), down() and summary() (and any
+# other action): it is sourced here, from its own directory, and the function
+# named <action> is called (summary may be absent; anything else must exist).
+# Any other bin is run with <action> as its argument.
+exec_bin() {
+    local name="$1"   # workspace name (mandatory)
+    local action="$2" # up, down, summary... (mandatory)
+
+    if [ "$(get_field "$name" 11)" = true ]; then
+        sh -c '
+cd "$1" || exit 1
+action=$2
+shift 2
+. "$0"
+if command -v "$action" >/dev/null 2>&1; then
+    "$action"
+elif [ "$action" != summary ]; then
+    zz-log e "This workspace has no $action action"
+    exit 1
+fi' "./$(get_field "$name" 8)" "$(get_dir "$name")" "$action"
+    else
+        sh -c 'cd "$1" && if [ -x "$2" ]; then "./$2" $3; else bash "$2" $3; fi' sh "$(get_dir "$name")" "$(get_field "$name" 8)" "$action"
+    fi
+}
+
+# run_step <name> <action>: run a workspace's bin with <action> (up|down, or any
+# action asked with -a); only up and down are remembered.
 run_step() {
     local name="$1"   # workspace name (mandatory)
-    local action="$2" # up or down (mandatory)
+    local action="$2" # up, down or a custom action (mandatory)
     local ws_dir ws_bin remember
     local rc=0
 
     ws_dir=$(get_dir "$name")
     ws_bin=$(get_field "$name" 8)
     zz-log i "{B $name}: $action"
-    run_output sh -c 'cd "$1" && if [ -x "$2" ]; then "./$2" $3; else bash "$2" $3; fi' sh "$ws_dir" "$ws_bin" "$action" || rc=$?
+    run_output exec_bin "$name" "$action" || rc=$?
     if [ "$rc" -ne 0 ]; then
         zz-log e "{B $name}: $action failed (exit $rc)"
         zz-log - "Script: {U $ws_dir/$ws_bin}"
@@ -214,8 +256,35 @@ run_step() {
         exit 1
     fi
     zz-log s "{B $name}: $action done"
-    if [ "$action" = up ]; then remember=up; else remember=skip; fi
+    case "$action" in
+    up) remember=up ;;
+    down) remember=skip ;;
+    *) return 0 ;;
+    esac
     zz-persist -q -f "$envfile" "$(get_state_key "$name")" "$remember"
+}
+
+# print_summaries: ask every workspace declaring "config.summary" for its
+# "summary" action and print each non-empty block as is.
+print_summaries() {
+    local n out pkgs="" header=""
+
+    # The summaries read their steps' inputs (ports, credential files): resolved
+    # as for a run - environment, env file, default - but never asked.
+    for n in $names; do
+        [ "$(get_field "$n" 9)" = true ] || continue
+        pkgs="$pkgs${pkgs:+:}$(get_dir "$n")/package.json"
+    done
+    [ -z "$pkgs" ] || eval "$(zz-call -n -f "$envfile" -p "$pkgs")"
+    for n in $names; do
+        [ "$(get_field "$n" 9)" = true ] || continue
+        out=$(exec_bin "$n" summary) || true
+        [ -n "$out" ] || continue
+        # one header line, once, before the first block: where the summary starts
+        [ -n "$header" ] || zz-log s "{B $repo} summary"
+        header=1
+        printf '%s\n\n' "$out"
+    done
 }
 
 # --- code
@@ -269,6 +338,8 @@ o names only_list Run ONLY these workspaces (overrides -w/-s/-d)
 D - down_all Bring every workspace down
 F - force_flag Allow -d while a dependent stays enabled
 S - status_flag Show each workspace's state and inputs, run nothing
+a action action_name Call this action (a function of a config.functions workspace) on the -o workspaces instead of up
+m - summary_flag Print the summary of each workspace that declares config.summary, run nothing
 # extra extra Unknown arguments (rejected)
 help
 )"
@@ -281,7 +352,13 @@ help
 force_down=0 status_only=0 only=
 [ -z "$force_flag" ] || force_down=1
 [ -z "$status_flag" ] || status_only=1
-nflags=$(printf '%s' "$with_list$skip_list$down_list$only_list$down_all$force_flag$status_flag" | wc -c)
+nflags=$(printf '%s' "$with_list$skip_list$down_list$only_list$down_all$force_flag$status_flag$summary_flag$action_name" | wc -c)
+
+# --- summary: -m prints the summaries (inputs resolved, never asked) and stops.
+if [ -n "$summary_flag" ]; then
+    print_summaries
+    exit 0
+fi
 
 apply_state up "$with_list"
 apply_state skip "$skip_list"
@@ -289,6 +366,10 @@ apply_state skip "$skip_list"
 apply_state down "$down_list"
 apply_state up "$only_list"
 only=$(printf '%s' "$only_list" | tr ',' ' ')
+[ -z "$action_name" ] || [ -n "$only_list" ] || {
+    zz-log e "-a <action> needs -o <workspaces>"
+    exit 1
+}
 
 if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
     for n in $names; do
@@ -353,6 +434,17 @@ if [ "$status_only" -ne 1 ]; then
     done
 fi
 
+# What the selected workspaces need from the host (config.requires: root,
+# os=<id>), checked before any of them starts.
+if [ "$status_only" -ne 1 ]; then
+    for n in $names; do
+        [ "$(get_state "$n")" = skip ] && continue
+        req=$(get_field "$n" 10 | tr ',' ' ')
+        # shellcheck disable=SC2086
+        [ -z "$req" ] || zz-require -n "$n" $req || exit 1
+    done
+fi
+
 if [ "$force_down" -ne 1 ]; then
     for n in $names; do
         [ "$(get_state "$n")" = down ] || continue
@@ -397,6 +489,18 @@ if [ "$#" -gt 0 ]; then
     eval "$out"
 fi
 
+# --- -a: one custom action on the selected workspaces, nothing else.
+if [ -n "$action_name" ]; then
+    for n in $up_names; do
+        [ "$(get_field "$n" 11)" = true ] || {
+            zz-log e "{Purple $n} is not a config.functions workspace: it has no $action_name action"
+            exit 1
+        }
+        run_step "$n" "$action_name"
+    done
+    exit 0
+fi
+
 # --- run: all "down" steps in reverse order, then all "up" steps in order.
 for n in $(printf '%s\n' "$names" | sed '1!G;h;$!d'); do
     [ "$(get_state "$n")" = down ] && run_step "$n" down
@@ -404,4 +508,7 @@ done
 for n in $names; do
     [ "$(get_state "$n")" = up ] && run_step "$n" up
 done
+
+# --- summary: what the workspaces declaring config.summary report, once all ran.
+print_summaries
 exit 0

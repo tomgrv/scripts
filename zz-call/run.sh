@@ -144,7 +144,8 @@ persist_value() {
 }
 
 # --- resolve: the declared inputs, then (when no command) the outputs.
-inputs_filter='(.config.input // [])[], ((.config.inputs // {}) | to_entries[] | {var: .key, question: .value.description, default: .value.default, secret: .value.secret})'
+# config.ports ([{name, port, access}]) are inputs too: <NAME>_PORT, defaulting to the port.
+inputs_filter='(.config.input // [])[], ((.config.inputs // {}) | to_entries[] | {var: .key, question: .value.description, default: .value.default, secret: .value.secret}), ((.config.ports // [])[] | {var: ((.name | ascii_upcase) + "_PORT"), question: (.name + " port (" + (.access // "public") + ")"), default: (.port | tostring)})'
 input_entries=$(collect_entries "$inputs_filter")
 output_entries=$(collect_entries '(.config.output // [])[]')
 [ -n "$output_entries" ] || output_entries=$input_entries

@@ -234,3 +234,59 @@ teardown() {
     grep -qx 'KEY=val' "$tmp"
     rm -f "$tmp"
 }
+
+@test "zz-persist -g generates a value once, keeps it afterwards and prints it" {
+    tmp=$(mktemp)
+    run zz-persist -f "$tmp" -g 16 PW
+    [ "$status" -eq 0 ]
+    first="${lines[${#lines[@]}-1]}"
+    [ "${#first}" -eq 16 ]
+    grep -q "^PW=$first\$" "$tmp"
+    run zz-persist -f "$tmp" -g 16 PW
+    [ "${lines[${#lines[@]}-1]}" = "$first" ]
+    rm -f "$tmp"
+}
+
+@test "zz-persist -g takes a given value over generating one" {
+    tmp=$(mktemp)
+    run zz-persist -f "$tmp" -g 16 PW given
+    [ "${lines[${#lines[@]}-1]}" = "given" ]
+    grep -q '^PW=given$' "$tmp"
+    rm -f "$tmp"
+}
+
+@test "zz-persist -r prints the stored value and writes nothing" {
+    tmp=$(mktemp)
+    printf 'A=1\nB=two\n' >"$tmp"
+    run zz-persist -f "$tmp" -r B
+    [ "$status" -eq 0 ]
+    [ "$output" = "two" ]
+    run zz-persist -f "$tmp" -r MISSING
+    [ "$status" -eq 0 ]
+    [ -z "$output" ]
+    [ "$(wc -l <"$tmp")" -eq 2 ]
+    rm -f "$tmp"
+}
+
+@test "zz-persist -u removes the key and leaves the others" {
+    tmp=$(mktemp)
+    printf 'A=1\nB=two\n' >"$tmp"
+    run zz-persist -f "$tmp" -u A
+    [ "$status" -eq 0 ]
+    ! grep -q '^A=' "$tmp"
+    grep -q '^B=two$' "$tmp"
+    rm -f "$tmp"
+}
+
+@test "zz-persist -l adds a whole line once, keeping the file's other lines" {
+    tmp=$(mktemp)
+    printf 'first\n' >"$tmp"
+    run zz-persist -l -f "$tmp" 'export KUBECONFIG=/etc/k.yaml'
+    [ "$status" -eq 0 ]
+    run zz-persist -l -f "$tmp" 'export KUBECONFIG=/etc/k.yaml'
+    [ "$(grep -c '^export KUBECONFIG=/etc/k.yaml$' "$tmp")" -eq 1 ]
+    grep -q '^first$' "$tmp"
+    run zz-persist -l 'no file'
+    [ "$status" -ne 0 ]
+    rm -f "$tmp"
+}

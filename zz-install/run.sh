@@ -1,5 +1,5 @@
 #!/bin/sh
-# zz-install [-u url [-a archive] [-b binpath] [-v version] [-s sha256]] <name>
+# zz-install [-m] [-r] [-x shell] [-u url [-a archive] [-b binpath] [-v version] [-s sha256]] <name>
 #            [<manager>=<name>...] — install a tool, either
 #   - as a system package with whichever package manager is available
 #     (apt-get, apk, dnf, yum, brew, pacman, zypper, winget), escalating
@@ -23,8 +23,11 @@ a archive archive Archive type: tar.gz, tgz, tar.xz, zip (default: raw binary)
 b binpath binpath Binary path inside the archive (default: the tool name)
 v version version Value for {VERSION} in url/binpath
 s sha256 sha256 Expected sha256 (hash, or JSON object keyed <os>_<arch>)
+m - minimal Skip recommended packages (apt, dnf; other managers ignore it)
+r - remove Remove the system package instead of installing it
+x shell run_with With -u: run the downloaded file with this shell (an installer script) instead of installing it
 - pkg pkg Tool name (default package name)
-# overrides overrides <manager>=<name> package name overrides
+# more more More package names, or <manager>=<name> package name overrides
 help
 )"
 
@@ -85,6 +88,37 @@ update_apt() {
     run_op run_as_root apt-get update -qq
 }
 
+# remove_package [<manager>=<name>...]: remove the system package through the
+# first manager found (apt purges, so its configuration goes too). Overrides
+# are keyed like install_package's.
+remove_package() {
+    local key bin name
+
+    for key in apt apk dnf yum brew pacman zypper winget; do
+        bin=$key
+        [ "$key" = apt ] && bin=apt-get
+        command -v "$bin" >/dev/null 2>&1 || continue
+
+        name=$(get_package_name "$key" "$@")
+        zz-log - "Removing {Purple $name} via {B $key}"
+
+        case "$key" in
+        apt) run_op run_as_root apt-get purge -y -qq "$name" ;;
+        apk) run_op run_as_root apk del -q "$name" ;;
+        dnf) run_op run_as_root dnf remove -y -q "$name" ;;
+        yum) run_op run_as_root yum remove -y -q "$name" ;;
+        brew) run_op brew uninstall -q "$name" ;;
+        pacman) run_op run_as_root pacman -Rns --noconfirm "$name" ;;
+        zypper) run_op run_as_root zypper --non-interactive --quiet remove "$name" ;;
+        winget) run_op winget uninstall -e --name "$name" ;;
+        esac
+        return $?
+    done
+
+    zz-log e "No supported package manager found to remove {Purple $pkg}"
+    return 1
+}
+
 # install_package [<manager>=<name>...]: install the system package through
 # the first manager found. Overrides are keyed by the short manager name (apt,
 # not apt-get).
@@ -100,9 +134,9 @@ install_package() {
         zz-log - "Installing {Purple $name} via {B $key}"
 
         case "$key" in
-        apt) update_apt && run_op run_as_root apt-get install -y -qq "$name" ;;
+        apt) update_apt && run_op run_as_root apt-get install -y -qq ${minimal:+--no-install-recommends} "$name" ;;
         apk) run_op run_as_root apk add --no-cache -q "$name" ;;
-        dnf) run_op run_as_root dnf install -y -q "$name" ;;
+        dnf) run_op run_as_root dnf install -y -q ${minimal:+--setopt=install_weak_deps=False} "$name" ;;
         yum) run_op run_as_root yum install -y -q "$name" ;;
         brew) run_op brew install -q "$name" ;;
         pacman) run_op run_as_root pacman -S --noconfirm --needed "$name" ;;
@@ -173,11 +207,17 @@ install_download() {
     # Double quotes: $tmp is local, gone when the trap fires at exit.
     trap "rm -rf '$tmp'" EXIT
     mkdir -p "$tmp/x"
-    curl -fsSL "$download_url" -o "$tmp/dl" || {
+    curl -fsSL --retry 5 --retry-delay 3 --retry-connrefused "$download_url" -o "$tmp/dl" || {
         zz-log e "Download of {U $download_url} failed"
         return 1
     }
     verify_sha256 "$tmp/dl" "$sha256" || return 1
+
+    # -x: an installer script, run as is (its output forwarded), nothing installed.
+    if [ -n "$run_with" ]; then
+        run_op "$run_with" "$tmp/dl"
+        return $?
+    fi
 
     case "$archive" in
     tar.gz | tgz) tar -xzf "$tmp/dl" -C "$tmp/x" || return 1 ;;
@@ -202,8 +242,47 @@ install_download() {
 }
 
 # --- run
-if [ -n "$url" ]; then
+# Further names without "=" are more packages (default names, no override
+# applies to them); "<manager>=<name>" tokens override the first package's name.
+extra=""
+overrides=""
+for arg in "$@"; do
+    case "$arg" in
+    *=*) overrides="$overrides $arg" ;;
+    *) extra="$extra $arg" ;;
+    esac
+done
+[ -z "$extra" ] || [ -z "$overrides" ] || {
+    zz-log e "<manager>=<name> overrides apply to a single package; do not mix them with several"
+    exit 1
+}
+[ -z "$url" ] || [ -z "$extra" ] || {
+    zz-log e "-u installs a single tool"
+    exit 1
+}
+
+if [ -n "$remove" ]; then
+    [ -z "$url" ] || {
+        zz-log e "-r removes a system package, not a downloaded binary (-u)"
+        exit 1
+    }
+elif [ -n "$url" ]; then
     install_download
-else
-    install_package "$@"
+    exit $?
+elif [ -n "$run_with" ]; then
+    zz-log e "-x runs a downloaded file: give its URL with -u"
+    exit 1
 fi
+
+rc=0
+first="$pkg"
+for pkg in $first $extra; do
+    if [ -n "$remove" ]; then
+        # shellcheck disable=SC2086
+        remove_package $overrides || rc=$?
+    else
+        # shellcheck disable=SC2086
+        install_package $overrides || rc=$?
+    fi
+done
+exit "$rc"

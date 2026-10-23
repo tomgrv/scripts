@@ -1,0 +1,17 @@
+{
+  "name": "@tomgrv/scripts-kube-service-port",
+  "version": "4.9.0",
+  "description": "Change the port of a Service's named port",
+  "bin": {
+    "kube-service-port": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*"
+  },
+  "private": true
+}

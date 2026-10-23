@@ -5,6 +5,8 @@
 #   - the env file holds the value literally (read, never sourced);
 #   - the profile snippet is sourced by shells, so a value with anything but
 #     plain characters is single-quoted there and cannot run code;
+#   - -r prints the stored value, -u removes the key, -g generates a value
+#     (kept once stored) and prints it, so a caller needs no random/read helper;
 #   - a secret (-s) is asked masked (zz-prompt -s), never logged, and written
 #     only to owner-only files (zz-prompt -c offers to chmod 600 on a terminal).
 set -e
@@ -20,6 +22,10 @@ eval "$(
         v default   value_default   Default offered by -i (the stored value, if any, wins)
         s -         secret      The value is a secret: masked prompt, never logged, written only to owner-only files
         q -         quiet       Do not log the write (internal state)
+        g length    generate    Value of this many random letters/digits when none is given or stored (printed on stdout)
+        r -         show        Print the stored value of the key (no write)
+        u -         remove      Remove the key (no write)
+        l -         line        The key is a whole line: append it to the file unless it is already there
         - key       key         Variable name
         - value     value       Variable value
 help
@@ -29,8 +35,19 @@ help
 profile_dir=${ZZ_PROFILE_DIR:-/etc/profile.d}
 
 if [ -z "$key" ]; then
-    zz-log e "Usage: zz-persist [-f file] [-p profile] [-s] [-i question [-v default]] <key> [value]"
+    zz-log e "Usage: zz-persist [-f file] [-p profile] [-s] [-i question [-v default]] [-g length] [-r | -u] <key> [value]"
     exit 1
+fi
+
+# -l: the "key" is a whole line (an export, an authorized key...), added once.
+if [ -n "$line" ]; then
+    [ -n "$file" ] || {
+        zz-log e "-l needs -f <file>"
+        exit 1
+    }
+    [ -e "$file" ] || touch "$file"
+    grep -qxF -- "$key" "$file" || printf '%s\n' "$key" >>"$file"
+    exit 0
 fi
 
 # A name is letters, digits and underscores, not starting with a digit
@@ -111,6 +128,19 @@ upsert_line() {
     rm -f "$tmp"
 }
 
+# remove_line <file> <prefix>: drop every "<prefix>..." line from a file.
+remove_line() {
+    local target="$1" # file to update (mandatory)
+    local prefix="$2" # line prefix (mandatory)
+    local tmp
+
+    tmp=$(mktemp)
+    P=$prefix awk 'BEGIN { p = ENVIRON["P"] } index($0, p) != 1 { print }' "$target" >"$tmp"
+    # cat, not mv: keeps the target file's owner and mode.
+    cat "$tmp" >"$target"
+    rm -f "$tmp"
+}
+
 # persist_line <file> <prefix> <value>: persist one line to a target.
 persist_line() {
     local target="$1" # file to write (mandatory)
@@ -129,6 +159,21 @@ persist_line() {
     upsert_line "$target" "$prefix" "$text"
     [ -n "$quiet" ] || zz-log i "$key persisted to {U $target}"
 }
+
+# --- -r: print the stored value; -u: remove the key
+if [ -n "$show" ]; then
+    current=$(read_current "$file" "$key=")
+    [ -z "$current" ] && [ -n "$profile" ] && current=$(read_current "$profile_dir/$profile.sh" "export $key=")
+    printf '%s' "$current"
+    exit 0
+fi
+
+if [ -n "$remove" ]; then
+    [ -z "$file" ] || { [ ! -f "$file" ] || remove_line "$file" "$key="; }
+    [ -z "$profile" ] || { [ ! -f "$profile_dir/$profile.sh" ] || remove_line "$profile_dir/$profile.sh" "export $key="; }
+    [ -n "$quiet" ] || zz-log i "$key removed"
+    exit 0
+fi
 
 # --- value: ask when -i, else take the argument
 if [ -n "$question" ]; then
@@ -157,6 +202,16 @@ if [ -n "$question" ]; then
     fi
 fi
 
+# -g: no value given or asked: keep the stored one, else generate (letters and digits only)
+if [ -n "$generate" ] && [ -z "${value:-}" ]; then
+    value=$(read_current "$file" "$key=")
+    [ -z "$value" ] && [ -n "$profile" ] && value=$(read_current "$profile_dir/$profile.sh" "export $key=")
+    if [ -z "$value" ]; then
+        # || true: head closing early sends tr a SIGPIPE that set -e would report.
+        value=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c "$generate" || true)
+    fi
+fi
+
 # One line per pair: a newline would corrupt the file (and, in a profile, run).
 case "${value:-}" in
 *'
@@ -182,3 +237,6 @@ if [ -n "$profile" ]; then
         zz-log w "$key: cannot write {U $profile_file}, skipped"
     fi
 fi
+
+# --- -g: the value (new or kept) is the caller's result
+[ -z "$generate" ] || printf '%s' "$value"

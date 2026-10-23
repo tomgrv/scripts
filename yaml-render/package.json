@@ -1,0 +1,17 @@
+{
+  "name": "@tomgrv/scripts-yaml-render",
+  "version": "4.9.0",
+  "description": "Fill the ${NAME} placeholders of a YAML file",
+  "bin": {
+    "yaml-render": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*"
+  },
+  "private": true
+}

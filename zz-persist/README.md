@@ -10,7 +10,8 @@ and linked onto `PATH` as `zz-persist`.
 ## Usage
 
 ```sh
-zz-persist [-f file] [-p profile] [-s] <key> <value>
+zz-persist [-f file] [-p profile] [-s] [-g length] <key> [value]
+zz-persist [-f file] [-p profile] (-r | -u) <key>
 zz-persist [-f file] [-p profile] [-s] -i "question" [-v default] <key>
 ```
 
@@ -22,6 +23,10 @@ zz-persist [-f file] [-p profile] [-s] -i "question" [-v default] <key>
 | `-v default`  | default offered by `-i`; a value already stored for the key wins       |
 | `-s`          | the value is a secret (see below)                                      |
 | `-q`          | do not log the write (for internal state)                              |
+| `-g length`   | no value given or stored: generate `length` letters/digits, keep it once stored, print it on stdout |
+| `-r`          | print the stored value of the key (empty when unset); nothing is written |
+| `-u`          | remove the key from the file / profile                                 |
+| `-l`          | the argument is a whole line to append to the `-f` file unless already there |
 
 At least one of `-f`/`-p` is required. Both are idempotent: running twice
 replaces the existing entry instead of duplicating it.
