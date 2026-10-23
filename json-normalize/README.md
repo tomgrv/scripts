@@ -13,6 +13,22 @@ and linked onto `PATH` as `json-normalize`.
 json-normalize [-w] [-t tabSize] [-f fallback] [-l local] [-i] [-s schema] <files...>
 ```
 
+Validates the file first (see `json-validate`), then orders keys by the schema definition, then alphabetically.
+
+| Option      | Effect                                                                                            |
+| ----------- | ------------------------------------------------------------------------------------------------- |
+| `-w`        | write the result back to the file                                                                 |
+| `-t <size>` | tab size for indentation                                                                          |
+| `-c`        | cache schema validation maps                                                                      |
+| `-a`        | allow additional properties at the root level                                                     |
+| `-d`        | debug output                                                                                      |
+| `-f <file>` | fallback schema (`local` targets the feature folder's default schemas)                            |
+| `-l <path>` | infer the schema from a local folder based on the file name (`x.y.json` → `<path>/y.schema.json`) |
+| `-i`        | infer the schema from the JSON Schema Store when nothing is found locally                         |
+| `-s <file>` | schema file or URL                                                                                |
+
+With `lint-staged`: `"*.json": ["json-normalize -c -w -a -i -t 4 -f local -l true"]`.
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

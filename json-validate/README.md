@@ -13,6 +13,16 @@ and linked onto `PATH` as `json-validate`.
 json-validate [-a] [-i] [-f fallback] [-l local] [-s schema] <json>
 ```
 
+| Option      | Effect                                                                                            |
+| ----------- | ------------------------------------------------------------------------------------------------- |
+| `-a`        | allow additional properties at the root level                                                     |
+| `-d`        | debug output                                                                                      |
+| `-c`        | cache schema validation maps                                                                      |
+| `-f <file>` | fallback schema when none is found locally or inferred                                            |
+| `-l <path>` | infer the schema from a local folder based on the file name (`x.y.json` → `<path>/y.schema.json`) |
+| `-i`        | infer the schema from the JSON Schema Store when nothing is found locally                         |
+| `-s <file>` | schema file or URL to validate against                                                            |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand
