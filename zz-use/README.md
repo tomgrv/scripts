@@ -11,6 +11,8 @@ and linked onto `PATH` as `zz-use`.
 
 ```sh
 zz-use "<tool>" [tool...]
+zz-use <org>/<repo>[@<ref>]   # GitHub repo, installs its <repo> script
+zz-use @<scope>/<pkg>          # npm package, installs its <pkg> script
 zz-use [tool...] -x "<tool>" [arg...] # install <tool>, then exec it
 ```
 
