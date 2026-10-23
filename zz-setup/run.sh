@@ -267,7 +267,7 @@ run_step() {
 # print_summaries: ask every workspace declaring "config.summary" for its
 # "summary" action and print each non-empty block as is.
 print_summaries() {
-    local n out pkgs=""
+    local n out pkgs="" header=""
 
     # The summaries read their steps' inputs (ports, credential files): resolved
     # as for a run - environment, env file, default - but never asked.
@@ -279,7 +279,11 @@ print_summaries() {
     for n in $names; do
         [ "$(get_field "$n" 9)" = true ] || continue
         out=$(exec_bin "$n" summary) || true
-        [ -z "$out" ] || printf '%s\n\n' "$out"
+        [ -n "$out" ] || continue
+        # one header line, once, before the first block: where the summary starts
+        [ -n "$header" ] || zz-log s "{B $repo} summary"
+        header=1
+        printf '%s\n\n' "$out"
     done
 }
 

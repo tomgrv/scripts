@@ -59,7 +59,7 @@ Lists are space- or comma-separated workspace names.
 | `-F`         | allow `-d` while a dependent stays enabled         |
 | `-S`         | show workspace states and inputs, run nothing      |
 | `-a <action>` | with `-o`: call this action (a function of a `config.functions` workspace) instead of `up` |
-| `-m`         | print the `summary` of each workspace declaring `config.summary: true`, run nothing (a normal run prints them after the last step) |
+| `-m`         | print the `summary` of each workspace declaring `config.summary: true`, run nothing (a normal run prints them after the last step, under a `<repo> summary` header line) |
 | `-h`         | help (lists the workspaces)                        |
 
 No options on a terminal opens the menu, preselected with the states of the last

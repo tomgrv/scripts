@@ -360,6 +360,7 @@ make_summary_remote() {
     make_summary_remote
     run zz-setup acme/sm -m
     [ "$status" -eq 0 ]
+    [[ "$output" == *"sm summary"* ]]
     [[ "$output" == *"s-summary"* ]]
     [[ "$output" != *"ran:"* ]]
 }
