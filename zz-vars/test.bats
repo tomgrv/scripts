@@ -58,3 +58,12 @@ teardown() {
     run env WEB_HTTP_PORT=9090 zz-vars -f "$WORK/env" p=p </dev/null
     [[ "$output" == *"9090"* ]]
 }
+
+@test "zz-vars rejects an input name that is not a shell identifier" {
+    mkdir "$WORK/bad"
+    echo '{"name":"bad","config":{"inputs":{"X;touch pwned":{}}}}' >"$WORK/bad/package.json"
+    run zz-vars -f "$WORK/env" bad=bad </dev/null
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Invalid input name"* ]]
+    [ ! -e pwned ]
+}

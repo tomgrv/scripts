@@ -11,6 +11,8 @@ eval $(
 help
 )
 
+zz-log w "distribute-utils is deprecated: use {B INSTALL_BIN_DIR=<target> zz-use 'zz-*'}"
+
 get_target_from_config() {
     local config_target=""
 

@@ -79,6 +79,13 @@ for item in "$@"; do
 done
 all_inputs=$(printf '%s' "$all_inputs" | awk -F"$us" 'NF && !seen[$1]++')
 
+# Names go through eval and sed below: only shell identifiers are accepted.
+bad=$(printf '%s\n' "$all_inputs" | awk -F"$us" 'NF && $1 !~ /^[A-Za-z_][A-Za-z0-9_]*$/ { print $1 }')
+[ -z "$bad" ] || {
+    zz-log e "Invalid input name (not a shell identifier): $(printf '%s' "$bad" | tr '\n' ' ')"
+    exit 1
+}
+
 # The caller's environment first, then the env file, for what is unset.
 # The final resolution, defaults and persistence are zz-call's, below.
 while IFS="$us" read -r var rest; do

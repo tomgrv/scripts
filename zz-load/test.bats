@@ -66,3 +66,44 @@ teardown() {
     [ "$status" -eq 0 ]
     [ "$output" = "stdin-value" ]
 }
+
+@test "zz-load -r errors on a missing file instead of echoing it" {
+    run zz-load -r /no/such/file/here
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"not found"* ]]
+}
+
+@test "zz-load -r reads an existing file" {
+    tmp=$(mktemp)
+    echo "from-file" >"$tmp"
+    run bash -c "zz-load -r '$tmp' 2>/dev/null"
+    rm -f "$tmp"
+    [ "$status" -eq 0 ]
+    [ "$output" = "from-file" ]
+}
+
+@test "zz-load -r errors on an empty source" {
+    run zz-load -r ""
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"No source provided"* ]]
+}
+
+@test "zz-load downloads an http(s) URL with curl -fsSL" {
+    stub_script curl <<'EOF2'
+#!/bin/sh
+echo "curl $*"
+EOF2
+    run bash -c 'zz-load https://example.com/x 2>/dev/null'
+    [ "$status" -eq 0 ]
+    [ "$output" = "curl -fsSL https://example.com/x" ]
+}
+
+@test "zz-load errors when the download fails" {
+    stub_script curl <<'EOF2'
+#!/bin/sh
+exit 22
+EOF2
+    run zz-load https://example.com/x
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"Unable to download"* ]]
+}

@@ -10,8 +10,9 @@ and linked onto `PATH` as `zz-vars`.
 
 ## Usage
 
+<!-- prettier-ignore -->
 ```sh
-zz-vars [-S] -f profile] < envfile > [-P < name > = < dir > ...
+zz-vars [-S] -f <envfile> [-P profile] <name>=<dir>...
 eval "$(zz-vars -f .env -P myprofile a=packages/a b=packages/b)"
 ```
 
@@ -19,7 +20,7 @@ eval "$(zz-vars -f .env -P myprofile a=packages/a b=packages/b)"
 - Otherwise, on a terminal, offers to set unset inputs (`zz-menu`, then
   `zz-persist`, secrets masked), resolves every input with `zz-call` (caller's
   environment, env file, default) and prints the `export` lines to `eval`.
-- Exits 1 when a required input is still empty, 3 when the user aborted.
+- Exits 1 when a required input is still empty (or an input name is not a shell identifier), 3 when the user aborted.
 
 ## Tests
 
