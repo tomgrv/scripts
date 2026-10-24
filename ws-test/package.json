@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-ws-test",
-  "version": "4.6.0",
+  "version": "5.0.0",
   "description": "Run a workspace's .scripts.test entry (from each root *.json file) as its test suite",
   "bin": {
     "ws-test": "run.sh"

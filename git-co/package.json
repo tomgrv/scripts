@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-co",
-  "version": "4.6.0",
+  "version": "5.0.0",
   "description": "Git enhanced commit",
   "bin": {
     "git-co": "run.sh"

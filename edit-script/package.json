@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-edit-script",
-  "version": "4.6.0",
+  "version": "5.0.0",
   "description": "Copy an installed script locally and open it for editing",
   "bin": {
     "edit-script": "run.sh"
