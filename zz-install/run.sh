@@ -1,5 +1,5 @@
 #!/bin/sh
-# zz-install [-m] [-r] [-x shell] [-u url [-a archive] [-b binpath] [-v version] [-s sha256]] <name>
+# zz-install [-m] [-r] [-f] [-x shell] [-u url [-a archive] [-b binpath] [-v version] [-s sha256]] <name>
 #            [<manager>=<name>...] — install a tool, either
 #   - as a system package with whichever package manager is available
 #     (apt-get, apk, dnf, yum, brew, pacman, zypper, winget), escalating
@@ -24,6 +24,7 @@ b binpath binpath Binary path inside the archive (default: the tool name)
 v version version Value for {VERSION} in url/binpath
 s sha256 sha256 Expected sha256 (hash, or JSON object keyed <os>_<arch>)
 m - minimal Skip recommended packages (apt, dnf; other managers ignore it)
+f - full Upgrade every installed package first (system upgrade), then install
 r - remove Remove the system package instead of installing it
 x shell run_with With -u: run the downloaded file with this shell (an installer script) instead of installing it
 - pkg pkg Tool name (default package name)
@@ -86,6 +87,34 @@ run_op() {
 update_apt() {
     find /var/lib/apt/lists -maxdepth 1 -type f -mmin -60 2>/dev/null | grep -q . && return 0
     run_op run_as_root apt-get update -qq
+}
+
+# upgrade_system: upgrade every installed package through the first manager
+# found (apt refreshes its index first), before the requested install.
+upgrade_system() {
+    local key bin
+
+    for key in apt apk dnf yum brew pacman zypper winget; do
+        bin=$key
+        [ "$key" = apt ] && bin=apt-get
+        command -v "$bin" >/dev/null 2>&1 || continue
+
+        zz-log - "Upgrading installed packages via {B $key}"
+        case "$key" in
+        apt) run_op run_as_root apt-get update -qq && run_op run_as_root apt-get upgrade -y -qq ;;
+        apk) run_op run_as_root apk upgrade -q ;;
+        dnf) run_op run_as_root dnf upgrade -y -q ;;
+        yum) run_op run_as_root yum upgrade -y -q ;;
+        brew) run_op brew upgrade -q ;;
+        pacman) run_op run_as_root pacman -Syu --noconfirm ;;
+        zypper) run_op run_as_root zypper --non-interactive --quiet update ;;
+        winget) run_op winget upgrade --all ;;
+        esac
+        return $?
+    done
+
+    zz-log e "No supported package manager found to upgrade the system"
+    return 1
 }
 
 # remove_package [<manager>=<name>...]: remove the system package through the
@@ -267,11 +296,23 @@ if [ -n "$remove" ]; then
         exit 1
     }
 elif [ -n "$url" ]; then
+    [ -z "$full" ] || {
+        zz-log e "-f upgrades system packages, not a downloaded binary (-u)"
+        exit 1
+    }
     install_download
     exit $?
 elif [ -n "$run_with" ]; then
     zz-log e "-x runs a downloaded file: give its URL with -u"
     exit 1
+fi
+
+if [ -n "$full" ]; then
+    [ -z "$remove" ] || {
+        zz-log e "-f upgrades the system before an install, it cannot be combined with -r"
+        exit 1
+    }
+    upgrade_system || exit 1
 fi
 
 rc=0
