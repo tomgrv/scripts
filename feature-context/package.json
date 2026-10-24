@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-feature-context",
-  "version": "4.6.0",
+  "version": "5.0.0",
   "description": "Resolve a feature's source/target directories from the calling script",
   "bin": {
     "feature-context": "run.sh"

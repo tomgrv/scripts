@@ -1,6 +1,12 @@
+<!-- @format -->
+
 # distribute-utils
 
-Copy zz-*/utility scripts into a project's local scripts directory.
+Copy zz-\*/utility scripts into a project's local scripts directory.
+
+> **Deprecated.** It copies a snapshot that goes stale, and the default source
+> `/usr/local/share/common-utils` is no longer populated, so it can report success
+> having copied nothing. Use `INSTALL_BIN_DIR=<target> zz-use 'zz-*'` instead.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `distribute-utils`.
@@ -9,6 +15,15 @@ and linked onto `PATH` as `distribute-utils`.
 
 ```sh
 distribute-utils [-t target] [-s source] [-q]
+```
+
+The target directory is resolved from, in order: `-t`, a `.zz_dist` file in the project root (target on its first line), then `config.zz_dist` in `package.json`. It must already exist; without a target the script fails, or exits 0 silently with `-q`. `-s` defaults to `/usr/local/share/common-utils`.
+
+```sh
+echo "./scripts" > .zz_dist && mkdir -p ./scripts
+distribute-utils                 # target from .zz_dist
+distribute-utils -t ./my-utils   # explicit target
+distribute-utils -q              # no error when no target is configured
 ```
 
 ## Dependencies

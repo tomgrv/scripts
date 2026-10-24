@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # zz-prompt
 
 Interactive free-form input with an optional default.

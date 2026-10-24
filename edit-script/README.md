@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # edit-script
 
 Copy an installed script locally and open it for editing.

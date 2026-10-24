@@ -8,6 +8,13 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `json`, e.g. `json merge target.json source.json`
 runs `json-merge target.json source.json`.
 
+## Usage
+
+```sh
+json <subcommand> [args...]
+json merge target.json source.json   # runs json-merge
+```
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

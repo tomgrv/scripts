@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-release-beta",
-  "version": "1.0.0",
+  "version": "5.0.0",
   "description": "Start a new release branch using Git Flow",
   "bin": {
     "git-release-beta": "run.sh"

@@ -1,5 +1,10 @@
 #!/bin/sh
 
+eval $(
+    zz-args "Reapply file mode changes (chmod) from the working tree diff without touching content" $0 "$@" <<help
+help
+)
+
 # Reapply file mode changes (chmod) from the working tree diff without touching content
 
 deleted_files=$(git ls-files --deleted)

@@ -11,6 +11,19 @@ affected by a given commit range in `-m`/minimal mode (via
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `bump-version`.
 
+## Usage
+
+```sh
+bump-version [-m] [-r <range>] [-d] <version>
+```
+
+| Argument     | Effect                                                                   |
+| ------------ | ------------------------------------------------------------------------ |
+| `-m`         | Only bump workspace files if commit scope relates to workspace name      |
+| `-r <range>` | Git range to check for affected workspaces (required for minimal mode)   |
+| `-d`         | Show what would be updated without making changes                        |
+| `<version>`  | Version to set in files (optional - will use GitVersion if not provided) |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

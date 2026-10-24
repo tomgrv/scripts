@@ -1,0 +1,15 @@
+{
+  "name": "@tomgrv/scripts-zz-load",
+  "version": "5.0.0",
+  "description": "Read from a URL, a file, a literal argument, or stdin",
+  "bin": {
+    "zz-load": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-log": "*"
+  },
+  "private": true
+}

@@ -29,7 +29,7 @@ teardown() {
     # down to isolate the test.
     run env INSTALL_BIN_DIR="$bindir" PATH="$TEST_BIN:/usr/bin:/bin" "$zz_update_bin"
     [ "$status" -eq 0 ]
-    for tool in zz-use zz-colors zz-log zz-args zz-prompt zz-menu zz-input zz-bindir zz-dispatch zz-npx zz-persist zz-call zz-update; do
+    for tool in zz-use zz-colors zz-log zz-args zz-prompt zz-menu zz-load zz-bindir zz-dispatch zz-npx zz-persist zz-call zz-update; do
         [ -x "$bindir/$tool" ]
     done
     rm -rf "$bindir"

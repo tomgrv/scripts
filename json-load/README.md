@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # json-load
 
 Load JSON from a file or URL, tagging it with $id.
@@ -23,7 +25,7 @@ bats test.bats
 ```
 
 - help/usage output and exit code
-- errors with no source, and when the local file doesn't exist
+- errors with no source, and when the local file doesn't exist (source resolved by `zz-load -r`)
 - loads a local file and prints its content
 - `-s` tags a schema file with `$id`, without overwriting an existing one
 - strips `//` line comments before parsing

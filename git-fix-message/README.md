@@ -8,6 +8,19 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-fix-message` (invoke via `git fix-message`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git fix-message [-f] [-p] [-m <msg>] <sha>
+```
+
+| Argument   | Effect                            |
+| ---------- | --------------------------------- |
+| `-f`       | allow overwritting pushed history |
+| `-p`       | push to remote                    |
+| `-m <msg>` | new commit message                |
+| `<sha>`    | sha commit to rewrite message     |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

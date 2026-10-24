@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # zz-call
 
 Ensure a caller's declared env vars are set before running something that
@@ -16,16 +18,16 @@ and linked onto `PATH` as `zz-call`.
 zz-call [-p package.json[:more.json]] [-f envfile] [-P profile] [-n] [-e] [command [args...]]
 ```
 
-| Flag | Effect |
-| ---- | ------ |
-| `-p a:b` | read several `package.json` files; the first definition of a var wins |
-| `-f file` | env file to read and persist (default `config.file`, else `.env`) |
-| `-P name` | also export persisted values from `/etc/profile.d/<name>.sh` |
-| `-n` | never prompt: a missing var falls back to its `default`, not persisted |
-| `-e` | also persist values already set in the environment |
+| Flag      | Effect                                                                 |
+| --------- | ---------------------------------------------------------------------- |
+| `-p a:b`  | read several `package.json` files; the first definition of a var wins  |
+| `-f file` | env file to read and persist (default `config.file`, else `.env`)      |
+| `-P name` | also export persisted values from `/etc/profile.d/<name>.sh`           |
+| `-n`      | never prompt: a missing var falls back to its `default`, not persisted |
+| `-e`      | also persist values already set in the environment                     |
 
-Besides `config.input`, `config.ports` (each `{name, port, access}` is the var `<NAME>_PORT`, defaulting to the port) and `config.inputs` (an object keyed by var, with
-`description`, `default`, `secret`) is read. Resolution order: environment,
+Resolution is [`zz-vars`](../zz-vars)'s, which reads `config.inputs` (canonical), `config.input` (a deprecated array) and `config.ports` (each `{name, port, access}` is the var `<NAME>_PORT`, defaulting to the port) and `config.inputs` (an object keyed by var, with
+`description`, `default`, `required`, `secret`, `as`) is read. Resolution order: environment,
 then the env file (read literally, never sourced), then a prompt. A `secret`
 input is only flagged to `zz-persist` (`-s`), which asks for it masked and
 refuses any target that others can read: `zz-call` has no secret handling of
@@ -41,10 +43,21 @@ script in this repo has one right next to its `run.sh`) under `config`.
     "config": {
         "file": ".env",
         "input": [
-            { "var": "DB_HOST", "question": "Database host?", "default": "localhost" },
-            { "var": "DB_PASSWORD", "question": "Database password?", "as": "PGPASSWORD" }
+            {
+                "var": "DB_HOST",
+                "question": "Database host?",
+                "default": "localhost"
+            },
+            {
+                "var": "DB_PASSWORD",
+                "question": "Database password?",
+                "as": "PGPASSWORD"
+            }
         ],
-        "output": [{ "var": "DB_HOST" }, { "var": "DB_PASSWORD", "as": "PGPASSWORD" }]
+        "output": [
+            { "var": "DB_HOST" },
+            { "var": "DB_PASSWORD", "as": "PGPASSWORD" }
+        ]
     }
 }
 ```

@@ -8,6 +8,13 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-release` (invoke via `git release`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git release <subcommand> [args...]
+git release prod           # runs git-release-prod
+```
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

@@ -181,3 +181,19 @@ EOF
     grep -qx 'TOK=dflt' .env
     [ "$(stat -c %a .env)" = 600 ]
 }
+
+@test "zz-call config.inputs accepts 'as' like config.input does" {
+    echo '{"config":{"inputs":{"DB_PASSWORD":{"default":"pw","as":"PGPASSWORD"}}}}' >package.json
+    run zz-call -n
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"export PGPASSWORD='pw'"* ]]
+}
+
+@test "zz-call warns that config.input is deprecated, but not config.inputs" {
+    echo '{"config":{"input":[{"var":"OLD","default":"o"}]}}' >package.json
+    run zz-call -n
+    [[ "$output" == *"config.input"*"deprecated"* ]]
+    echo '{"config":{"inputs":{"NEW":{"default":"n"}}}}' >package.json
+    run zz-call -n
+    [[ "$output" != *"deprecated"* ]]
+}

@@ -8,6 +8,16 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-fix-last` (invoke via `git fix-last`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git fix-last [-m <msg>]
+```
+
+| Argument   | Effect             |
+| ---------- | ------------------ |
+| `-m <msg>` | New commit message |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

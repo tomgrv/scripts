@@ -5,7 +5,8 @@
 #   - the env file holds the value literally (read, never sourced);
 #   - the profile snippet is sourced by shells, so a value with anything but
 #     plain characters is single-quoted there and cannot run code;
-#   - -r prints the stored value, -u removes the key, -g generates a value
+#   - -r prints the stored value, -x the export lines of several keys at once,
+#     -u removes the key, -g generates a value
 #     (kept once stored) and prints it, so a caller needs no random/read helper;
 #   - a secret (-s) is asked masked (zz-prompt -s), never logged, and written
 #     only to owner-only files (zz-prompt -c offers to chmod 600 on a terminal).
@@ -26,6 +27,7 @@ eval "$(
         r -         show        Print the stored value of the key (no write)
         u -         remove      Remove the key (no write)
         l -         line        The key is a whole line: append it to the file unless it is already there
+        x -         exports     The key is a list of names: print an export line for each one that is stored (no write)
         - key       key         Variable name
         - value     value       Variable value
 help
@@ -52,7 +54,7 @@ fi
 
 # A name is letters, digits and underscores, not starting with a digit
 # (so a single letter is fine: [A-Za-z_][A-Za-z0-9_]* would demand two).
-case "$key" in
+[ -n "$exports" ] || case "$key" in
 "" | [0-9]* | *[!A-Za-z0-9_]*)
     zz-log e "Invalid key name: {Purple $key}"
     exit 1
@@ -159,6 +161,26 @@ persist_line() {
     upsert_line "$target" "$prefix" "$text"
     [ -n "$quiet" ] || zz-log i "$key persisted to {U $target}"
 }
+
+# -x: the "key" is a space-separated list of names; one process reads them all.
+if [ -n "$exports" ]; then
+    [ -n "$file" ] || [ -n "$profile" ] || {
+        zz-log e "At least one of -f or -p is required"
+        exit 1
+    }
+    for name in $key; do
+        case "$name" in
+        [0-9]* | *[!A-Za-z0-9_]*)
+            zz-log e "Invalid key name: {Purple $name}"
+            exit 1
+            ;;
+        esac
+        current=$(read_current "$file" "$name=")
+        [ -z "$current" ] && [ -n "$profile" ] && current=$(read_current "$profile_dir/$profile.sh" "export $name=")
+        [ -z "$current" ] || printf "export %s='%s'\n" "$name" "$(printf '%s' "$current" | sed "s/'/'\\\\''/g")"
+    done
+    exit 0
+fi
 
 # --- -r: print the stored value; -u: remove the key
 if [ -n "$show" ]; then

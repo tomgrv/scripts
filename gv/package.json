@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-gv",
-  "version": "4.6.0",
+  "version": "5.0.0",
   "description": "Call the GitVersion tool with this repo's .gitversion configuration",
   "bin": {
     "gv": "run.sh"

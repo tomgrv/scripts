@@ -12,6 +12,7 @@ and linked onto `PATH` as `zz-persist`.
 ```sh
 zz-persist [-f file] [-p profile] [-s] [-g length] <key> [value]
 zz-persist [-f file] [-p profile] (-r | -u) <key>
+zz-persist [-f file] [-p profile] -x "<key> <key>..."
 zz-persist [-f file] [-p profile] [-s] -i "question" [-v default] <key>
 ```
 
@@ -19,6 +20,7 @@ zz-persist [-f file] [-p profile] [-s] -i "question" [-v default] <key>
 | ------------- | ---------------------------------------------------------------------- |
 | `-f file`     | upsert `KEY=VALUE` into this env-style file                            |
 | `-p profile`  | upsert `export KEY=VALUE` into `/etc/profile.d/<profile>.sh`           |
+| `-x`          | print `export KEY='value'` for each stored key of the one quoted list (no write) |
 | `-i question` | ask for the value (terminal only; otherwise the default is used as-is) |
 | `-v default`  | default offered by `-i`; a value already stored for the key wins       |
 | `-s`          | the value is a secret (see below)                                      |

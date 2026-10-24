@@ -8,6 +8,18 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-getcommit` (invoke via `git getcommit`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git getcommit [-f] [-p] <sha>
+```
+
+| Argument | Effect                                    |
+| -------- | ----------------------------------------- |
+| `-f`     | allow overwritting pushed history         |
+| `-p`     | show commit previous to the one specified |
+| `<sha>`  | sha commit to fix from after              |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

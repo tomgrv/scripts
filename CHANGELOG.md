@@ -1,5 +1,36 @@
 # Changelog
 
+## 5.0.0 (2026-10-24)
+
+*Commits from: v4.12.0..HEAD*
+
+### 💥 BREAKING CHANGES
+
+- zz-input is now zz-load. With a command, zz-call exports the declared outputs only, and a required input left empty now fails unless -n is given.
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v4.12.0' into develop
+### 📦 scripts-git-align changes
+
+#### Bug Fixes
+
+- 🐛 parse -h via zz-args in git-* scripts missing it (#98)
+
+### 📦 scripts-git-release changes
+
+#### Other changes
+
+- 👷 pin release scripts-ref to v4 (#96)
+
+### 📦 scripts-zz changes
+
+#### Other changes
+
+- 📚️ 📝 rewrite root README around current usage (#99)
+- 📝 add Usage to every tool README and fix headers (#97)
+
 ## 4.12.0 (2026-10-23)
 
 *Commits from: v4.11.0..HEAD*
@@ -966,5 +997,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-10-23 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-10-24 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*

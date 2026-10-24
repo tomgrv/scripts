@@ -8,6 +8,12 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-fix-rights` (invoke via `git fix-rights`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git fix-rights
+```
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

@@ -8,6 +8,13 @@ Call the `gitversion`/`docker-gitversion` CLI against this repo's
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `gv`.
 
+## Usage
+
+```sh
+gv [gitversion args...]
+gv -showvariable MajorMinorPatch
+```
+
 ## Dependencies
 
 Assumes a `docker-gitversion` (or `dotnet-gitversion`) wrapper is already on

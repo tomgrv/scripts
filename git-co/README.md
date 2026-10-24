@@ -8,6 +8,19 @@ Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `git-co` (invoke via `git co`, since
 git resolves any `git-*` executable on `PATH` as a subcommand).
 
+## Usage
+
+```sh
+git co [-n] [-s <scope>] [-b <branch>] <msg...>
+```
+
+| Argument      | Effect                             |
+| ------------- | ---------------------------------- |
+| `-n`          | Enforce no scope in commit message |
+| `-s <scope>`  | Scope to use in commit message     |
+| `-b <branch>` | Branch to commit to                |
+| `<msg>`       | Commit message                     |
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand

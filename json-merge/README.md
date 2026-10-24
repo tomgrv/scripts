@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # json-merge
 
 Recursively merge one JSON file into another, arrays deduped and unioned.

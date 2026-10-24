@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # zz-args
 
 Parse $@ per a heredoc spec, print eval-able var=value assignments.

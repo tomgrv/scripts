@@ -1,6 +1,8 @@
+<!-- @format -->
+
 # feature-install
 
-Copy a feature's stubs/config/bin into a target, run install-*.sh.
+Copy a feature's stubs/config/bin into a target, run install-\*.sh.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `feature-install`.

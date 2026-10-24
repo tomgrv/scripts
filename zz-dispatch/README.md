@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # zz-dispatch
 
 Dispatch an underscore-prefixed caller to a sibling `<name>-<subcmd>` script.
