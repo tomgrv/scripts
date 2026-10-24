@@ -70,6 +70,8 @@ for pkg_file in $(printf '%s' "$pkgs" | tr ':' ' '); do
         zz-log e "No package.json found at {U $pkg_file}"
         exit 1
     }
+    [ "$(jq '(.config.input // []) | length' "$pkg_file")" -eq 0 ] ||
+        zz-log w "config.input in {U $pkg_file} is deprecated: use config.inputs"
 done
 pkg=$first
 

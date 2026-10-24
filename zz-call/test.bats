@@ -195,9 +195,18 @@ EOF
  "inputs":{"NEW":{"description":"New?","required":true,"secret":true}},
  "ports":[{"name":"web","port":80}]}}
 EOF2
-    run zz-call -l
+    run bash -c 'zz-call -l 2>/dev/null'
     [ "$status" -eq 0 ]
     [ "${lines[0]}" = "$(printf 'OLD\037Old?\037false\037o\037false')" ]
     [ "${lines[1]}" = "$(printf 'NEW\037New?\037true\037\037true')" ]
     [[ "${lines[2]}" == "WEB_PORT"*"false"*"80"* ]]
+}
+
+@test "zz-call warns that config.input is deprecated, but not config.inputs" {
+    echo '{"config":{"input":[{"var":"OLD","default":"o"}]}}' >package.json
+    run zz-call -n
+    [[ "$output" == *"config.input"*"deprecated"* ]]
+    echo '{"config":{"inputs":{"NEW":{"default":"n"}}}}' >package.json
+    run zz-call -n
+    [[ "$output" != *"deprecated"* ]]
 }

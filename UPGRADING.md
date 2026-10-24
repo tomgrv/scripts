@@ -245,3 +245,33 @@ Lessons it added to the catalogue:
   consumer read its own fields.
 - **A test stub must never write through a symlinked PATH entry:** use
   `stub_script` (`tests/helpers.bash`), which removes the link first.
+
+### 7.4 Fourth example: retiring `config.input` for `config.inputs`
+
+A data-format change rather than a rename: the `config.input` array (read by
+`zz-call`) is replaced by the `config.inputs` object, which now does everything
+it did (`as` included) and carries `required`. No consumer used the array, so
+the break is cheap, but it is still done in two releases (section 3.1.4):
+
+| Release | Change                                                                            |
+| ------- | --------------------------------------------------------------------------------- |
+| N       | `zz-call` reads both and warns on `config.input`; `zz-vars` asks `zz-call -l`     |
+| N+1     | `zz-call` drops `config.input` (major, `!` + `BREAKING CHANGE:` footer)            |
+
+| Old                                                         | New                                                         |
+| ----------------------------------------------------------- | ----------------------------------------------------------- |
+| `"input": [{"var": "A", "question": "Q?", "default": "d"}]` | `"inputs": {"A": {"description": "Q?", "default": "d"}}`    |
+| `{"var": "A", "as": "B"}`                                   | `"A": {"as": "B"}`                                          |
+| `"output": [...]` (unchanged)                               | `"output": [...]`                                           |
+
+Unchanged on purpose: `config.output` (singular, still the filter for printed
+`export` lines), `config.ports`, `config.file`.
+
+Consumer check before N+1:
+
+```sh
+grep -rn '"input"' --include=package.json --exclude-dir=node_modules . | grep -v '"inputs"'
+```
+
+Dead key found on the way: the `vps-*` steps declare `"outputs": {}` (plural),
+which nothing reads; delete it when touching those files.
