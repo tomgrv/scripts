@@ -28,18 +28,22 @@
 # - "output": which resolved vars to print as `export <as>='value'`.
 #   Defaults to "input" when omitted.
 #
-# Also accepted: "config.inputs" (object keyed by var: description, default,
-# secret) next to "config.input", several package.json files at once
+# "config.inputs" (object keyed by var: description, default, required, secret,
+# as) is the canonical form and does everything "config.input" does, "as"
+# included; "config.input" is kept as a deprecated alias. Also accepted:
+# several package.json files at once
 # (-p a.json:b.json), and a persisted-value lookup in the env file (read
 # literally, never sourced): environment first, then the file, then a prompt.
 #
 # Usage:
-#   zz-call [-p package.json[:more.json]] [-f envfile] [-P profile] [-n] [-e]
+#   zz-call [-p package.json[:more.json]] [-f envfile] [-P profile] [-n] [-e] [-l]
 #           [command [args...]]
 #   -f  env file to read/persist (default: config.file of the first package.json, else .env)
 #   -P  also export persisted values from <ZZ_PROFILE_DIR, default /etc/profile.d>/<profile>.sh
 #   -n  never prompt: a missing var falls back to its default, not persisted
 #   -e  also persist values already set in the environment
+#   -l  list the declared inputs, one per line, fields separated by \037:
+#       var, question, required, default, secret; resolve nothing
 
 set -e
 
@@ -53,6 +57,7 @@ eval "$(
         P profile   profile     Also export persisted values from <ZZ_PROFILE_DIR, default /etc/profile.d>/<profile>.sh
         n -         noprompt    Never prompt: missing vars fall back to their default (not persisted)
         e -         persistenv  Also persist values already set in the environment
+        l -         list        List the declared inputs (var, question, required, default, secret), resolve nothing
         # cmd        cmd         Command (and args) to run once every input var is resolved
 help
 )"
@@ -145,9 +150,14 @@ persist_value() {
 
 # --- resolve: the declared inputs, then (when no command) the outputs.
 # config.ports ([{name, port, access}]) are inputs too: <NAME>_PORT, defaulting to the port.
-inputs_filter='(.config.input // [])[], ((.config.inputs // {}) | to_entries[] | {var: .key, question: .value.description, default: .value.default, secret: .value.secret}), ((.config.ports // [])[] | {var: ((.name | ascii_upcase) + "_PORT"), question: (.name + " port (" + (.access // "public") + ")"), default: (.port | tostring)})'
+inputs_filter='(.config.input // [])[], ((.config.inputs // {}) | to_entries[] | {var: .key, question: (.value.question // .value.description), default: .value.default, secret: .value.secret, required: .value.required, as: .value.as}), ((.config.ports // [])[] | {var: ((.name | ascii_upcase) + "_PORT"), question: (.name + " port (" + (.access // "public") + ")"), default: (.port | tostring)})'
 input_entries=$(collect_entries "$inputs_filter")
 output_entries=$(collect_entries '(.config.output // [])[]')
+
+if [ -n "$list" ]; then
+    [ -z "$input_entries" ] || printf '%s\n' "$input_entries" | jq -r '[.var, (.question // ""), ((.required // false) | tostring), (.default // ""), ((.secret // false) | tostring)] | join("\u001f")'
+    exit 0
+fi
 [ -n "$output_entries" ] || output_entries=$input_entries
 
 # Each input comes from the environment, then the env file, then a prompt (or

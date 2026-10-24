@@ -181,3 +181,23 @@ EOF
     grep -qx 'TOK=dflt' .env
     [ "$(stat -c %a .env)" = 600 ]
 }
+
+@test "zz-call config.inputs accepts 'as' like config.input does" {
+    echo '{"config":{"inputs":{"DB_PASSWORD":{"default":"pw","as":"PGPASSWORD"}}}}' >package.json
+    run zz-call -n
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"export PGPASSWORD='pw'"* ]]
+}
+
+@test "zz-call -l lists inputs, inputs and ports as var, question, required, default, secret" {
+    cat >package.json <<'EOF2'
+{"config":{"input":[{"var":"OLD","question":"Old?","default":"o"}],
+ "inputs":{"NEW":{"description":"New?","required":true,"secret":true}},
+ "ports":[{"name":"web","port":80}]}}
+EOF2
+    run zz-call -l
+    [ "$status" -eq 0 ]
+    [ "${lines[0]}" = "$(printf 'OLD\037Old?\037false\037o\037false')" ]
+    [ "${lines[1]}" = "$(printf 'NEW\037New?\037true\037\037true')" ]
+    [[ "${lines[2]}" == "WEB_PORT"*"false"*"80"* ]]
+}

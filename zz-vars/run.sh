@@ -1,8 +1,8 @@
 #!/bin/sh
 # zz-vars [-S] -f <envfile> [-P profile] <name>=<dir>... — the inputs the
-# given workspaces declare in their package.json ("config.inputs", keyed by
-# variable, "config.input", the zz-call array, and "config.ports": each
-# port is the input <NAME>_PORT, defaulting to its port).
+# given workspaces declare in their package.json, as zz-call reads them
+# ("config.inputs", "config.input" and "config.ports": each port is the
+# input <NAME>_PORT, defaulting to its port).
 #   -S  status only: print each input as set / required / optional, run nothing
 #   (default) on a terminal, offer to set the unset ones (zz-menu, then
 #   zz-persist, secrets masked), resolve all of them with zz-call (caller's
@@ -39,19 +39,14 @@ get_env_value() {
     [ ! -f "$envfile" ] || sed -n "s/^$key=//p" "$envfile" | tail -n1
 }
 
-# get_inputs <owner> <dir>: inputs of one workspace: "VAR US description US
-# required US default US owner US secret".
+# get_inputs <owner> <dir>: inputs of one workspace, as zz-call -l lists them
+# (var, description, required, default, secret), reordered to "VAR US
+# description US required US default US owner US secret".
 get_inputs() {
     local owner="$1" # workspace name (mandatory)
     local dir="$2"   # workspace directory holding package.json (mandatory)
 
-    jq -r --arg n "$owner" '
-      ((.config.inputs // {}) | to_entries[]
-         | [.key, (.value.description // ""), ((.value.required // false) | tostring), (.value.default // ""), $n, ((.value.secret // false) | tostring)] | join("\u001f")),
-      ((.config.input // [])[]
-         | [.var, (.question // ""), "false", (.default // ""), $n, "false"] | join("\u001f")),
-      ((.config.ports // [])[]
-         | [((.name | ascii_upcase) + "_PORT"), (.name + " port (" + (.access // "public") + ")"), "false", (.port | tostring), $n, "false"] | join("\u001f"))' "$dir/package.json"
+    zz-call -l -p "$dir/package.json" | awk -F"$us" -v OFS="$us" -v n="$owner" '{ print $1, $2, $3, $4, n, $5 }'
 }
 
 # get_input_status <name> <required>: set / required / optional for a variable.

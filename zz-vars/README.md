@@ -3,7 +3,7 @@
 # zz-vars
 
 Show, ask and resolve the inputs workspaces declare (`config.ports` too: each `{name, port, access}` is the input `<NAME>_PORT`, defaulting to its port; `config.inputs`, keyed by
-variable, and `config.input`, the `zz-call` array). Used by `zz-setup`.
+variable, and `config.input`, the deprecated array form; all parsed by `zz-call -l`). Used by `zz-setup`.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `zz-vars`.
