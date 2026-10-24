@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-yaml",
-  "version": "1.0.0",
+  "version": "5.0.0",
   "description": "Dispatch to yaml-<subcommand> utilities",
   "bin": {
     "yaml": "run.sh"

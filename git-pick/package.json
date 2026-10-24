@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-pick",
-  "version": "4.6.0",
+  "version": "5.0.0",
   "description": "Pick files from a specific commit",
   "bin": {
     "git-pick": "run.sh"

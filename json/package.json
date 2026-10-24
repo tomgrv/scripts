@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-json",
-  "version": "4.10.0",
+  "version": "5.0.0",
   "description": "Dispatch to json-<subcommand> utilities",
   "bin": {
     "json": "run.sh"
