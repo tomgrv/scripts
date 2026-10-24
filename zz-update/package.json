@@ -14,7 +14,7 @@
     "@tomgrv/scripts-zz-call": "*",
     "@tomgrv/scripts-zz-colors": "*",
     "@tomgrv/scripts-zz-dispatch": "*",
-    "@tomgrv/scripts-zz-input": "*",
+    "@tomgrv/scripts-zz-load": "*",
     "@tomgrv/scripts-zz-log": "*",
     "@tomgrv/scripts-zz-menu": "*",
     "@tomgrv/scripts-zz-npx": "*",

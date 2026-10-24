@@ -11,4 +11,4 @@ set -e
 
 # --- run: reinstall the whole core set, bypassing the cache.
 exec zz-use -f \
-    zz-use zz-colors zz-log zz-args zz-prompt zz-menu zz-input zz-bindir zz-dispatch zz-npx zz-persist zz-call zz-update zz
+    zz-use zz-colors zz-log zz-args zz-prompt zz-menu zz-load zz-bindir zz-dispatch zz-npx zz-persist zz-call zz-update zz

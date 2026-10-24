@@ -100,3 +100,9 @@ EOF
     [ "$status" -eq 0 ]
     [ -x "$WORK_DIR/target/zz-exec.sh" ]
 }
+
+@test "distribute-utils warns that it is deprecated and points to zz-use" {
+    mkdir -p target src
+    run distribute-utils -t "$WORK_DIR/target" -s "$WORK_DIR/src"
+    [[ "$output" == *"deprecated"* && "$output" == *"zz-use"* ]]
+}

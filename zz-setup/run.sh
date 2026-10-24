@@ -246,15 +246,16 @@ run_step() {
 # print_summaries: ask every workspace declaring "config.summary" for its
 # "summary" action and print each non-empty block as is.
 print_summaries() {
-    local n out pkgs="" header=""
+    local n out header=""
 
     # The summaries read their steps' inputs (ports, credential files): resolved
     # as for a run - environment, env file, default - but never asked.
+    set --
     for n in $names; do
         [ "$(get_field "$n" 9)" = true ] || continue
-        pkgs="$pkgs${pkgs:+:}$(get_dir "$n")/package.json"
+        set -- "$@" "$n=$(get_dir "$n")"
     done
-    [ -z "$pkgs" ] || eval "$(zz-call -n -f "$envfile" -p "$pkgs")"
+    [ "$#" -eq 0 ] || eval "$(zz-vars -n -f "$envfile" "$@")"
     for n in $names; do
         [ "$(get_field "$n" 9)" = true ] || continue
         out=$(exec_bin "$n" summary) || true
@@ -480,7 +481,7 @@ if [ "$status_only" -eq 1 ]; then
 fi
 if [ "$#" -gt 0 ]; then
     rc=0
-    out=$(zz-vars -f "$envfile" ${ZZ_SETUP_PROFILE:+-P "$ZZ_SETUP_PROFILE"} "$@") || rc=$?
+    out=$(zz-vars -e -f "$envfile" ${ZZ_SETUP_PROFILE:+-P "$ZZ_SETUP_PROFILE"} "$@") || rc=$?
     [ "$rc" -ne 3 ] || exit 0
     [ "$rc" -eq 0 ] || exit "$rc"
     eval "$out"

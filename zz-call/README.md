@@ -26,8 +26,8 @@ zz-call [-p package.json[:more.json]] [-f envfile] [-P profile] [-n] [-e] [comma
 | `-n`      | never prompt: a missing var falls back to its `default`, not persisted |
 | `-e`      | also persist values already set in the environment                     |
 
-Besides `config.input`, `config.ports` (each `{name, port, access}` is the var `<NAME>_PORT`, defaulting to the port) and `config.inputs` (an object keyed by var, with
-`description`, `default`, `secret`) is read. Resolution order: environment,
+Resolution is [`zz-vars`](../zz-vars)'s, which reads `config.inputs` (canonical), `config.input` (a deprecated array) and `config.ports` (each `{name, port, access}` is the var `<NAME>_PORT`, defaulting to the port) and `config.inputs` (an object keyed by var, with
+`description`, `default`, `required`, `secret`, `as`) is read. Resolution order: environment,
 then the env file (read literally, never sourced), then a prompt. A `secret`
 input is only flagged to `zz-persist` (`-s`), which asks for it masked and
 refuses any target that others can read: `zz-call` has no secret handling of

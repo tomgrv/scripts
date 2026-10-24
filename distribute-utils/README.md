@@ -4,6 +4,10 @@
 
 Copy zz-\*/utility scripts into a project's local scripts directory.
 
+> **Deprecated.** It copies a snapshot that goes stale, and the default source
+> `/usr/local/share/common-utils` is no longer populated, so it can report success
+> having copied nothing. Use `INSTALL_BIN_DIR=<target> zz-use 'zz-*'` instead.
+
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `distribute-utils`.
 

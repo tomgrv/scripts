@@ -290,3 +290,22 @@ teardown() {
     [ "$status" -ne 0 ]
     rm -f "$tmp"
 }
+
+@test "zz-persist -x prints an export line for each stored key among several, nothing for the rest" {
+    env_file=$(mktemp)
+    printf 'A=1\nB=it'"'"'s\n' >"$env_file"
+    run zz-persist -x -f "$env_file" "A B C"
+    rm -f "$env_file"
+    [ "$status" -eq 0 ]
+    [ "${lines[0]}" = "export A='1'" ]
+    [ "${lines[1]}" = "export B='it'\\''s'" ]
+    [ "${#lines[@]}" -eq 2 ]
+}
+
+@test "zz-persist -x rejects an invalid name" {
+    env_file=$(mktemp)
+    run zz-persist -x -f "$env_file" "A 9B"
+    rm -f "$env_file"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Invalid key name"* ]]
+}
