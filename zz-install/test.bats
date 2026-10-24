@@ -76,6 +76,26 @@ set_uid() {
     [[ "$(cat "$CALLS")" == *"apt-get install -y -qq --no-install-recommends jq" ]]
 }
 
+@test "zz-install -f upgrades the system first, then installs (apt and dnf)" {
+    stub apt-get
+    run_install -f jq
+    [ "$status" -eq 0 ]
+    [[ "$(cat "$CALLS")" == *"apt-get update -qq"*"apt-get upgrade -y -qq"*"apt-get install -y -qq jq" ]]
+    rm "$STUBS/apt-get" "$CALLS"
+    stub dnf
+    run_install -f jq
+    [ "$status" -eq 0 ]
+    [[ "$(cat "$CALLS")" == *"dnf upgrade -y -q"*"dnf install -y -q jq" ]]
+}
+
+@test "zz-install -f refuses -r and -u" {
+    stub apt-get
+    run_install -f -r jq
+    [ "$status" -ne 0 ]
+    run_install -f -u http://x/y jq
+    [ "$status" -ne 0 ]
+}
+
 @test "zz-install -r removes the package (apt purges, dnf removes)" {
     stub apt-get
     run_install -r jq
