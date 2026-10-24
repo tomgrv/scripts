@@ -187,17 +187,16 @@ bad=$(printf '%s\n' "$all_inputs" | awk -F"$us" 'NF && ($1 !~ /^[A-Za-z_][A-Za-z
     exit 1
 }
 
-# The caller's environment first, then the env file, for what is unset.
-# The final resolution, defaults and persistence are done below.
+# The caller's environment first, then the env file (read in one go by
+# zz-persist), for what is unset.
+unset_names=
 while IFS="$us" read -r var rest; do
     [ -n "$var" ] || continue
-    if [ -z "$(eval "printf '%s' \"\${$var:-}\"")" ]; then
-        value=$(get_env_value "$var")
-        [ -n "$value" ] && eval "export $var=\$value"
-    fi
+    [ -n "$(eval "printf '%s' \"\${$var:-}\"")" ] || unset_names="$unset_names $var"
 done <<EXPLICIT
 $all_inputs
 EXPLICIT
+[ -z "$unset_names" ] || [ ! -f "$envfile" ] || eval "$(zz-persist -x -f "$envfile" "$unset_names")"
 
 # --- status view
 if [ -n "$status_flag" ]; then
