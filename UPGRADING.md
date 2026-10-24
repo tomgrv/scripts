@@ -250,13 +250,14 @@ Lessons it added to the catalogue:
 
 A data-format change rather than a rename: the `config.input` array (read by
 `zz-call`) is replaced by the `config.inputs` object, which now does everything
-it did (`as` included) and carries `required`. No consumer used the array, so
+it did (`as` included) and carries `required`; `zz-vars` parses it and stops at the
+`export` lines, `zz-call` only execs a command with them. No consumer used the array, so
 the break is cheap, but it is still done in two releases (section 3.1.4):
 
 | Release | Change                                                                            |
 | ------- | --------------------------------------------------------------------------------- |
-| N       | `zz-call` reads both and warns on `config.input`; `zz-vars` asks `zz-call -l`     |
-| N+1     | `zz-call` drops `config.input` (major, `!` + `BREAKING CHANGE:` footer)            |
+| N       | `zz-vars` (now the one parser, `zz-call` only execs) reads both, warns on `config.input` |
+| N+1     | `zz-vars` drops `config.input` (major, `!` + `BREAKING CHANGE:` footer)           |
 
 | Old                                                         | New                                                         |
 | ----------------------------------------------------------- | ----------------------------------------------------------- |

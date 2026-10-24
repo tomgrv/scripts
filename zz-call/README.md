@@ -15,7 +15,7 @@ and linked onto `PATH` as `zz-call`.
 ## Usage
 
 ```sh
-zz-call [-p package.json[:more.json]] [-f envfile] [-P profile] [-n] [-e] [-l] [command [args...]]
+zz-call [-p package.json[:more.json]] [-f envfile] [-P profile] [-n] [-e] [command [args...]]
 ```
 
 | Flag      | Effect                                                                 |
@@ -25,9 +25,8 @@ zz-call [-p package.json[:more.json]] [-f envfile] [-P profile] [-n] [-e] [-l] [
 | `-P name` | also export persisted values from `/etc/profile.d/<name>.sh`           |
 | `-n`      | never prompt: a missing var falls back to its `default`, not persisted |
 | `-e`      | also persist values already set in the environment                     |
-| `-l`      | list the declared inputs (var, question, required, default, secret)    |
 
-`config.inputs` is the canonical form; `config.input` (an array, the only one that existed before) stays as a deprecated alias. Besides it, `config.ports` (each `{name, port, access}` is the var `<NAME>_PORT`, defaulting to the port) and `config.inputs` (an object keyed by var, with
+Resolution is [`zz-vars`](../zz-vars)'s, which reads `config.inputs` (canonical), `config.input` (a deprecated array) and `config.ports` (each `{name, port, access}` is the var `<NAME>_PORT`, defaulting to the port) and `config.inputs` (an object keyed by var, with
 `description`, `default`, `required`, `secret`, `as`) is read. Resolution order: environment,
 then the env file (read literally, never sourced), then a prompt. A `secret`
 input is only flagged to `zz-persist` (`-s`), which asks for it masked and
