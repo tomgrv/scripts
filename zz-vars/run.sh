@@ -43,11 +43,11 @@ us=$(printf '\037')
 
 # --- functions
 
-# get_env_value <key>: value of <key> in the env file, read literally.
+# get_env_value <key>: value of <key> in the env file, as zz-persist reads it.
 get_env_value() {
     local key="$1" # variable name (mandatory)
 
-    [ ! -f "$envfile" ] || sed -n "s/^$key=//p" "$envfile" | tail -n1
+    [ ! -f "$envfile" ] || zz-persist -r -f "$envfile" "$key"
 }
 
 # get_pkg <dir>: the package.json of a workspace; a file given as <dir> is used as is.
@@ -124,6 +124,33 @@ persist_value() {
         zz-persist -f "$envfile" "$name" "$value"
     fi
     persist_profile "$name" "$value" "$is_secret"
+}
+
+# ask_value <var> <question> <default> <is_secret>: ask for an input and keep
+# the answer: written to the env file (and the profile snippet) and exported.
+# On a terminal zz-persist asks (masked for a secret, showing the stored
+# value); off one, only -a gets here and zz-prompt reads the answer from stdin
+# (a secret still goes through zz-persist, which then takes its default).
+ask_value() {
+    local var="$1"       # variable name (mandatory)
+    local question="$2"  # what to ask (mandatory)
+    local default="$3"   # offered answer, may be empty (mandatory)
+    local is_secret="$4" # "true" or "false" (mandatory)
+    local value
+
+    if [ "$is_secret" = true ] || [ -t 0 ]; then
+        if [ "$is_secret" = true ]; then set -- -s; else set --; fi
+        [ -z "$default" ] || set -- "$@" -v "$default"
+        zz-persist -q -f "$envfile" -i "$question" "$@" "$var"
+    else
+        zz-persist -q -f "$envfile" "$var" "$(zz-prompt "$question" "$default")"
+    fi
+    saved=1
+    value=$(get_env_value "$var")
+    [ -z "$value" ] || {
+        export "$var=$value"
+        persist_profile "$var" "$value" "$is_secret"
+    }
 }
 
 # print_export <name> <var>: the `export` line of <name> with the value of <var>.
@@ -213,17 +240,8 @@ ROWS
         desc=$(printf '%s' "$row" | cut -d"$us" -f2)
         def=$(printf '%s' "$row" | cut -d"$us" -f4)
         secret=$(printf '%s' "$row" | cut -d"$us" -f6)
-        # zz-persist asks (masked with -s), shows the stored value and writes
-        # it; the answer is then read back into this run.
-        if [ "$secret" = true ]; then set -- -s; else set --; fi
-        [ -z "$def" ] || set -- "$@" -v "$def"
-        zz-persist -q -f "$envfile" -i "${choice}${desc:+ ($desc)}" "$@" "$choice"
-        saved=1
-        value=$(get_env_value "$choice")
-        [ -z "$value" ] || eval "export $choice=\$value"
+        ask_value "$choice" "${choice}${desc:+ ($desc)}" "$def" "$secret"
     done
-    # One line for all of them, instead of one "persisted" line per input.
-    [ -z "$saved" ] || zz-log i "Inputs saved in {U $envfile}"
 fi
 
 # --- resolve: the environment (the env file's values included, above), then
@@ -236,20 +254,18 @@ while IFS="$us" read -r var desc req def owner secret as <&3; do
         [ -z "$persistenv" ] || persist_value "$var" "$current" "$secret"
     elif [ -n "$noprompt" ] || [ -z "$sequential" ]; then
         current=$def
-    elif [ "$secret" = true ]; then
-        # Asked and stored by zz-persist (masked, owner-only).
-        zz-persist -f "$envfile" -s -i "${desc:-$var}" ${def:+-v "$def"} "$var"
-        current=$(get_env_value "$var")
-        [ -z "$current" ] || persist_profile "$var" "$current" true
     else
-        current=$(zz-prompt "${desc:-Value for $var?}" "$def")
-        persist_value "$var" "$current" false
+        ask_value "$var" "${desc:-Value for $var?}" "$def" "$secret"
+        eval "current=\${$var:-}"
+        [ -n "$current" ] || current=$def
     fi
     export "$var=$current"
     [ "$as" = "$var" ] || export "$as=$current"
 done 3<<RESOLVE
 $all_inputs
 RESOLVE
+# One line for all of them, instead of one "persisted" line per input.
+[ -z "$saved" ] || zz-log i "Inputs saved in {U $envfile}"
 
 # --- refuse a required input that is still empty (not with -n).
 missing=0
