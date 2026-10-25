@@ -1,5 +1,20 @@
 # Changelog
 
+## 5.1.0 (2026-10-25)
+
+*Commits from: v5.0.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v5.0.0' into develop
+### 📦 scripts-zz-install changes
+
+#### Features
+
+- ✨ add -f to upgrade the system before installing (#101)
+
 ## 5.0.0 (2026-10-24)
 
 *Commits from: v4.12.0..HEAD*
@@ -998,5 +1013,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-10-24 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-10-25 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
