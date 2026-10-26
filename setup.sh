@@ -74,6 +74,12 @@ sh "$TMP_DIR/zz-use/run.sh" "zz-*" zz
 # `curl | sh` stdin is the script pipe, so hand the child the terminal (when
 # there is one) for its prompts; this shell keeps reading the script from stdin.
 if [ "$#" -gt 0 ]; then
+    # sudo gives its command a pty it only feeds from sudo's own stdin: with the
+    # script piped in, prompts show up but typed answers never arrive.
+    if [ ! -t 0 ] && [ -n "${SUDO_USER:-}" ] && (: </dev/tty) 2>/dev/null; then
+        log "Piped into sudo, typed answers may not reach the prompts; if it hangs, use:"
+        log "  sudo ZZ_ORIGIN_REF=${ZZ_ORIGIN_REF} sh -c \"\$(curl -fsSL https://raw.githubusercontent.com/${ZZ_ORIGIN}/${ZZ_ORIGIN_REF}/setup.sh)\" setup $*"
+    fi
     if (: </dev/tty) 2>/dev/null; then
         sh "$TMP_DIR/zz-use/run.sh" -x "$@" </dev/tty
     else
