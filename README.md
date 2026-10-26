@@ -15,12 +15,13 @@ Install the `zz-*` core once (needs only `curl` and `sh`):
 curl -fsSL https://raw.githubusercontent.com/tomgrv/scripts/main/setup.sh | sh
 ```
 
-To install and run a tool straight away (here a root setup that asks questions),
-pass it after `sh -s --`. Under `sudo`, do not pipe the script into it (sudo does
-not forward typed answers to a piped command): let the shell read it instead.
+Anything after the script is the tool to install and run, with its arguments
+(`zz-use -x`); `ZZ_ORIGIN_REF` pins a ref. As root, let the shell read the
+script (`sudo sh -c "$(curl ...)"`) rather than piping it into `sudo`, which
+does not forward typed answers to the prompts:
 
 ```sh
-sudo sh -c "$(curl -fsSL https://raw.githubusercontent.com/tomgrv/scripts/main/setup.sh)" setup zz-setup org/repo
+sudo sh -c "$(curl -fsSL https://raw.githubusercontent.com/tomgrv/scripts/main/setup.sh)" setup <tool> [args...]
 ```
 
 Then get any tool by name, or run it straight away:
