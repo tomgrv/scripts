@@ -7,15 +7,19 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/tomgrv/scripts/main/setup.sh | sh
 #
-# Pin to a specific tag, branch, or commit instead of main with a
-# positional arg (curl ... | sh -s -- v2) or ZZ_ORIGIN_REF=v2. Bootstrap
-# from a different org/repo entirely with ZZ_ORIGIN=someorg/otherscripts.
-# Both are exported for the zz-use this script hands off to (and anything
+# Pin to a specific tag, branch, or commit instead of main with
+# ZZ_ORIGIN_REF=v2. Bootstrap from a different org/repo entirely with
+# ZZ_ORIGIN=someorg/otherscripts. Both are exported for the zz-use this script hands off to (and anything
 # it execs), so every zz-use call afterwards defaults to this same origin
 # — "wherever this install actually came from" — rather than a hardcoded
 # tomgrv/scripts:
 #
-#   curl -fsSL .../setup.sh | sh -s -- v2
+#   curl -fsSL .../setup.sh | ZZ_ORIGIN_REF=v2 sh
+#
+# Every positional arg is passed as-is to `zz-use -x`: the first is the tool
+# to install and exec, the rest are its argv.
+#
+#   curl -fsSL .../setup.sh | sh -s -- some-tool --some-flag
 #
 # Deliberately dumb and DRY: this script owns none of the bin-dir
 # resolution or linking logic itself — that's zz-use's job, and
@@ -33,8 +37,7 @@
 set -eu
 
 export ZZ_ORIGIN="${ZZ_ORIGIN:-tomgrv/scripts}"
-export ZZ_ORIGIN_REF="${1:-${ZZ_ORIGIN_REF:-main}}"
-[ "$#" -gt 0 ] && shift
+export ZZ_ORIGIN_REF="${ZZ_ORIGIN_REF:-main}"
 # The default is a separate plain assignment, not inlined into
 # ${ZZ_SETUP_REPO_URL:-...}: a literal "}" inside that expansion's default
 # text (from "{ORIGIN}"/"{REF}") terminates the expansion early at parse
@@ -67,6 +70,9 @@ curl -fsSL "$REPO_URL" | tar -xz -C "$TMP_DIR" --strip-components=1
 log "Installing core zz-* scripts via the downloaded zz-use..."
 sh "$TMP_DIR/zz-use/run.sh" "zz-*" zz
 
+# Child, not exec: the temp dir cleanup trap must still run afterwards.
+[ "$#" -eq 0 ] || sh "$TMP_DIR/zz-use/run.sh" -x "$@"
+
 # Optional handoff: a package.json "main" field, or a root main.sh, gets
 # run with the downloaded checkout as cwd-equivalent; anything else, this
 # script's job (install the core bundle) is already done, so it stops.
@@ -82,8 +88,8 @@ case "$MAIN" in
 esac
 if [ -n "$MAIN" ] && [ -f "$TMP_DIR/$MAIN" ]; then
     log "Running ${MAIN} (package.json \"main\")..."
-    sh -- "$TMP_DIR/$MAIN" "$@"
+    sh -- "$TMP_DIR/$MAIN"
 elif [ -f "$TMP_DIR/main.sh" ]; then
     log "Running main.sh..."
-    sh -- "$TMP_DIR/main.sh" "$@"
+    sh -- "$TMP_DIR/main.sh"
 fi
