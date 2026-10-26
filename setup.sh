@@ -70,5 +70,13 @@ curl -fsSL "$REPO_URL" | tar -xz -C "$TMP_DIR" --strip-components=1
 log "Installing core zz-* scripts via the downloaded zz-use..."
 sh "$TMP_DIR/zz-use/run.sh" "zz-*" zz
 
-# Child, not exec: the temp dir cleanup trap must still run afterwards.
-[ "$#" -eq 0 ] || sh "$TMP_DIR/zz-use/run.sh" -x "$@"
+# Child, not exec: the temp dir cleanup trap must still run afterwards. Under
+# `curl | sh` stdin is the script pipe, so hand the child the terminal (when
+# there is one) for its prompts; this shell keeps reading the script from stdin.
+if [ "$#" -gt 0 ]; then
+    if (: </dev/tty) 2>/dev/null; then
+        sh "$TMP_DIR/zz-use/run.sh" -x "$@" </dev/tty
+    else
+        sh "$TMP_DIR/zz-use/run.sh" -x "$@"
+    fi
+fi
