@@ -324,6 +324,8 @@ install_bins() {
         }
     done
 }
+# A bin is a copy, so it finds the checkout through ZZ_SETUP_ROOT, not its own location.
+export ZZ_SETUP_ROOT="$PWD"
 install_bins
 
 # Initial state: the workspaces flagged "default" start enabled.

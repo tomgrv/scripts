@@ -289,7 +289,7 @@ make_conflict_remote() {
     echo '{"name":"@x/helper","bin":{"helper":"run.sh"}}' >"$WORK/ws/helper/package.json"
     printf '#!/bin/sh\necho helper-ok\n' >"$WORK/ws/helper/run.sh"
     chmod +x "$WORK/ws/helper/run.sh"
-    printf '#!/bin/sh\nhelper\n' >"$WORK/ws/str/run.sh"
+    printf '#!/bin/sh\nhelper\necho "root:$ZZ_SETUP_ROOT"\n' >"$WORK/ws/str/run.sh"
     echo '{"name":"ws","workspaces":["a","b","lib","str","helper"]}' >"$WORK/ws/package.json"
     git -C "$WORK/ws" add -A
     git -C "$WORK/ws" commit -q -m helper
@@ -300,6 +300,7 @@ make_conflict_remote() {
     run zz-setup acme/ws -o str </dev/null
     [ "$status" -eq 0 ]
     [[ "$output" == *"helper-ok"* ]]
+    [[ "$output" == *"root:$WORK/dir/ws"* ]]
 }
 
 @test "zz-setup remembers the state of every workspace, as is (up, skip, down)" {
