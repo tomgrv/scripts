@@ -3,8 +3,9 @@
 # the one reader behind zz-menu, zz-persist and the git-fix-* confirmations.
 # The prompt is written to stderr so stdout carries only the entered value
 # (or the default when the user just presses Enter). POSIX read (dash-safe).
-# When stdin ends (e.g. `curl | sh`, where it is the script pipe) the answer is
-# read from /dev/tty if one can be opened; ZZ_PROMPT_TTY=0 turns that off.
+# When stdin is not a terminal (e.g. `curl | sh`, where it is the script pipe,
+# which never reports end of input while its writer lives) the answer is read
+# from /dev/tty if one can be opened; ZZ_PROMPT_TTY=0 turns that off.
 #   -s  secret: the answer is not echoed and the default is shown as [***]
 #   -e  fail (status 1) when input ends instead of answering with the default
 #   -c  choices, e.g. Yn: accept one of these letters (any case), re-ask on
@@ -54,10 +55,10 @@ read_answer() {
         [ -z "$stty_orig" ] || stty -echo <"${tty_in:-/dev/fd/0}" 2>/dev/null
     fi
     eof=
-    read -r value || eof=1
-    if [ -n "$eof" ] && [ -n "$tty_in" ]; then
-        eof=
+    if [ -n "$tty_in" ]; then
         read -r value <"$tty_in" || eof=1
+    else
+        read -r value || eof=1
     fi
     if [ -n "$stty_orig" ]; then
         stty "$stty_orig" <"${tty_in:-/dev/fd/0}" 2>/dev/null
