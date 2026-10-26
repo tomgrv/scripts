@@ -23,7 +23,7 @@
 # "config.input") declare inputs. Its (first) bin gets "up"/"down" as argument.
 #
 # The state of each workspace you run is remembered in the env file
-# (ZZ_STATE_<name>=up|skip) and preselects the next menu; the menu's up/skip
+# (ZZ_STATE_<name>=up|skip|down) and preselects the next menu; the menu's
 # choices are remembered as soon as they are confirmed.
 #
 # Options (parsed with zz-args, after the repository; names are space- or
@@ -184,9 +184,8 @@ set_state() { eval "$(get_state_var "$1")=\$2"; }
 get_env_value() { [ ! -f "$envfile" ] || sed -n "s/^$1=//p" "$envfile" | tail -n1; }
 
 # get_state_key <name>: the env file key under which the last successful run
-# is remembered per workspace (up, or skip once brought down; "down" is never
-# sticky) and preselects the menu, which only opens on a terminal with no
-# option, so flags and non-interactive runs are unchanged.
+# is remembered per workspace (up, skip or down, as is) and preselects the menu
+# and starts runs given flags from it.
 get_state_key() { printf 'ZZ_%s' "$(get_state_var "$1")"; }
 
 # apply_state <state> <names>: set the state of the comma-separated workspaces
@@ -218,11 +217,11 @@ exec_bin() {
 }
 
 # run_step <name> <action>: run a workspace's bin with <action> (up|down, or any
-# action asked with -a); only up and down are remembered.
+# action asked with -a); the states themselves are remembered before the run.
 run_step() {
     local name="$1"   # workspace name (mandatory)
     local action="$2" # up, down or a custom action (mandatory)
-    local ws_dir ws_bin remember
+    local ws_dir ws_bin
     local rc=0
 
     ws_dir=$(get_dir "$name")
@@ -236,12 +235,6 @@ run_step() {
         exit 1
     fi
     zz-log s "{B $name}: $action done"
-    case "$action" in
-    up) remember=up ;;
-    down) remember=skip ;;
-    *) return 0 ;;
-    esac
-    zz-persist -q -f "$envfile" "$(get_state_key "$name")" "$remember"
 }
 
 # print_summaries: ask every workspace declaring "config.summary" for its
@@ -364,7 +357,7 @@ fi
 load_saved_states() {
     for n in $names; do
         saved=$(get_env_value "$(get_state_key "$n")")
-        case "$saved" in up | skip) set_state "$n" "$saved" ;; esac
+        [ -z "$saved" ] || set_state "$n" "$saved"
     done
 }
 [ "$nflags" -eq 0 ] || load_saved_states
@@ -399,9 +392,8 @@ if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
     fi
     for line in $out; do
         set_state "${line%%=*}" "${line#*=}"
-        # A skipped workspace never runs, so remember the choice now (down is
-        # remembered as skip once it has run).
-        case "${line#*=}" in up | skip) zz-persist -q -f "$envfile" "$(get_state_key "${line%%=*}")" "${line#*=}" ;; esac
+        # A skipped workspace never runs, so remember every choice now, as is.
+        zz-persist -q -f "$envfile" "$(get_state_key "${line%%=*}")" "${line#*=}"
     done
 fi
 
@@ -475,6 +467,11 @@ for n in $names; do [ "$(get_state "$n")" = up ] && up_names="$up_names $n"; don
     zz-log n "Nothing selected, nothing to do"
     exit 0
 }
+
+# Remember every workspace's state, as is, whatever it is.
+if [ "$status_only" -ne 1 ]; then
+    for n in $names; do zz-persist -q -f "$envfile" "$(get_state_key "$n")" "$(get_state "$n")"; done
+fi
 
 # --- inputs: zz-vars shows them (-S), or asks, resolves and refuses a
 # missing required one; its export lines are evaluated here so the

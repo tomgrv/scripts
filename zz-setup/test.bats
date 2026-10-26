@@ -283,16 +283,16 @@ make_conflict_remote() {
     [ ! -d "$WORK/dir/ws" ]
 }
 
-@test "zz-setup remembers the state of each workspace it ran, down is stored as skip" {
+@test "zz-setup remembers the state of every workspace, as is (up, skip, down)" {
     make_workspace_remote
     export ZZ_SETUP_ENV_FILE="$WORK/state.env"
     run zz-setup acme/ws -o a
     [ "$status" -eq 0 ]
     grep -qx 'ZZ_STATE_a=up' "$ZZ_SETUP_ENV_FILE"
-    ! grep -q 'ZZ_STATE_b' "$ZZ_SETUP_ENV_FILE"
+    grep -qx 'ZZ_STATE_b=skip' "$ZZ_SETUP_ENV_FILE"
     run zz-setup acme/ws -d a
     [ "$status" -eq 0 ]
-    grep -qx 'ZZ_STATE_a=skip' "$ZZ_SETUP_ENV_FILE"
+    grep -qx 'ZZ_STATE_a=down' "$ZZ_SETUP_ENV_FILE"
 }
 
 @test "zz-setup ignores remembered states without a menu" {
