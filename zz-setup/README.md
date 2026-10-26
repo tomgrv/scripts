@@ -88,3 +88,7 @@ variables when there is no terminal (`sudo` drops them: put them on the
 ```sh
 bats test.bats
 ```
+
+## Bins on PATH
+
+Before it runs anything, `zz-setup` puts the `run.sh` of every workspace that has a `bin` (a step or not) on `PATH` under its folder name, through a local-path `zz-use`. A step can therefore call a sibling that is not a step, such as a shared helper, by name, without a `zz-use` line of its own.

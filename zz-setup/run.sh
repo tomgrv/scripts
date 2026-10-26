@@ -310,6 +310,22 @@ done)
 [ -n "$list" ] || run_entry "$@"
 names=$(printf '%s\n' "$list" | cut -d"$us" -f2)
 
+# --- bins: the run.sh of every workspace with a bin - a step or not - is put on PATH
+# under its folder name, so a step can call a sibling (a shared helper that is not a
+# step) by name. A local path origin: no download, always re-linked.
+install_bins() {
+    local w out
+
+    for w in $(ws-list -b .); do
+        [ -f "$w/run.sh" ] || continue
+        out=$(zz-use "$PWD/${w#./}" 2>&1) || {
+            zz-log w "Could not put ${w#./} on PATH"
+            printf '%s\n' "$out" >&2
+        }
+    done
+}
+install_bins
+
 # Initial state: the workspaces flagged "default" start enabled.
 for n in $names; do
     if [ "$(get_field "$n" 5)" = true ]; then

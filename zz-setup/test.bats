@@ -283,6 +283,25 @@ make_conflict_remote() {
     [ ! -d "$WORK/dir/ws" ]
 }
 
+@test "zz-setup puts the bin of every workspace on PATH, a helper that is not a step included" {
+    make_workspace_remote
+    mkdir "$WORK/ws/helper"
+    echo '{"name":"@x/helper","bin":{"helper":"run.sh"}}' >"$WORK/ws/helper/package.json"
+    printf '#!/bin/sh\necho helper-ok\n' >"$WORK/ws/helper/run.sh"
+    chmod +x "$WORK/ws/helper/run.sh"
+    printf '#!/bin/sh\nhelper\n' >"$WORK/ws/str/run.sh"
+    echo '{"name":"ws","workspaces":["a","b","lib","str","helper"]}' >"$WORK/ws/package.json"
+    git -C "$WORK/ws" add -A
+    git -C "$WORK/ws" commit -q -m helper
+    git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
+    export INSTALL_BIN_DIR="$WORK/bin"
+    mkdir -p "$INSTALL_BIN_DIR"
+    PATH="$INSTALL_BIN_DIR:$PATH"
+    run zz-setup acme/ws -o str </dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"helper-ok"* ]]
+}
+
 @test "zz-setup remembers the state of every workspace, as is (up, skip, down)" {
     make_workspace_remote
     export ZZ_SETUP_ENV_FILE="$WORK/state.env"
