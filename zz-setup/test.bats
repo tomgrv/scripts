@@ -304,6 +304,26 @@ make_conflict_remote() {
     [[ "$output" == *"Nothing selected"* ]]
 }
 
+@test "zz-setup starts from the remembered states when flags are given" {
+    make_workspace_remote
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    echo 'ZZ_STATE_a=up' >"$ZZ_SETUP_ENV_FILE"
+    run zz-setup acme/ws -w str </dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"a:up:bar"* ]]
+    [[ "$output" == *"str"* ]]
+}
+
+@test "zz-setup lets a flag override the remembered state it names" {
+    make_workspace_remote
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    printf 'ZZ_STATE_a=up\nZZ_STATE_str=up\n' >"$ZZ_SETUP_ENV_FILE"
+    run zz-setup acme/ws -s str </dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"a:up:bar"* ]]
+    [[ "$output" != *"│  str"* ]]
+}
+
 @test "zz-setup preselects the menu from the remembered states" {
     command -v script >/dev/null || skip "script(1) not available"
     make_workspace_remote

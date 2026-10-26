@@ -359,6 +359,16 @@ if [ -n "$summary_flag" ]; then
     exit 0
 fi
 
+# Remembered states (the last runs' up/skip) come first, so a flag only changes what
+# it names: -s b does not forget that a was skipped last time.
+load_saved_states() {
+    for n in $names; do
+        saved=$(get_env_value "$(get_state_key "$n")")
+        case "$saved" in up | skip) set_state "$n" "$saved" ;; esac
+    done
+}
+[ "$nflags" -eq 0 ] || load_saved_states
+
 apply_state up "$with_list"
 apply_state skip "$skip_list"
 [ -z "$down_all" ] || apply_state down "$names"
@@ -371,10 +381,7 @@ only=$(printf '%s' "$only_list" | tr ',' ' ')
 }
 
 if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
-    for n in $names; do
-        saved=$(get_env_value "$(get_state_key "$n")")
-        case "$saved" in up | skip) set_state "$n" "$saved" ;; esac
-    done
+    load_saved_states
     items=
     set --
     for n in $names; do
