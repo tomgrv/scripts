@@ -23,7 +23,8 @@
 # "config.input") declare inputs. Its (first) bin gets "up"/"down" as argument.
 #
 # The state of each workspace you run is remembered in the env file
-# (ZZ_STATE_<name>=up|skip) and preselects the next menu.
+# (ZZ_STATE_<name>=up|skip) and preselects the next menu; the menu's up/skip
+# choices are remembered as soon as they are confirmed.
 #
 # Options (parsed with zz-args, after the repository; names are space- or
 # comma-separated): -w enable, -s skip, -d down, -o only these, -D down all,
@@ -391,6 +392,9 @@ if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
     fi
     for line in $out; do
         set_state "${line%%=*}" "${line#*=}"
+        # A skipped workspace never runs, so remember the choice now (down is
+        # remembered as skip once it has run).
+        case "${line#*=}" in up | skip) zz-persist -q -f "$envfile" "$(get_state_key "${line%%=*}")" "${line#*=}" ;; esac
     done
 fi
 
