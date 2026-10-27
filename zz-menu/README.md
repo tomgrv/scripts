@@ -23,6 +23,7 @@ carries only the chosen key.
 | `-t <title>`  | title line shown above the items                             |
 | `-d <key>`    | key chosen when the user just presses Enter                  |
 | `-f <text>`   | hint line replacing the default one (`\n` starts a new line) |
+| `-z <key=label>` | an item numbered 0, listed first; choosing 0 prints its key (pick mode) |
 | `-c <states>` | cycle mode: comma-separated states, see below                |
 
 | Exit status | Meaning                                                 |

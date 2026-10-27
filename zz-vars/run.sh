@@ -245,19 +245,25 @@ saved=""
 if [ -t 0 ] && [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ]; then
     while :; do
         set --
-        unset_count=0
+        unset_count=0 zero=
         while IFS="$us" read -r var desc req def owner secret as; do
             st=$(get_input_status "$var" "$req")
             [ "$st" = set ] || unset_count=$((unset_count + 1))
-            set -- "$@" "$var=$(printf '%-24s' "$var") [$(printf '%-8s' "$st")] $owner${desc:+ - $desc}"
+            row="$(printf '%-24s' "$var") [$(printf '%-8s' "$st")] $owner${desc:+ - $desc}"
+            # a value saved in the env file is shown in bold, and can be deleted (item 0)
+            if [ -n "$(get_env_value "$var")" ]; then
+                row="$(printf '\033[1m')${row}${End}"
+                zero=1
+            fi
+            set -- "$@" "$var=$row"
         done <<ROWS
 $all_inputs
 ROWS
         [ "$unset_count" -gt 0 ] || [ -n "$manage" ] || break
-        set -- "$@" "~delete=Delete a saved value..."
         rc=0
-        choice=$(zz-menu -t "Inputs" \
-            -f "  Number sets that input; <enter> proceeds with what's set, q quits." \
+        # shellcheck disable=SC2086
+        choice=$(zz-menu -t "Inputs" ${zero:+-z "~delete=Delete a saved value..."} \
+            -f "  Number sets that input (bold: saved, 0 deletes one); <enter> proceeds with what's set, q quits." \
             "$@") || rc=$?
         case "$rc" in
         0) ;;

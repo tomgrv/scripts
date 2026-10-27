@@ -31,4 +31,4 @@ bats test.bats
 
 ## Deleting a saved value
 
-On a terminal the inputs menu ends with **Delete a saved value...**: it lists the inputs stored in the env file (and the profile snippet), and the one you pick is forgotten, so its default applies again. A secret is only deleted after a `y` to the confirmation. A value that comes from the caller's environment is not touched. The menu only appears while an input is unset; `-m` shows it anyway, to change or delete a value when everything is set.
+On a terminal the inputs menu lists a saved value in bold and starts with item **0, Delete a saved value...**: it lists the inputs stored in the env file (and the profile snippet), and the one you pick is forgotten, so its default applies again. A secret is only deleted after a `y` to the confirmation. A value that comes from the caller's environment is not touched. The menu only appears while an input is unset; `-m` shows it anyway, to change or delete a value when everything is set.
