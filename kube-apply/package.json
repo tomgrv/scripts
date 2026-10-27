@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-kube-apply",
-  "version": "4.10.0",
+  "version": "5.2.0",
   "description": "Render a manifest template with yaml-render and kubectl apply it",
   "bin": {
     "kube-apply": "run.sh"

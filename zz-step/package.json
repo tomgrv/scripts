@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz-step",
-  "version": "5.0.0",
+  "version": "5.2.0",
   "description": "Sourced up|down|summary entry point of a setup step",
   "bin": {
     "zz-step": "run.sh"

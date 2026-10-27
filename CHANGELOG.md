@@ -1,5 +1,21 @@
 # Changelog
 
+## 5.2.0 (2026-10-27)
+
+*Commits from: v5.1.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v5.1.0' into develop
+### 📦 scripts-zz-setup changes
+
+#### Features
+
+- ✨ pass all params to zz-use -x; persist menu choices (#103)
+- ✨ setup menus and inputs rework, kube/helm/systemd helpers (#104)
+
 ## 5.1.0 (2026-10-25)
 
 *Commits from: v5.0.0..HEAD*
@@ -1014,5 +1030,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-10-25 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-10-27 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*

@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-kube-require",
-  "version": "4.10.0",
+  "version": "5.2.0",
   "description": "Check kubectl and helm and print the KUBECONFIG export for eval",
   "bin": {
     "kube-require": "run.sh"

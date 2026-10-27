@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-helm-install",
-  "version": "4.10.0",
+  "version": "5.2.0",
   "description": "Install or upgrade a Helm release with progress and diagnostics",
   "bin": {
     "helm-install": "run.sh"
