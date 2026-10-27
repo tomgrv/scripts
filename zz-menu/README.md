@@ -18,13 +18,14 @@ Each `<item>` is `<key>=<label>` (split at the first `=`), or just `<label>`,
 which then doubles as its own key. The menu is drawn on stderr, so stdout
 carries only the chosen key.
 
-| Option           | Purpose                                                                 |
-| ---------------- | ----------------------------------------------------------------------- |
-| `-t <title>`     | title line shown above the items                                        |
-| `-d <key>`       | key chosen when the user just presses Enter                             |
-| `-f <text>`      | hint line replacing the default one (`\n` starts a new line)            |
-| `-z <key=label>` | an item numbered 0, listed first; choosing 0 prints its key (pick mode) |
-| `-c <states>`    | cycle mode: comma-separated states, see below                           |
+| Option           | Purpose                                                                           |
+| ---------------- | --------------------------------------------------------------------------------- |
+| `-t <title>`     | title line shown above the items                                                  |
+| `-d <key>`       | key chosen when the user just presses Enter                                       |
+| `-f <text>`      | hint line replacing the default one (`\n` starts a new line)                      |
+| `-z <key=label>` | an item numbered 0, listed first; choosing 0 prints its key (pick mode)           |
+| `-b <keys>`      | comma-separated item keys shown highlighted (bold white); the menu owns its style |
+| `-c <states>`    | cycle mode: comma-separated states, see below                                     |
 
 | Exit status | Meaning                                                 |
 | ----------- | ------------------------------------------------------- |

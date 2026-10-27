@@ -7,6 +7,14 @@ helpers, JSON/YAML utilities, Kubernetes helpers and the `zz-*` building
 blocks for writing your own scripts. Each tool lives in its own folder with a
 README giving its usage.
 
+**Start here**
+
+- Install the core: [Quick start](#quick-start); get tools by name: [`zz-use`](#installing-tools-with-zz-use).
+- Write a script with the blocks: [Writing your own script](#writing-your-own-script) and the [`zz-*` core](#core-zz-).
+- Configure behaviour: [Environment variables](#environment-variables).
+- Find a tool: [JSON, YAML, Kubernetes and feature tools](#json-yaml-kubernetes-and-feature-tools), [release](#release-and-versioning), [git](#git-tools).
+- Add or change a tool: [Contributing](#contributing).
+
 ## Quick start
 
 Install the `zz-*` core once (needs only `curl` and `sh`):
@@ -85,7 +93,7 @@ own, or installed from npm: `npm install --save-dev ./json-validate`.
 | `zz-log <lvl> <msg...>`                                                                                                | colored, leveled log line on stderr (`i`/`w`/`e`/`s`/`-`)                                                                                                                                      |
 | `zz-args <title> <caller> <<-help ...`                                                                                 | parse `$@` per a spec; `eval $(zz-args ...)` to bind the vars                                                                                                                                  |
 | `zz-prompt [-s] [-e] [-c Yn] <question> [default]`                                                                     | interactive free-form input; `ZZ_PROMPT_ANSWERS=<file>` scripts the answers                                                                                                                    |
-| `zz-menu [-t title] [-d key] [-f footer] [-z key=label] [-c states] <key=label>...`                                    | interactive numbered menu (pick or cycle; `-z` adds an item 0)                                                                                                                                 |
+| `zz-menu [-t title] [-d key] [-f footer] [-z key=label] [-b keys] [-c states] <key=label>...`                          | interactive numbered menu (pick or cycle; `-z` adds an item 0)                                                                                                                                 |
 | `zz-load [-r] [file\|url\|literal]`                                                                                    | read from a URL, a file, a literal arg or stdin                                                                                                                                                |
 | `zz-bindir [-t target]`                                                                                                | resolve/create a writable bin dir; `eval $(zz-bindir ...)` to bind `$dir` and extend `PATH`                                                                                                    |
 | `zz-dispatch <caller> <subcmd>`                                                                                        | dispatch an underscore-prefixed caller to a sibling `<name>-<subcmd>` script                                                                                                                   |

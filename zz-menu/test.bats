@@ -160,3 +160,9 @@ teardown() {
     [[ "$output" == *"No such item: 0"* ]]
     [[ "$output" == *"a" ]]
 }
+
+@test "zz-menu -b highlights the listed items in bold white, the others stay plain" {
+    run bash -c 'echo q | zz-menu -b b a=Alpha b=Beta'
+    [[ "$output" == *$'\033[1;37mBeta'* ]]
+    [[ "$output" != *$'\033[1;37mAlpha'* ]]
+}

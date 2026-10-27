@@ -22,7 +22,7 @@ eval "$(zz-vars -f .env -P myprofile a=packages/a b=packages/b)"
   environment, env file, default) and prints the `export` lines to `eval`.
 - `-n` never asks (defaults, required not enforced); `-a` asks each unset input on stdin without the menu; `-e` also persists values already in the environment.
 - `-m` shows the menu even when every input is set (to change or delete a saved value).
-- The menu shows each input's source (`env`, `env*` when the environment overrides a different saved value, `file`, `default`) and writes saved values in bold white; item `0` deletes a saved value. It only runs when `zz-interactive` says so (`ZZ_INTERACTIVE=0` keeps it off).
+- The menu shows each input's source (`env`, `env*` when the environment overrides a different saved value, `file`, `default`) and highlights saved values (the menu's `-b`); item `0` deletes a saved value. It only runs when `zz-interactive` says so (`ZZ_INTERACTIVE=0` keeps it off).
 - Exits 1 when a required input is still empty (or an input name is not a shell identifier). `q` in the menu leaves it and proceeds with what is set (the menu never aborts the run).
 
 ## Tests

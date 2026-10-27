@@ -259,14 +259,14 @@ saved=""
 if [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ] && zz-interactive; then
     while :; do
         set --
-        unset_count=0 zero=
+        unset_count=0 zero= highlight=
         while IFS="$us" read -r var desc req def owner secret as; do
             st=$(get_input_status "$var" "$req")
             [ "$st" = set ] || unset_count=$((unset_count + 1))
             row="$(printf '%-24s' "$var") [$(printf '%-8s' "$st")] $(printf '%-7s' "$(get_input_source "$var" "$def")") $owner${desc:+ - $desc}"
-            # a value saved in the env file is shown in bold, and can be deleted (item 0)
+            # a value saved in the env file is highlighted by the menu, and can be deleted (item 0)
             if [ -n "$(get_env_value "$var")" ]; then
-                row="${Saved}${row}${End}"
+                highlight="${highlight:+$highlight,}$var"
                 zero=1
             fi
             set -- "$@" "$var=$row"
@@ -276,7 +276,7 @@ ROWS
         [ "$unset_count" -gt 0 ] || [ -n "$manage" ] || break
         rc=0
         # shellcheck disable=SC2086
-        choice=$(zz-menu -t "Inputs" ${zero:+-z "~delete=Delete a saved value..."} \
+        choice=$(zz-menu -t "Inputs" ${zero:+-z "~delete=Delete a saved value..."} ${highlight:+-b "$highlight"} \
             -f "  Number sets that input (bold: saved, 0 deletes one; env* = the environment overrides the saved value); <enter> or q proceeds with what's set." \
             "$@") || rc=$?
         case "$rc" in

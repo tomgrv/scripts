@@ -1,5 +1,5 @@
 #!/bin/sh
-# zz-menu [-t title] [-d default] [-f footer] [-z item] [-c states] <item>... — interactive
+# zz-menu [-t title] [-d default] [-f footer] [-z item] [-b keys] [-c states] <item>... — interactive
 # numbered menu. Each <item> is "<key>=<label>" (or just "<label>", used as its
 # own key). The menu is drawn on stderr; results go to stdout.
 #
@@ -19,6 +19,9 @@
 # -z "<key>=<label>" adds an item numbered 0, listed above the others, for an
 # action that is not one of them (pick mode only): choosing 0 prints its key.
 #
+# -b "<key>,<key>" shows those items highlighted (bold white): the menu owns its
+# style, callers only say which items matter.
+#
 # Pick mode is meant for callers that loop until the user is done:
 #   while choice=$(zz-menu -t "Steps" "a=Alpha" "b=Beta"); do ...; done
 
@@ -33,6 +36,7 @@ eval "$(
         d default default  Key chosen when the user just presses Enter
         f footer  footer   Hint line replacing the default one under the items
         z zero    zero     Item "<key>=<label>" numbered 0, listed first (pick mode)
+        b keys    highlight Comma-separated item keys shown in bold white
         c cycle   cycle    Comma-separated states; choosing an item advances its state
         # items   items    Items: <key>=<label> or <label>
 help
@@ -83,6 +87,7 @@ render() {
         if [ -n "$cycle" ]; then
             label="[$(printf "%-${width}s" "$state")] ${label}"
         fi
+        case ",$highlight," in *",$key,"*) label="${BWhite}${label}${End}" ;; esac
         printf '%b%s\n' "  ${BBlue}$(printf '%2d' "$i")${End})${mark}" "$label" >&2
         i=$((i + 1))
     done
