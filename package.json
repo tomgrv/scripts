@@ -63,6 +63,7 @@
     "yaml",
     "yaml-merge",
     "yaml-render",
+    "kube",
     "kube-progress",
     "kube-diagnose",
     "kube-teardown",

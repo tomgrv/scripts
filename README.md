@@ -109,6 +109,7 @@ own, or installed from npm: `npm install --save-dev ./json-validate`.
 | `json-merge`        | recursively merge one JSON file into another (arrays deduped, unioned)     |
 | `json-render`       | fill the `${NAME}` placeholders of a JSON file, values JSON-escaped        |
 | `yaml-render`       | fill the `${NAME}` placeholders of a YAML file (chart values, manifest)    |
+| `kube`              | dispatch to `kube-<subcommand>` (`apply`, `rollout`, `require`, ...)       |
 | `kube-progress`     | run a command, logging the pod status of a namespace while it works        |
 | `kube-diagnose`     | show what is stuck in a Kubernetes namespace                               |
 | `kube-teardown`     | uninstall a Helm release and delete its namespace                          |
