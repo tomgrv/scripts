@@ -252,7 +252,7 @@ if [ -t 0 ] && [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ]; then
             row="$(printf '%-24s' "$var") [$(printf '%-8s' "$st")] $owner${desc:+ - $desc}"
             # a value saved in the env file is shown in bold, and can be deleted (item 0)
             if [ -n "$(get_env_value "$var")" ]; then
-                row="$(printf '\033[1m')${row}${End}"
+                row="${BWhite}${row}${End}"
                 zero=1
             fi
             set -- "$@" "$var=$row"
