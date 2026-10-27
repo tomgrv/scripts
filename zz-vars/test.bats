@@ -106,3 +106,38 @@ teardown() {
     run zz-vars -n -f "$WORK/env" a=a
     [[ "$output" == *"export OLD='o'"* && "$output" == *"deprecated"* ]]
 }
+
+# menu_run <menu answers...>: run zz-vars -m on a pty with a scripted zz-menu (each call
+# pops the next answer from "$WORK/answers"; a bare "enter" is exit 2) and zz-prompt "y".
+menu_run() {
+    printf '%s\n' "$@" >"$WORK/answers"
+    stub_script zz-menu <<EOS
+#!/bin/sh
+a=\$(head -n1 "$WORK/answers"); sed -i 1d "$WORK/answers"
+case "\$a" in enter) exit 2 ;; quit) exit 1 ;; *) echo "\$a" ;; esac
+EOS
+    printf '#!/bin/sh\necho y\n' | stub_script zz-prompt
+    script -qec "zz-vars -m -f $WORK/env a=a" /dev/null >"$WORK/out" 2>&1 || true
+}
+
+@test "zz-vars menu: a saved value can be deleted (a secret after a confirmation)" {
+    printf 'A_TOKEN=s3\nA_OPT=keep\n' >"$WORK/env"
+    chmod 600 "$WORK/env"
+    menu_run '~delete' A_TOKEN enter
+    ! grep -q '^A_TOKEN=' "$WORK/env"
+    grep -q '^A_OPT=keep$' "$WORK/env"
+}
+
+@test "zz-vars menu: nothing is deleted when the secret's confirmation is refused" {
+    printf 'A_TOKEN=s3\n' >"$WORK/env"
+    chmod 600 "$WORK/env"
+    printf '#!/bin/sh\necho n\n' | stub_script zz-prompt
+    printf '%s\n' '~delete' A_TOKEN enter >"$WORK/answers"
+    stub_script zz-menu <<EOS
+#!/bin/sh
+a=\$(head -n1 "$WORK/answers"); sed -i 1d "$WORK/answers"
+case "\$a" in enter) exit 2 ;; *) echo "\$a" ;; esac
+EOS
+    script -qec "zz-vars -m -f $WORK/env a=a" /dev/null >/dev/null 2>&1 || true
+    grep -q '^A_TOKEN=s3$' "$WORK/env"
+}
