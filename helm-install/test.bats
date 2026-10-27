@@ -42,6 +42,16 @@ stub_cluster() {
     ! grep -q '^diagnose' "$CALLS"
 }
 
+@test "helm-install waits for a terminating namespace to be gone before creating it" {
+    stub_cluster "" 0
+    printf '#!/bin/sh\necho "kubectl $*" >>"%s"\n[ "$1" = get ] && echo Terminating\nexit 0\n' "$CALLS" | stub_script kubectl
+    run helm-install ns rel chart
+    [ "$status" -eq 0 ]
+    wait_line=$(grep -n '^kubectl wait --for=delete namespace/ns' "$CALLS" | head -1 | cut -d: -f1)
+    create_line=$(grep -n '^kubectl create namespace ns' "$CALLS" | head -1 | cut -d: -f1)
+    [ -n "$wait_line" ] && [ "$wait_line" -lt "$create_line" ]
+}
+
 @test "helm-install forgets the record of a failed release, keeping its resources" {
     stub_cluster failed 0
     run helm-install ns rel chart

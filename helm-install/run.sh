@@ -22,6 +22,14 @@ if [ -z "$namespace" ] || [ -z "$release" ] || [ -z "$chart" ]; then
     exit 1
 fi
 
+# A namespace an earlier `down` is still deleting would reject the new objects: wait for it to go.
+phase=$(kubectl get namespace "$namespace" -o jsonpath='{.status.phase}' 2>/dev/null || true)
+if [ "$phase" = Terminating ]; then
+    zz-log w "Namespace $namespace is still terminating; waiting for it to be gone..."
+    kubectl wait --for=delete "namespace/$namespace" --timeout="${ns_wait:-180s}" ||
+        { zz-log e "Namespace $namespace is still terminating; retry in a moment." && exit 1; }
+fi
+
 kubectl create namespace "$namespace" --dry-run=client -o yaml | kubectl apply -f - >/dev/null || exit 1
 
 # A release left "failed" by an earlier attempt makes `helm upgrade` choke on resources it
