@@ -113,6 +113,10 @@ own, or installed from npm: `npm install --save-dev ./json-validate`.
 | `kube-diagnose`     | show what is stuck in a Kubernetes namespace                               |
 | `kube-teardown`     | uninstall a Helm release and delete its namespace                          |
 | `kube-service-port` | change the port of a Service's named port                                  |
+| `kube-require`      | check kubectl and helm, print the KUBECONFIG export for `eval`             |
+| `kube-rollout`      | wait for a Deployment rollout with progress and diagnostics                |
+| `helm-repo`         | add and refresh Helm repositories, failing with a clear message            |
+| `helm-install`      | install or upgrade a Helm release with progress and diagnostics            |
 | `feature`           | dispatch to `feature-<subcommand>` (`install`, `configure`, `context`)     |
 | `feature-context`   | resolve a feature's source/target dirs from the calling script             |
 | `edit-script`       | copy an installed script locally and open it for editing                   |

@@ -1,0 +1,17 @@
+{
+  "name": "@tomgrv/scripts-kube-rollout",
+  "version": "4.10.0",
+  "description": "Wait for a Deployment rollout with progress and diagnostics",
+  "bin": {
+    "kube-rollout": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*"
+  },
+  "private": true
+}
