@@ -21,13 +21,13 @@ if ! command -v kubectl >/dev/null 2>&1; then
         zz-log w "kubectl not found; nothing to remove."
         echo 'return 0'
     else
-        zz-log e "kubectl not found; run vps-k3s/run.sh first."
+        zz-log e "kubectl not found; run svc-k3s/run.sh first."
         echo 'exit 1'
     fi
     exit 0
 fi
 if [ -z "$down_flag" ] && ! command -v helm >/dev/null 2>&1; then
-    zz-log e "helm not found; run vps-k3s/run.sh first."
+    zz-log e "helm not found; run svc-k3s/run.sh first."
     echo 'exit 1'
     exit 0
 fi
