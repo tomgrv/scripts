@@ -32,7 +32,7 @@ no_kube_path() {
 
 @test "kube-require prints the KUBECONFIG export (default k3s path, KUBECONFIG, -k)" {
     printf '#!/bin/sh\n' | stub_script kubectl
-    printf '#!/bin/sh\n' | stub_script helm
+    printf '#!/bin/sh\necho v3.17.4\n' | stub_script helm
     run env -u KUBECONFIG sh -c 'kube-require 2>/dev/null'
     [ "$output" = "export KUBECONFIG='/etc/rancher/k3s/k3s.yaml'" ]
     run env KUBECONFIG=/x/y sh -c 'kube-require 2>/dev/null'
@@ -53,4 +53,31 @@ no_kube_path() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"after"* ]]
     [[ "$output" != *"not-reached"* ]]
+}
+
+# stub_helm <version>: a helm that reports this version.
+stub_helm() {
+    printf '#!/bin/sh\necho v%s\n' "$1" | stub_script helm
+    printf '#!/bin/sh\nexit 0\n' | stub_script kubectl
+}
+
+@test "kube-require -H: helm 3.17 or later passes, an older or missing one does not" {
+    stub_helm 3.17.4
+    run kube-require -H
+    [ "$status" -eq 0 ]
+    stub_helm 4.0.1
+    run kube-require -H
+    [ "$status" -eq 0 ]
+    stub_helm 3.16.2
+    run kube-require -H
+    [ "$status" -eq 1 ]
+    PATH="$(no_kube_path)" run kube-require -H
+    [ "$status" -eq 1 ]
+}
+
+@test "kube-require makes the caller exit 1, saying why, when helm is too old" {
+    stub_helm 3.16.2
+    run kube-require
+    [[ "$output" == *"too old"* ]]
+    [[ "$output" == *"exit 1"* ]]
 }

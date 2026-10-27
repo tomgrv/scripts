@@ -334,6 +334,27 @@ make_conflict_remote() {
     [[ "$output" == *"up:[ str ]"* ]]
 }
 
+@test "zz-setup ends with a results table: ok, failed and not run steps" {
+    make_workspace_remote
+    printf '#!/bin/sh\nexit 4\n' >"$WORK/ws/b/run.sh"
+    git -C "$WORK/ws" commit -q -am failb
+    git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
+    run zz-setup acme/ws -w b,str
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Results:"* ]]
+    [[ "$output" == *"a"*"up: ok"* ]]
+    [[ "$output" == *"b"*"up: failed"* ]]
+    [[ "$output" == *"str"*"up: not run"* ]]
+}
+
+@test "zz-setup prints the results table after a successful multi-step run" {
+    make_workspace_remote
+    run zz-setup acme/ws -w b
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Results:"* ]]
+    [[ "$output" == *"b"*"up: ok"* ]]
+}
+
 @test "zz-setup remembers the state of every workspace, as is (up, skip, down)" {
     make_workspace_remote
     export ZZ_SETUP_ENV_FILE="$WORK/state.env"

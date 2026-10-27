@@ -218,6 +218,26 @@ exec_bin() {
 
 # run_step <name> <action>: run a workspace's bin with <action> (up|down, or any
 # action asked with -a); the states themselves are remembered before the run.
+# print_results: one line per planned step (action:name in $plan) - ok, failed or not run -
+# when the run had several, so a failure midway shows what did and did not happen.
+print_results() {
+    local item action name line st secs
+
+    [ "${step_total:-0}" -gt 1 ] || return 0
+    printf '\n' >&2
+    zz-log i "Results:"
+    for item in $plan; do
+        action="${item%%:*}" name="${item#*:}"
+        line="$(printf '%s' "$results" | awk -v a="$action" -v n="$name" '$2 == a && $3 == n { print; exit }')"
+        st="${line%% *}" secs="${line##* }"
+        case "$st" in
+        ok) zz-log s "  {B $name} $action: ok (${secs}s)" ;;
+        failed) zz-log e "  {B $name} $action: failed (${secs}s)" ;;
+        *) zz-log w "  {B $name} $action: not run" ;;
+        esac
+    done
+}
+
 run_step() {
     local name="$1"   # workspace name (mandatory)
     local action="$2" # up, down or a custom action (mandatory)
@@ -239,9 +259,14 @@ run_step() {
         zz-log e "{B [$name]} $action failed (exit $rc) after ${secs}s"
         zz-log - "Script: {U $ws_dir/$ws_bin}"
         zz-log - "Re-run only this step: zz-setup $spec -o $name"
+        results="${results}failed $action $name $secs
+"
+        print_results
         printf '\n' >&2
         exit 1
     fi
+    results="${results}ok $action $name $secs
+"
     zz-log s "{B [$name]} $action done in ${secs}s"
 }
 
@@ -532,12 +557,14 @@ if [ "$#" -gt 0 ]; then
 fi
 
 # --- -a: one custom action on the selected workspaces, nothing else.
-step_no=0 step_total=0
+step_no=0 step_total=0 results= plan=
 if [ -n "$action_name" ]; then
     step_total=$(printf '%s\n' $up_names | grep -c .)
+    for n in $up_names; do plan="$plan $action_name:$n"; done
     for n in $up_names; do
         run_step "$n" "$action_name"
     done
+    print_results
     exit 0
 fi
 
@@ -546,11 +573,18 @@ for n in $names; do
     case "$(get_state "$n")" in up | down) step_total=$((step_total + 1)) ;; esac
 done
 for n in $(printf '%s\n' "$names" | sed '1!G;h;$!d'); do
+    [ "$(get_state "$n")" = down ] && plan="$plan down:$n"
+done
+for n in $names; do
+    [ "$(get_state "$n")" = up ] && plan="$plan up:$n"
+done
+for n in $(printf '%s\n' "$names" | sed '1!G;h;$!d'); do
     [ "$(get_state "$n")" = down ] && run_step "$n" down
 done
 for n in $names; do
     [ "$(get_state "$n")" = up ] && run_step "$n" up
 done
+print_results
 
 # --- summary: what the workspaces declaring config.summary report, once all ran.
 print_summaries

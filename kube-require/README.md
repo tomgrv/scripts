@@ -2,7 +2,7 @@
 
 # kube-require
 
-Check that `kubectl` and `helm` are installed and print the `KUBECONFIG` export for the caller to evaluate.
+Check that `kubectl` and `helm` (3.17 or later: the upstream charts use template functions older versions lack) are installed and print the `KUBECONFIG` export for the caller to evaluate.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
 and linked onto `PATH` as `kube-require`.
@@ -29,5 +29,6 @@ bats test.bats
 ```
 
 - prints the export for the default path, `KUBECONFIG` and `-k`
-- makes the caller exit 1 when kubectl or helm is missing
+- makes the caller exit 1 when kubectl or helm is missing, or helm is older than 3.17
+- `kube-require -H` only checks helm: exit 0 when it is installed and recent enough, nothing printed
 - `-d` makes the caller return 0 when kubectl is missing
