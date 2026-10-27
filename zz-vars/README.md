@@ -21,7 +21,7 @@ eval "$(zz-vars -f .env -P myprofile a=packages/a b=packages/b)"
   `zz-persist`, secrets masked), resolves every input with `zz-call` (caller's
   environment, env file, default) and prints the `export` lines to `eval`.
 - `-n` never asks (defaults, required not enforced); `-a` asks each unset input on stdin without the menu; `-e` also persists values already in the environment.
-- Exits 1 when a required input is still empty (or an input name is not a shell identifier), 3 when the user aborted.
+- Exits 1 when a required input is still empty (or an input name is not a shell identifier). `q` in the menu leaves it and proceeds with what is set (the menu never aborts the run).
 
 ## Tests
 

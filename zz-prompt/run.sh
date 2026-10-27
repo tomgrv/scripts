@@ -8,6 +8,8 @@
 # from /dev/tty if one can be opened; ZZ_PROMPT_TTY=0 turns that off.
 #   -s  secret: the answer is not echoed and the default is shown as [***]
 #   -e  fail (status 1) when input ends instead of answering with the default
+#   ZZ_PROMPT_ANSWERS=<file>  scripted answers, one line per prompt (an empty line is a bare Enter;
+#       an exhausted file is end of input): the same for zz-menu, which asks through zz-prompt
 #   -c  choices, e.g. Yn: accept one of these letters (any case), re-ask on
 #       anything else; the answer is always printed lowercased
 
@@ -47,6 +49,18 @@ read_answer() {
         printf '%b' "${BBlue}#${None} $question ${BBlue}[$shown]${None} " >&2
     else
         printf '%b' "${BBlue}#${None} $question " >&2
+    fi
+    if [ -n "${ZZ_PROMPT_ANSWERS:-}" ]; then
+        eof=
+        if [ -s "$ZZ_PROMPT_ANSWERS" ]; then
+            value=$(head -n1 "$ZZ_PROMPT_ANSWERS")
+            sed -i 1d "$ZZ_PROMPT_ANSWERS"
+        else
+            value=
+            eof=1
+        fi
+        echo >&2
+        return 0
     fi
     [ -t 0 ] || ! has_tty || tty_in=/dev/tty
     stty_orig=

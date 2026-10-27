@@ -277,14 +277,10 @@ ROWS
         rc=0
         # shellcheck disable=SC2086
         choice=$(zz-menu -t "Inputs" ${zero:+-z "~delete=Delete a saved value..."} \
-            -f "  Number sets that input (bold: saved, 0 deletes one; env* = the environment overrides the saved value); <enter> proceeds with what's set; q quits." \
+            -f "  Number sets that input (bold: saved, 0 deletes one; env* = the environment overrides the saved value); <enter> or q proceeds with what's set." \
             "$@") || rc=$?
         case "$rc" in
         0) ;;
-        1)
-            zz-log n "Aborted, nothing changed"
-            exit 3
-            ;;
         *) break ;;
         esac
         if [ "$choice" = "~delete" ]; then

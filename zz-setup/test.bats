@@ -336,6 +336,23 @@ make_conflict_remote() {
     grep -qx 'ZZ_STATE_a=down' "$ZZ_SETUP_ENV_FILE"
 }
 
+@test "zz-setup menu asks before bringing a workspace down; -y does not" {
+    make_workspace_remote
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    echo 'ZZ_STATE_a=down' >"$ZZ_SETUP_ENV_FILE"
+    printf '\nn\n' >"$WORK/answers"
+    run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws
+    [[ "$output" == *"Bring a down"* ]]
+    [[ "$output" != *"a:down"* ]]
+    printf '\ny\n' >"$WORK/answers"
+    run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws
+    [[ "$output" == *"a:down"* ]]
+    printf '\n' >"$WORK/answers"
+    run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws -y
+    [[ "$output" != *"Bring a down"* ]]
+    [[ "$output" == *"a:down"* ]]
+}
+
 @test "zz-setup ignores remembered states without a menu" {
     make_workspace_remote
     export ZZ_SETUP_ENV_FILE="$WORK/state.env"

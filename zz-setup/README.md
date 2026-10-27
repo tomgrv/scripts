@@ -57,6 +57,7 @@ Lists are space- or comma-separated workspace names.
 | `-o <names>` | run ONLY these (overrides `-w`/`-s`/`-d`)          |
 | `-D`         | bring every workspace down                         |
 | `-F`         | allow `-d` while a dependent stays enabled         |
+| `-y`         | do not ask to confirm the workspaces set to `down` in the menu |
 | `-S`         | show workspace states and inputs, run nothing      |
 | `-a <action>` | with `-o`: run this action (any argument the bin understands) instead of `up` |
 | `-m`         | print the `summary` of each workspace declaring `config.summary: true`, run nothing (a normal run prints them after the last step, under a `<repo> summary` header line) |

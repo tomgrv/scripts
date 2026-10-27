@@ -107,23 +107,17 @@ teardown() {
     [[ "$output" == *"export OLD='o'"* && "$output" == *"deprecated"* ]]
 }
 
-# menu_run <menu answers...>: run zz-vars -m on a pty with a scripted zz-menu (each call
-# pops the next answer from "$WORK/answers"; a bare "enter" is exit 2) and zz-prompt "y".
+# menu_run <answers...>: run zz-vars -m with the answers scripted through ZZ_PROMPT_ANSWERS
+# (an empty answer is a bare Enter).
 menu_run() {
     printf '%s\n' "$@" >"$WORK/answers"
-    stub_script zz-menu <<EOS
-#!/bin/sh
-a=\$(head -n1 "$WORK/answers"); sed -i 1d "$WORK/answers"
-case "\$a" in enter) exit 2 ;; quit) exit 1 ;; *) echo "\$a" ;; esac
-EOS
-    printf '#!/bin/sh\necho y\n' | stub_script zz-prompt
-    script -qec "zz-vars -m -f $WORK/env a=a" /dev/null >"$WORK/out" 2>&1 || true
+    ZZ_PROMPT_ANSWERS="$WORK/answers" zz-vars -m -f "$WORK/env" a=a >/dev/null 2>&1 || true
 }
 
 @test "zz-vars menu: a saved value can be deleted (a secret after a confirmation)" {
     printf 'A_TOKEN=s3\nA_OPT=keep\n' >"$WORK/env"
     chmod 600 "$WORK/env"
-    menu_run '~delete' A_TOKEN enter
+    menu_run 0 1 y ''
     ! grep -q '^A_TOKEN=' "$WORK/env"
     grep -q '^A_OPT=keep$' "$WORK/env"
 }
@@ -131,15 +125,17 @@ EOS
 @test "zz-vars menu: nothing is deleted when the secret's confirmation is refused" {
     printf 'A_TOKEN=s3\n' >"$WORK/env"
     chmod 600 "$WORK/env"
-    printf '#!/bin/sh\necho n\n' | stub_script zz-prompt
-    printf '%s\n' '~delete' A_TOKEN enter >"$WORK/answers"
-    stub_script zz-menu <<EOS
-#!/bin/sh
-a=\$(head -n1 "$WORK/answers"); sed -i 1d "$WORK/answers"
-case "\$a" in enter) exit 2 ;; *) echo "\$a" ;; esac
-EOS
-    script -qec "zz-vars -m -f $WORK/env a=a" /dev/null >/dev/null 2>&1 || true
+    menu_run 0 1 n ''
     grep -q '^A_TOKEN=s3$' "$WORK/env"
+}
+
+@test "zz-vars menu: q leaves the menu and proceeds, it does not abort" {
+    printf 'A_TOKEN=s3\n' >"$WORK/env"
+    chmod 600 "$WORK/env"
+    printf 'q\n' >"$WORK/answers"
+    run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-vars -m -f "$WORK/env" a=a
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"A_TOKEN"* ]]
 }
 
 @test "zz-vars -S shows where each value comes from (env, env* when it overrides a saved value, file, default)" {

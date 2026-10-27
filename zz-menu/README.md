@@ -32,6 +32,8 @@ carries only the chosen key.
 | `1`         | the user quit (`q`) or input ended                      |
 | `2`         | bare Enter with no default — the caller's "proceed" cue |
 
+`q` leaves the menu without choosing and never aborts the caller's run: a sub-menu goes back or keeps what is set (`zz-vars`, `vps-access`); only the top-level `zz-setup` workspace menu treats it as "cancel everything". Tests drive any menu or prompt with `ZZ_PROMPT_ANSWERS=<file>` (one answer per line, see `zz-prompt`).
+
 ### Single choice
 
 ```sh

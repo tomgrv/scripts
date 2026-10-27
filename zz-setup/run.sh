@@ -357,6 +357,7 @@ D - down_all Bring every workspace down
 F - force_flag Allow -d while a dependent stays enabled
 S - status_flag Show each workspace's state and inputs, run nothing
 a action action_name Run this action (any argument the bin understands) on the -o workspaces instead of up
+y - assume_yes Do not ask to confirm the workspaces set to down
 m - summary_flag Print the summary of each workspace that declares config.summary, run nothing
 # extra extra Unknown arguments (rejected)
 help
@@ -421,6 +422,13 @@ if [ "$nflags" -eq 0 ] && zz-interactive; then
         # A skipped workspace never runs, so remember every choice now, as is.
         zz-persist -q -f "$envfile" "$(get_state_key "${line%%=*}")" "${line#*=}"
     done
+    # down removes what the workspace installed: confirm each, unless -y
+    if [ -z "$assume_yes" ]; then
+        for n in $names; do
+            [ "$(get_state "$n")" = down ] || continue
+            [ "$(zz-prompt -c yN "Bring $n down (remove what it installed)?")" = y ] || set_state "$n" skip
+        done
+    fi
 fi
 
 if [ -n "$only" ]; then
