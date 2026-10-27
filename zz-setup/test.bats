@@ -364,6 +364,18 @@ make_conflict_remote() {
     grep -qx 'ZZ_STATE_b=skip' "$ZZ_SETUP_ENV_FILE"
     run zz-setup acme/ws -d a
     [ "$status" -eq 0 ]
+    # a down that succeeded is remembered as skip: nothing left to bring down
+    grep -qx 'ZZ_STATE_a=skip' "$ZZ_SETUP_ENV_FILE"
+}
+
+@test "zz-setup keeps the state down when the down fails" {
+    make_workspace_remote
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    printf '#!/bin/sh\nexit 5\n' >"$WORK/ws/a/run.sh"
+    git -C "$WORK/ws" commit -q -am faila
+    git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
+    run zz-setup acme/ws -d a
+    [ "$status" -ne 0 ]
     grep -qx 'ZZ_STATE_a=down' "$ZZ_SETUP_ENV_FILE"
 }
 
@@ -378,6 +390,7 @@ make_conflict_remote() {
     printf '\ny\n' >"$WORK/answers"
     run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws
     [[ "$output" == *"a:down"* ]]
+    echo 'ZZ_STATE_a=down' >"$ZZ_SETUP_ENV_FILE"
     printf '\n' >"$WORK/answers"
     run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws -y
     [[ "$output" != *"Bring a down"* ]]

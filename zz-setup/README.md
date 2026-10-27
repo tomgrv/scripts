@@ -65,7 +65,7 @@ Lists are space- or comma-separated workspace names.
 
 No options on a terminal opens the menu, preselected with the states of the last
 run: every workspace's state is remembered in the env file before the run as
-`ZZ_STATE_<name>=up|skip|down`, stored as is: a workspace brought down stays `down` until a later run or menu choice changes it, and the menu's choices are remembered as soon as they are confirmed.
+`ZZ_STATE_<name>=up|skip|down`, stored as is: a workspace whose `down` failed (or has not run yet) stays `down`, and one brought down successfully is remembered as `skip`, and the menu's choices are remembered as soon as they are confirmed.
 Non-interactive runs without flags ignore it; with flags (`-w`, `-s`, `-d`, ...) the run starts from it and each flag only changes the workspaces it names. Supply inputs as environment
 variables when there is no terminal (`sudo` drops them: put them on the
 `sudo` line).

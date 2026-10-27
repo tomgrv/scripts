@@ -579,7 +579,11 @@ for n in $names; do
     [ "$(get_state "$n")" = up ] && plan="$plan up:$n"
 done
 for n in $(printf '%s\n' "$names" | sed '1!G;h;$!d'); do
-    [ "$(get_state "$n")" = down ] && run_step "$n" down
+    [ "$(get_state "$n")" = down ] || continue
+    run_step "$n" down
+    # removed for good: remembered as skip, so it is not brought down again (nor asked about) next time
+    set_state "$n" skip
+    zz-persist -q -f "$envfile" "$(get_state_key "$n")" skip
 done
 for n in $names; do
     [ "$(get_state "$n")" = up ] && run_step "$n" up
