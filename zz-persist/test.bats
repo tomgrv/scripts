@@ -309,3 +309,47 @@ teardown() {
     [ "$status" -ne 0 ]
     [[ "$output" == *"Invalid key name"* ]]
 }
+
+@test "zz-persist -S writes a secret to the shared secrets file" {
+    tmp=$(mktemp -d)
+    ZZ_SECRETS_FILE="$tmp/s.env" run zz-persist -S -q KEY val
+    [ "$status" -eq 0 ]
+    grep -q '^KEY=val$' "$tmp/s.env"
+    rm -rf "$tmp"
+}
+
+@test "zz-persist -S -g -o generates once, keeps and prints (hex)" {
+    tmp=$(mktemp -d)
+    export ZZ_SECRETS_FILE="$tmp/s.env"
+    a=$(zz-persist -S -q -g 16 -t hex KEY)
+    b=$(zz-persist -S -q -g 16 -t hex KEY)
+    [ "${#a}" -eq 16 ]
+    [ "$a" = "$b" ]
+    case "$a" in *[!0-9a-f]*) false ;; esac
+    rm -rf "$tmp"
+}
+
+@test "zz-persist -o prints a stored value and never blanks it" {
+    tmp=$(mktemp)
+    echo 'KEY=stored' >"$tmp"
+    run zz-persist -f "$tmp" -o -q KEY
+    [ "$output" = "stored" ]
+    grep -q '^KEY=stored$' "$tmp"
+    rm -f "$tmp"
+}
+
+@test "zz-persist -r falls back to the -v default" {
+    tmp=$(mktemp)
+    run zz-persist -f "$tmp" -r -v 'not set' KEY
+    [ "$output" = "not set" ]
+    rm -f "$tmp"
+}
+
+@test "zz-persist -u removes each key of a list" {
+    tmp=$(mktemp)
+    printf 'A=1\nB=2\nC=3\n' >"$tmp"
+    run zz-persist -f "$tmp" -u -q "A B"
+    [ "$status" -eq 0 ]
+    [ "$(cat "$tmp")" = "C=3" ]
+    rm -f "$tmp"
+}

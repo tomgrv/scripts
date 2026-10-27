@@ -1,5 +1,5 @@
 #!/bin/sh
-# zz-vars [-S] [-n | -a] [-e] -f <envfile> [-P profile] <name>=<dir>... — the
+# zz-vars [-S] [-n | -a] [-m] [-e] -f <envfile> [-P profile] <name>=<dir>... — the
 # inputs the given workspaces declare in their package.json ("config.inputs",
 # keyed by variable, "config.input", the deprecated array, and "config.ports":
 # each port is the input <NAME>_PORT, defaulting to its port), resolved and
@@ -12,9 +12,11 @@
 #       a required one is not enforced
 #   -a  ask each unset input in turn on stdin (zz-prompt, no menu), persisting
 #       the answer
+#   -m  manage: show the menu even when every input is set
 #   -e  also persist the values already set in the environment
 #   (default) on a terminal, offer to set the unset ones (zz-menu, then
-#   zz-persist, secrets masked); fail (1) when a required one is still empty
+#   zz-persist, secrets masked; a "Delete a saved value" entry forgets one, a
+#   secret after a confirmation); fail (1) when a required one is still empty
 #   (3 when the user aborted).
 # <dir> (or a package.json file) is relative to the current directory. The env file is plain KEY=VALUE
 # (zz-persist's format), read literally and never sourced.
@@ -29,6 +31,7 @@ f file envfile Env file holding the persisted values
 P name profile Also export persisted values from <ZZ_PROFILE_DIR>/<name>.sh
 n - noprompt Never ask: unset inputs fall back to their default, required ones are not enforced
 a - sequential Ask each unset input in turn on stdin, without the menu
+m - manage Show the menu even when every input is set (to change or delete a saved value)
 e - persistenv Also persist the values already set in the environment
 # items items <name>=<dir> of each workspace
 help
@@ -81,6 +84,20 @@ get_outputs() {
     jq -r '(.config.output // [])[] | [.var, (.as // .var)] | join("\u001f")' "$pkg_file"
 }
 
+# get_input_source <name> <default>: where the value comes from - env (the caller's environment;
+# env* when it overrides a different saved value), file (saved), default, or - when unset.
+get_input_source() {
+    local name="$1"    # variable name (mandatory)
+    local default="$2" # the input's default, may be empty (mandatory)
+    local saved
+
+    saved="$(get_env_value "$name")"
+    case "$env_names" in
+    *" $name "*) if [ -n "$saved" ] && [ "$saved" != "$(eval "printf '%s' \"\${$name:-}\"")" ]; then echo 'env*'; else echo env; fi ;;
+    *) if [ -n "$saved" ]; then echo file; elif [ -n "$default" ]; then echo default; else echo -; fi ;;
+    esac
+}
+
 # get_input_status <name> <required>: set / required / optional for a variable.
 get_input_status() {
     local name="$1"     # variable name (mandatory)
@@ -124,6 +141,34 @@ persist_value() {
         zz-persist -f "$envfile" "$name" "$value"
     fi
     persist_profile "$name" "$value" "$is_secret"
+}
+
+# delete_saved: let the user pick a value saved in the env file (and the profile snippet) and
+# forget it; a secret only after a confirmation. The value stays in the caller's environment
+# if it came from there.
+delete_saved() {
+    local var desc req def owner secret as pick is_secret=false
+
+    set --
+    while IFS="$us" read -r var desc req def owner secret as; do
+        [ -n "$var" ] || continue
+        [ -z "$(get_env_value "$var")" ] || set -- "$@" "$var=$(printf '%-24s' "$var") $owner$([ "$secret" != true ] || printf ' (secret)')"
+    done <<ROWS
+$all_inputs
+ROWS
+    [ "$#" -gt 0 ] || {
+        zz-log w "No saved value to delete."
+        return 0
+    }
+    pick=$(zz-menu -t "Delete a saved value" -f "  Number deletes that value; q goes back." "$@") || return 0
+    is_secret=$(printf '%s\n' "$all_inputs" | awk -F"$us" -v v="$pick" '$1 == v { print $6; exit }')
+    if [ "$is_secret" = true ] && [ "$(zz-prompt -c yN "Delete the secret ${pick}?")" != y ]; then
+        return 0
+    fi
+    zz-persist -q -f "$envfile" -u "$pick"
+    [ -z "$profile" ] || zz-persist -q -p "$profile" -u "$pick"
+    unset "$pick"
+    zz-log i "$pick deleted from {U $envfile}"
 }
 
 # ask_value <var> <question> <default> <is_secret>: ask for an input and keep
@@ -189,10 +234,10 @@ bad=$(printf '%s\n' "$all_inputs" | awk -F"$us" 'NF && ($1 !~ /^[A-Za-z_][A-Za-z
 
 # The caller's environment first, then the env file (read in one go by
 # zz-persist), for what is unset.
-unset_names=
+unset_names= env_names=" "
 while IFS="$us" read -r var rest; do
     [ -n "$var" ] || continue
-    [ -n "$(eval "printf '%s' \"\${$var:-}\"")" ] || unset_names="$unset_names $var"
+    if [ -n "$(eval "printf '%s' \"\${$var:-}\"")" ]; then env_names="$env_names$var "; else unset_names="$unset_names $var"; fi
 done <<EXPLICIT
 $all_inputs
 EXPLICIT
@@ -202,7 +247,7 @@ EXPLICIT
 if [ -n "$status_flag" ]; then
     while IFS="$us" read -r var desc req def owner secret as; do
         [ -n "$var" ] || continue
-        printf '  input %-24s [%s] %s\n' "$var" "$(get_input_status "$var" "$req")" "$owner"
+        printf '  input %-24s [%s] %-7s %s\n' "$var" "$(get_input_status "$var" "$req")" "$(get_input_source "$var" "$def")" "$owner"
     done <<STATUS
 $all_inputs
 STATUS
@@ -211,30 +256,37 @@ fi
 
 # --- ask: on a terminal, let the user set the inputs still unset.
 saved=""
-if [ -t 0 ] && [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ]; then
+if [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ] && zz-interactive; then
     while :; do
         set --
-        unset_count=0
+        unset_count=0 zero= highlight=
         while IFS="$us" read -r var desc req def owner secret as; do
             st=$(get_input_status "$var" "$req")
             [ "$st" = set ] || unset_count=$((unset_count + 1))
-            set -- "$@" "$var=$(printf '%-24s' "$var") [$(printf '%-8s' "$st")] $owner${desc:+ - $desc}"
+            row="$(printf '%-24s' "$var") [$(printf '%-8s' "$st")] $(printf '%-7s' "$(get_input_source "$var" "$def")") $owner${desc:+ - $desc}"
+            # a value saved in the env file is highlighted by the menu, and can be deleted (item 0)
+            if [ -n "$(get_env_value "$var")" ]; then
+                highlight="${highlight:+$highlight,}$var"
+                zero=1
+            fi
+            set -- "$@" "$var=$row"
         done <<ROWS
 $all_inputs
 ROWS
-        [ "$unset_count" -gt 0 ] || break
+        [ "$unset_count" -gt 0 ] || [ -n "$manage" ] || break
         rc=0
-        choice=$(zz-menu -t "Inputs" \
-            -f "  Number sets that input; <enter> proceeds with what's set, q quits." \
+        # shellcheck disable=SC2086
+        choice=$(zz-menu -t "Inputs" ${zero:+-z "~delete=Delete a saved value..."} ${highlight:+-b "$highlight"} \
+            -f "  Number sets that input (bold: saved, 0 deletes one; env* = the environment overrides the saved value); <enter> or q proceeds with what's set." \
             "$@") || rc=$?
         case "$rc" in
         0) ;;
-        1)
-            zz-log n "Aborted, nothing changed"
-            exit 3
-            ;;
         *) break ;;
         esac
+        if [ "$choice" = "~delete" ]; then
+            delete_saved
+            continue
+        fi
         row=$(printf '%s\n' "$all_inputs" | awk -F"$us" -v v="$choice" '$1 == v { print; exit }')
         desc=$(printf '%s' "$row" | cut -d"$us" -f2)
         def=$(printf '%s' "$row" | cut -d"$us" -f4)

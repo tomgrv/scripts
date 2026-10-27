@@ -16,19 +16,22 @@ zz-persist [-f file] [-p profile] -x "<key> <key>..."
 zz-persist [-f file] [-p profile] [-s] -i "question" [-v default] <key>
 ```
 
-| Option        | Meaning                                                                |
-| ------------- | ---------------------------------------------------------------------- |
-| `-f file`     | upsert `KEY=VALUE` into this env-style file                            |
-| `-p profile`  | upsert `export KEY=VALUE` into `/etc/profile.d/<profile>.sh`           |
-| `-x`          | print `export KEY='value'` for each stored key of the one quoted list (no write) |
-| `-i question` | ask for the value (terminal only; otherwise the default is used as-is) |
-| `-v default`  | default offered by `-i`; a value already stored for the key wins       |
-| `-s`          | the value is a secret (see below)                                      |
-| `-q`          | do not log the write (for internal state)                              |
-| `-g length`   | no value given or stored: generate `length` letters/digits, keep it once stored, print it on stdout |
-| `-r`          | print the stored value of the key (empty when unset); nothing is written |
-| `-u`          | remove the key from the file / profile                                 |
-| `-l`          | the argument is a whole line to append to the `-f` file unless already there |
+| Option        | Meaning                                                                                                        |
+| ------------- | -------------------------------------------------------------------------------------------------------------- |
+| `-f file`     | upsert `KEY=VALUE` into this env-style file                                                                    |
+| `-p profile`  | upsert `export KEY=VALUE` into `/etc/profile.d/<profile>.sh`                                                   |
+| `-x`          | print `export KEY='value'` for each stored key of the one quoted list (no write)                               |
+| `-i question` | ask for the value (terminal only; otherwise the default is used as-is)                                         |
+| `-v default`  | default offered by `-i`; a value already stored for the key wins                                               |
+| `-s`          | the value is a secret (see below)                                                                              |
+| `-q`          | do not log the write (for internal state)                                                                      |
+| `-g length`   | no value given or stored: generate `length` letters/digits, keep it once stored, print it on stdout            |
+| `-t type`     | with `-g`: `alnum` (default) or `hex` characters                                                               |
+| `-S`          | a secret in the shared secrets file: implies `-s`, and `-f $ZZ_SECRETS_FILE` (default `/root/.zz-secrets.env`) |
+| `-o`          | print the value (given, else stored); a stored value is never blanked                                          |
+| `-r`          | print the stored value of the key, else the `-v` default (empty if none); nothing is written                   |
+| `-u`          | remove the key (or each key of the one quoted list) from the file / profile                                    |
+| `-l`          | the argument is a whole line to append to the `-f` file unless already there                                   |
 
 At least one of `-f`/`-p` is required. Both are idempotent: running twice
 replaces the existing entry instead of duplicating it.

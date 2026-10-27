@@ -15,6 +15,8 @@ setup_scripts_path() {
         ln -sf "${dir}run.sh" "$TEST_BIN/$(basename "$dir")"
     done
     export PATH="$TEST_BIN:$PATH"
+    # Never let zz-prompt reach for the developer's terminal when stdin ends.
+    export ZZ_PROMPT_TTY=0
 }
 
 # Replace a real script already symlinked onto $TEST_BIN (by

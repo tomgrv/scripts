@@ -12,7 +12,7 @@ and linked onto `PATH` as `zz-vars`.
 
 <!-- prettier-ignore -->
 ```sh
-zz-vars [-S] [-n | -a] [-e] -f <envfile> [-P profile] <name>=<dir>...
+zz-vars [-S] [-n | -a] [-m] [-e] -f <envfile> [-P profile] <name>=<dir>...
 eval "$(zz-vars -f .env -P myprofile a=packages/a b=packages/b)"
 ```
 
@@ -21,10 +21,16 @@ eval "$(zz-vars -f .env -P myprofile a=packages/a b=packages/b)"
   `zz-persist`, secrets masked), resolves every input with `zz-call` (caller's
   environment, env file, default) and prints the `export` lines to `eval`.
 - `-n` never asks (defaults, required not enforced); `-a` asks each unset input on stdin without the menu; `-e` also persists values already in the environment.
-- Exits 1 when a required input is still empty (or an input name is not a shell identifier), 3 when the user aborted.
+- `-m` shows the menu even when every input is set (to change or delete a saved value).
+- The menu shows each input's source (`env`, `env*` when the environment overrides a different saved value, `file`, `default`) and highlights saved values (the menu's `-b`); item `0` deletes a saved value. It only runs when `zz-interactive` says so (`ZZ_INTERACTIVE=0` keeps it off).
+- Exits 1 when a required input is still empty (or an input name is not a shell identifier). `q` in the menu leaves it and proceeds with what is set (the menu never aborts the run).
 
 ## Tests
 
 ```sh
 bats test.bats
 ```
+
+## Deleting a saved value
+
+On a terminal the inputs menu lists a saved value in bold white and starts with item **0, Delete a saved value...**: it lists the inputs stored in the env file (and the profile snippet), and the one you pick is forgotten, so its default applies again. A secret is only deleted after a `y` to the confirmation. A value that comes from the caller's environment is not touched. The menu only appears while an input is unset; `-m` shows it anyway, to change or delete a value when everything is set.

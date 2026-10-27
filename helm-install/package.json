@@ -1,0 +1,19 @@
+{
+  "name": "@tomgrv/scripts-helm-install",
+  "version": "5.2.0",
+  "description": "Install or upgrade a Helm release with progress and diagnostics",
+  "bin": {
+    "helm-install": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "peerDependencies": {
+    "@tomgrv/scripts-kube-diagnose": "*",
+    "@tomgrv/scripts-kube-progress": "*",
+    "@tomgrv/scripts-zz-args": "*",
+    "@tomgrv/scripts-zz-colors": "*",
+    "@tomgrv/scripts-zz-log": "*"
+  },
+  "private": true
+}

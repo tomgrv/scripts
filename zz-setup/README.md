@@ -49,33 +49,40 @@ remaining arguments.
 
 Lists are space- or comma-separated workspace names.
 
-| Option       | Effect                                             |
-| ------------ | -------------------------------------------------- |
-| `-w <names>` | enable workspaces                                  |
-| `-s <names>` | skip workspaces                                    |
-| `-d <names>` | bring workspaces down                              |
-| `-o <names>` | run ONLY these (overrides `-w`/`-s`/`-d`)          |
-| `-D`         | bring every workspace down                         |
-| `-F`         | allow `-d` while a dependent stays enabled         |
-| `-S`         | show workspace states and inputs, run nothing      |
-| `-a <action>` | with `-o`: run this action (any argument the bin understands) instead of `up` |
-| `-m`         | print the `summary` of each workspace declaring `config.summary: true`, run nothing (a normal run prints them after the last step, under a `<repo> summary` header line) |
-| `-h`         | help (lists the workspaces)                        |
+| Option        | Effect                                                                                                                                                                   |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `-w <names>`  | enable workspaces                                                                                                                                                        |
+| `-s <names>`  | skip workspaces                                                                                                                                                          |
+| `-d <names>`  | bring workspaces down                                                                                                                                                    |
+| `-o <names>`  | run ONLY these (overrides `-w`/`-s`/`-d`)                                                                                                                                |
+| `-D`          | bring every workspace down                                                                                                                                               |
+| `-F`          | allow `-d` while a dependent stays enabled                                                                                                                               |
+| `-y`          | do not ask to confirm the workspaces set to `down` in the menu                                                                                                           |
+| `-S`          | show workspace states and inputs, run nothing                                                                                                                            |
+| `-a <action>` | with `-o`: run this action (any argument the bin understands) instead of `up`                                                                                            |
+| `-m`          | print the `summary` of each workspace declaring `config.summary: true`, run nothing (a normal run prints them after the last step, under a `<repo> summary` header line) |
+| `-h`          | help (lists the workspaces)                                                                                                                                              |
 
-No options on a terminal opens the menu, preselected with the states of the last
-run: each workspace that ran is remembered in the env file as
-`ZZ_STATE_<name>=up|skip` (`down` is stored as `skip`, so it is never sticky).
-Flags and non-interactive runs ignore it. Supply inputs as environment
-variables when there is no terminal (`sudo` drops them: put them on the
-`sudo` line).
+## Menu, remembered states and results
 
-| Variable            | Default                                           |
-| ------------------- | ------------------------------------------------- |
-| `ZZ_SETUP_REF`      | `main` (`@<ref>` wins)                            |
-| `ZZ_SETUP_DIR`      | `/opt` as root, else `~/.local/share`             |
-| `ZZ_SETUP_URL_BASE` | `https://github.com`                              |
-| `ZZ_SETUP_ENTRY`    | forces entrypoint mode; path relative to checkout |
-| `ZZ_SETUP_ENV_FILE` | `/etc/<repo>.env` as root, else `<checkout>/.env` |
+With no option on a terminal, `zz-setup` opens a menu preselected with the states of the last run. Each workspace's state is remembered in the env file as `ZZ_STATE_<name>=up|skip|down`:
+
+- the menu's choices are saved as soon as they are confirmed, and every workspace's state is saved again before the run, as is;
+- a `down` that succeeds is saved as `skip` (nothing is left to bring down); one that fails stays `down`;
+- each workspace set to `down` in the menu asks for a confirmation (`y`), unless `-y` is given;
+- runs without a terminal and without flags ignore the saved states; with flags (`-w`, `-s`, `-d`, ...) the run starts from them and each flag only changes the workspaces it names.
+
+A run of several steps ends with a results list: each planned step is `ok`, `failed` or `not run`, also when a step fails midway (the first failure stops the run).
+
+Supply inputs as environment variables when there is no terminal (`sudo` drops them: put them on the `sudo` line).
+
+| Variable            | Default                                                      |
+| ------------------- | ------------------------------------------------------------ |
+| `ZZ_SETUP_REF`      | `main` (`@<ref>` wins)                                       |
+| `ZZ_SETUP_DIR`      | `/opt` as root, else `~/.local/share`                        |
+| `ZZ_SETUP_URL_BASE` | `https://github.com`                                         |
+| `ZZ_SETUP_ENTRY`    | forces entrypoint mode; path relative to checkout            |
+| `ZZ_SETUP_ENV_FILE` | `/etc/<repo>.env` as root, else `<checkout>/.env`            |
 | `ZZ_SETUP_PROFILE`  | also export persisted inputs from `/etc/profile.d/<name>.sh` |
 
 ## Paths
@@ -88,3 +95,7 @@ variables when there is no terminal (`sudo` drops them: put them on the
 ```sh
 bats test.bats
 ```
+
+## Bins on PATH
+
+Before it runs anything, `zz-setup` puts the `run.sh` of every workspace that has a `bin` (a step or not) on `PATH` under its folder name, through a local-path `zz-use`. A step can therefore call a sibling that is not a step, such as a shared helper, by name, without a `zz-use` line of its own. An installed bin is a copy, so `zz-setup` also exports `ZZ_SETUP_ROOT` (the checkout) for the bins that need to find the other workspaces, and `ZZ_SETUP_UP` (the names of the workspaces this run brings up, space-separated and padded with spaces) for the steps that only concern those.

@@ -4,7 +4,7 @@
 
 A reusable procedure for shipping, and consuming, a **breaking change** across
 the repos that depend on each other (`tomgrv/scripts` → `tomgrv/actions` →
-`tomgrv/devcontainer-features` → consumers such as `perspikapps/vps`). The same
+`tomgrv/devcontainer-features` → consumers such as `tomgrv/vps`). The same
 generic core is kept in each repo's `UPGRADING.md`; only section 0 differs.
 
 ## 0. In this repo: `tomgrv/scripts` (provider)
@@ -46,7 +46,7 @@ generic core is kept in each repo's `UPGRADING.md`; only section 0 differs.
 | **Provider**          | The commands/APIs being changed   | `tomgrv/scripts`                       |
 | **Tooling**           | Actions that install and run them | `tomgrv/actions`                       |
 | **Distributor**       | Features/stubs copied to others   | `tomgrv/devcontainer-features`         |
-| **Consumer**          | Calls everything above            | `perspikapps/vps`, any downstream repo |
+| **Consumer**          | Calls everything above            | `tomgrv/vps`, any downstream repo |
 
 Chain: **Provider → Tooling → Distributor → Consumer.** CI in every repo
 installs the provider's `main` and runs the **published** tooling major, so a
@@ -168,7 +168,7 @@ dispatchers.
 | `tomgrv/scripts`               | v0.34  | v1.0.0 |
 | `tomgrv/actions`               | v2.46  | v3.0.0 |
 | `tomgrv/devcontainer-features` | v8.29  | v9.0.0 |
-| `perspikapps/vps`              | v0.3.0 | v1.0.0 |
+| `tomgrv/vps`              | v0.3.0 | v1.0.0 |
 
 | Old                                                                      | New                                                                      |
 | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
@@ -234,7 +234,7 @@ Lessons it added to the catalogue:
 | `zz-workspaces [<dir>]` (11-field rows)  | `ws-list -b -e zz-setup -o [<dir>]` (`./<dir>` per line, ordered by `config.order`) |
 | `@tomgrv/scripts-zz-workspaces` peer     | `@tomgrv/scripts-ws-list`                                                     |
 
-Order: merge `tomgrv/scripts` first, then `perspikapps/vps` (`vps-network` calls
+Order: merge `tomgrv/scripts` first, then `tomgrv/vps` (`vps-network` calls
 `ws-list`; `zz-setup` rebuilds its metadata rows itself). Consumers: replace
 `zz-workspaces` calls, drop its peer dependency, run `zz-update`.
 

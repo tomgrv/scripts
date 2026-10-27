@@ -23,7 +23,8 @@
 # "config.input") declare inputs. Its (first) bin gets "up"/"down" as argument.
 #
 # The state of each workspace you run is remembered in the env file
-# (ZZ_STATE_<name>=up|skip) and preselects the next menu.
+# (ZZ_STATE_<name>=up|skip|down) and preselects the next menu; the menu's
+# choices are remembered as soon as they are confirmed.
 #
 # Options (parsed with zz-args, after the repository; names are space- or
 # comma-separated): -w enable, -s skip, -d down, -o only these, -D down all,
@@ -183,9 +184,8 @@ set_state() { eval "$(get_state_var "$1")=\$2"; }
 get_env_value() { [ ! -f "$envfile" ] || sed -n "s/^$1=//p" "$envfile" | tail -n1; }
 
 # get_state_key <name>: the env file key under which the last successful run
-# is remembered per workspace (up, or skip once brought down; "down" is never
-# sticky) and preselects the menu, which only opens on a terminal with no
-# option, so flags and non-interactive runs are unchanged.
+# is remembered per workspace (up, skip or down, as is) and preselects the menu
+# and starts runs given flags from it.
 get_state_key() { printf 'ZZ_%s' "$(get_state_var "$1")"; }
 
 # apply_state <state> <names>: set the state of the comma-separated workspaces
@@ -217,30 +217,57 @@ exec_bin() {
 }
 
 # run_step <name> <action>: run a workspace's bin with <action> (up|down, or any
-# action asked with -a); only up and down are remembered.
+# action asked with -a); the states themselves are remembered before the run.
+# print_results: one line per planned step (action:name in $plan) - ok, failed or not run -
+# when the run had several, so a failure midway shows what did and did not happen.
+print_results() {
+    local item action name line st secs
+
+    [ "${step_total:-0}" -gt 1 ] || return 0
+    printf '\n' >&2
+    zz-log i "Results:"
+    for item in $plan; do
+        action="${item%%:*}" name="${item#*:}"
+        line="$(printf '%s' "$results" | awk -v a="$action" -v n="$name" '$2 == a && $3 == n { print; exit }')"
+        st="${line%% *}" secs="${line##* }"
+        case "$st" in
+        ok) zz-log s "  {B $name} $action: ok (${secs}s)" ;;
+        failed) zz-log e "  {B $name} $action: failed (${secs}s)" ;;
+        *) zz-log w "  {B $name} $action: not run" ;;
+        esac
+    done
+}
+
 run_step() {
     local name="$1"   # workspace name (mandatory)
     local action="$2" # up, down or a custom action (mandatory)
-    local ws_dir ws_bin remember
+    local ws_dir ws_bin start secs tag
     local rc=0
 
     ws_dir=$(get_dir "$name")
     ws_bin=$(get_field "$name" 8)
-    zz-log i "{B $name}: $action"
+    # A tagged, spaced entry and exit: [step] action (n/total), then how long it took.
+    step_no=$((step_no + 1))
+    tag="{B [$name]} $action"
+    [ "${step_total:-0}" -le 1 ] || tag="$tag ($step_no/$step_total)"
+    start=$(date +%s)
+    printf '\n' >&2
+    zz-log i "$tag"
     run_output exec_bin "$name" "$action" || rc=$?
+    secs=$(($(date +%s) - start))
     if [ "$rc" -ne 0 ]; then
-        zz-log e "{B $name}: $action failed (exit $rc)"
+        zz-log e "{B [$name]} $action failed (exit $rc) after ${secs}s"
         zz-log - "Script: {U $ws_dir/$ws_bin}"
         zz-log - "Re-run only this step: zz-setup $spec -o $name"
+        results="${results}failed $action $name $secs
+"
+        print_results
+        printf '\n' >&2
         exit 1
     fi
-    zz-log s "{B $name}: $action done"
-    case "$action" in
-    up) remember=up ;;
-    down) remember=skip ;;
-    *) return 0 ;;
-    esac
-    zz-persist -q -f "$envfile" "$(get_state_key "$name")" "$remember"
+    results="${results}ok $action $name $secs
+"
+    zz-log s "{B [$name]} $action done in ${secs}s"
 }
 
 # print_summaries: ask every workspace declaring "config.summary" for its
@@ -316,6 +343,24 @@ done)
 [ -n "$list" ] || run_entry "$@"
 names=$(printf '%s\n' "$list" | cut -d"$us" -f2)
 
+# --- bins: the run.sh of every workspace with a bin - a step or not - is put on PATH
+# under its folder name, so a step can call a sibling (a shared helper that is not a
+# step) by name. A local path origin: no download, always re-linked.
+install_bins() {
+    local w out
+
+    for w in $(ws-list -b .); do
+        [ -f "$w/run.sh" ] || continue
+        out=$(zz-use "$PWD/${w#./}" 2>&1) || {
+            zz-log w "Could not put ${w#./} on PATH"
+            printf '%s\n' "$out" >&2
+        }
+    done
+}
+# A bin is a copy, so it finds the checkout through ZZ_SETUP_ROOT, not its own location.
+export ZZ_SETUP_ROOT="$PWD"
+install_bins
+
 # Initial state: the workspaces flagged "default" start enabled.
 for n in $names; do
     if [ "$(get_field "$n" 5)" = true ]; then
@@ -337,6 +382,7 @@ D - down_all Bring every workspace down
 F - force_flag Allow -d while a dependent stays enabled
 S - status_flag Show each workspace's state and inputs, run nothing
 a action action_name Run this action (any argument the bin understands) on the -o workspaces instead of up
+y - assume_yes Do not ask to confirm the workspaces set to down
 m - summary_flag Print the summary of each workspace that declares config.summary, run nothing
 # extra extra Unknown arguments (rejected)
 help
@@ -358,6 +404,16 @@ if [ -n "$summary_flag" ]; then
     exit 0
 fi
 
+# Remembered states (the last runs' up/skip) come first, so a flag only changes what
+# it names: -s b does not forget that a was skipped last time.
+load_saved_states() {
+    for n in $names; do
+        saved=$(get_env_value "$(get_state_key "$n")")
+        [ -z "$saved" ] || set_state "$n" "$saved"
+    done
+}
+[ "$nflags" -eq 0 ] || load_saved_states
+
 apply_state up "$with_list"
 apply_state skip "$skip_list"
 [ -z "$down_all" ] || apply_state down "$names"
@@ -369,11 +425,8 @@ only=$(printf '%s' "$only_list" | tr ',' ' ')
     exit 1
 }
 
-if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
-    for n in $names; do
-        saved=$(get_env_value "$(get_state_key "$n")")
-        case "$saved" in up | skip) set_state "$n" "$saved" ;; esac
-    done
+if [ "$nflags" -eq 0 ] && zz-interactive; then
+    load_saved_states
     items=
     set --
     for n in $names; do
@@ -391,7 +444,16 @@ if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
     fi
     for line in $out; do
         set_state "${line%%=*}" "${line#*=}"
+        # A skipped workspace never runs, so remember every choice now, as is.
+        zz-persist -q -f "$envfile" "$(get_state_key "${line%%=*}")" "${line#*=}"
     done
+    # down removes what the workspace installed: confirm each, unless -y
+    if [ -z "$assume_yes" ]; then
+        for n in $names; do
+            [ "$(get_state "$n")" = down ] || continue
+            [ "$(zz-prompt -c yN "Bring $n down (remove what it installed)?")" = y ] || set_state "$n" skip
+        done
+    fi
 fi
 
 if [ -n "$only" ]; then
@@ -460,10 +522,17 @@ fi
 
 up_names=
 for n in $names; do [ "$(get_state "$n")" = up ] && up_names="$up_names $n"; done
+# the workspaces this run brings up, for the steps that only concern those (e.g. which apps to list)
+export ZZ_SETUP_UP=" $(echo $up_names) "
 [ "$status_only" -eq 1 ] || [ -n "$up_names$(for n in $names; do [ "$(get_state "$n")" = down ] && echo "$n"; done)" ] || {
     zz-log n "Nothing selected, nothing to do"
     exit 0
 }
+
+# Remember every workspace's state, as is, whatever it is.
+if [ "$status_only" -ne 1 ]; then
+    for n in $names; do zz-persist -q -f "$envfile" "$(get_state_key "$n")" "$(get_state "$n")"; done
+fi
 
 # --- inputs: zz-vars shows them (-S), or asks, resolves and refuses a
 # missing required one; its export lines are evaluated here so the
@@ -488,20 +557,38 @@ if [ "$#" -gt 0 ]; then
 fi
 
 # --- -a: one custom action on the selected workspaces, nothing else.
+step_no=0 step_total=0 results= plan=
 if [ -n "$action_name" ]; then
+    step_total=$(printf '%s\n' $up_names | grep -c .)
+    for n in $up_names; do plan="$plan $action_name:$n"; done
     for n in $up_names; do
         run_step "$n" "$action_name"
     done
+    print_results
     exit 0
 fi
 
 # --- run: all "down" steps in reverse order, then all "up" steps in order.
+for n in $names; do
+    case "$(get_state "$n")" in up | down) step_total=$((step_total + 1)) ;; esac
+done
 for n in $(printf '%s\n' "$names" | sed '1!G;h;$!d'); do
-    [ "$(get_state "$n")" = down ] && run_step "$n" down
+    [ "$(get_state "$n")" = down ] && plan="$plan down:$n"
+done
+for n in $names; do
+    [ "$(get_state "$n")" = up ] && plan="$plan up:$n"
+done
+for n in $(printf '%s\n' "$names" | sed '1!G;h;$!d'); do
+    [ "$(get_state "$n")" = down ] || continue
+    run_step "$n" down
+    # removed for good: remembered as skip, so it is not brought down again (nor asked about) next time
+    set_state "$n" skip
+    zz-persist -q -f "$envfile" "$(get_state_key "$n")" skip
 done
 for n in $names; do
     [ "$(get_state "$n")" = up ] && run_step "$n" up
 done
+print_results
 
 # --- summary: what the workspaces declaring config.summary report, once all ran.
 print_summaries

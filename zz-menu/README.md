@@ -18,18 +18,22 @@ Each `<item>` is `<key>=<label>` (split at the first `=`), or just `<label>`,
 which then doubles as its own key. The menu is drawn on stderr, so stdout
 carries only the chosen key.
 
-| Option        | Purpose                                                      |
-| ------------- | ------------------------------------------------------------ |
-| `-t <title>`  | title line shown above the items                             |
-| `-d <key>`    | key chosen when the user just presses Enter                  |
-| `-f <text>`   | hint line replacing the default one (`\n` starts a new line) |
-| `-c <states>` | cycle mode: comma-separated states, see below                |
+| Option           | Purpose                                                                           |
+| ---------------- | --------------------------------------------------------------------------------- |
+| `-t <title>`     | title line shown above the items                                                  |
+| `-d <key>`       | key chosen when the user just presses Enter                                       |
+| `-f <text>`      | hint line replacing the default one (`\n` starts a new line)                      |
+| `-z <key=label>` | an item numbered 0, listed first; choosing 0 prints its key (pick mode)           |
+| `-b <keys>`      | comma-separated item keys shown highlighted (bold white); the menu owns its style |
+| `-c <states>`    | cycle mode: comma-separated states, see below                                     |
 
 | Exit status | Meaning                                                 |
 | ----------- | ------------------------------------------------------- |
 | `0`         | an item was chosen; its key is on stdout                |
 | `1`         | the user quit (`q`) or input ended                      |
 | `2`         | bare Enter with no default — the caller's "proceed" cue |
+
+`q` leaves the menu without choosing and never aborts the caller's run: a sub-menu goes back or keeps what is set (`zz-vars`, `vps-access`); only the top-level `zz-setup` workspace menu treats it as "cancel everything". Tests drive any menu or prompt with `ZZ_PROMPT_ANSWERS=<file>` (one answer per line, see `zz-prompt`).
 
 ### Single choice
 
