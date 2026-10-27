@@ -497,6 +497,8 @@ fi
 
 up_names=
 for n in $names; do [ "$(get_state "$n")" = up ] && up_names="$up_names $n"; done
+# the workspaces this run brings up, for the steps that only concern those (e.g. which apps to list)
+export ZZ_SETUP_UP=" $(echo $up_names) "
 [ "$status_only" -eq 1 ] || [ -n "$up_names$(for n in $names; do [ "$(get_state "$n")" = down ] && echo "$n"; done)" ] || {
     zz-log n "Nothing selected, nothing to do"
     exit 0

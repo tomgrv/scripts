@@ -92,4 +92,4 @@ bats test.bats
 
 ## Bins on PATH
 
-Before it runs anything, `zz-setup` puts the `run.sh` of every workspace that has a `bin` (a step or not) on `PATH` under its folder name, through a local-path `zz-use`. A step can therefore call a sibling that is not a step, such as a shared helper, by name, without a `zz-use` line of its own. An installed bin is a copy, so `zz-setup` also exports `ZZ_SETUP_ROOT` (the checkout) for the bins that need to find the other workspaces.
+Before it runs anything, `zz-setup` puts the `run.sh` of every workspace that has a `bin` (a step or not) on `PATH` under its folder name, through a local-path `zz-use`. A step can therefore call a sibling that is not a step, such as a shared helper, by name, without a `zz-use` line of its own. An installed bin is a copy, so `zz-setup` also exports `ZZ_SETUP_ROOT` (the checkout) for the bins that need to find the other workspaces, and `ZZ_SETUP_UP` (the names of the workspaces this run brings up, space-separated and padded with spaces) for the steps that only concern those.
