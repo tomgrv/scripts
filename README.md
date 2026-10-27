@@ -115,6 +115,8 @@ own, or installed from npm: `npm install --save-dev ./json-validate`.
 | `kube-service-port` | change the port of a Service's named port                                  |
 | `kube-require`      | check kubectl and helm, print the KUBECONFIG export for `eval`             |
 | `kube-rollout`      | wait for a Deployment rollout with progress and diagnostics                |
+| `kube-apply`        | render a manifest template (`yaml-render`) and `kubectl apply` it          |
+| `systemd-service`   | enable or disable systemd units and check they run                         |
 | `helm-repo`         | add and refresh Helm repositories, failing with a clear message            |
 | `helm-install`      | install or upgrade a Helm release with progress and diagnostics            |
 | `feature`           | dispatch to `feature-<subcommand>` (`install`, `configure`, `context`)     |

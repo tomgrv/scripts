@@ -26,8 +26,11 @@ zz-persist [-f file] [-p profile] [-s] -i "question" [-v default] <key>
 | `-s`          | the value is a secret (see below)                                      |
 | `-q`          | do not log the write (for internal state)                              |
 | `-g length`   | no value given or stored: generate `length` letters/digits, keep it once stored, print it on stdout |
-| `-r`          | print the stored value of the key (empty when unset); nothing is written |
-| `-u`          | remove the key from the file / profile                                 |
+| `-t type`     | with `-g`: `alnum` (default) or `hex` characters                       |
+| `-S`          | a secret in the shared secrets file: implies `-s`, and `-f $ZZ_SECRETS_FILE` (default `/root/.zz-secrets.env`) |
+| `-o`          | print the value (given, else stored); a stored value is never blanked  |
+| `-r`          | print the stored value of the key, else the `-v` default (empty if none); nothing is written |
+| `-u`          | remove the key (or each key of the one quoted list) from the file / profile |
 | `-l`          | the argument is a whole line to append to the `-f` file unless already there |
 
 At least one of `-f`/`-p` is required. Both are idempotent: running twice

@@ -69,6 +69,8 @@
     "kube-service-port",
     "kube-require",
     "kube-rollout",
+    "kube-apply",
+    "systemd-service",
     "helm-repo",
     "helm-install",
     "feature",
