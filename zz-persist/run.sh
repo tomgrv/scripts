@@ -161,7 +161,7 @@ persist_line() {
 
     if [ "$is_secret" = 1 ] && ! is_owner_only_mode "$target"; then
         # On a terminal, offer the fix instead of only refusing.
-        if [ -t 0 ] && [ "$(zz-prompt -c yN "$key: $target is not owner-only; chmod 600 it?")" = y ]; then
+        if zz-interactive && [ "$(zz-prompt -c yN "$key: $target is not owner-only; chmod 600 it?")" = y ]; then
             chmod 600 "$target"
         else
             zz-log w "$key: {U $target} is not owner-only (mode $(stat -c '%a' "$target" 2>/dev/null)); refusing to persist secret, run {Purple chmod 600 $target} first"
@@ -231,7 +231,7 @@ if [ -n "$question" ]; then
     fi
 
     # Asked by zz-prompt (masked with -s); off a terminal the default is used.
-    if [ -t 0 ]; then
+    if zz-interactive; then
         if [ "$is_secret" = 1 ]; then
             value=$(zz-prompt -s "  ${question}" "$default")
         else

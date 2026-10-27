@@ -55,6 +55,7 @@
     "zz-vars",
     "zz-setup",
     "zz-step",
+    "zz-interactive",
     "json",
     "json-load",
     "json-validate",

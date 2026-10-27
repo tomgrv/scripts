@@ -242,7 +242,7 @@ fi
 
 # --- ask: on a terminal, let the user set the inputs still unset.
 saved=""
-if [ -t 0 ] && [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ]; then
+if [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ] && zz-interactive; then
     while :; do
         set --
         unset_count=0 zero=

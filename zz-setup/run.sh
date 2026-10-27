@@ -399,7 +399,7 @@ only=$(printf '%s' "$only_list" | tr ',' ' ')
     exit 1
 }
 
-if [ "$nflags" -eq 0 ] && [ -t 0 ]; then
+if [ "$nflags" -eq 0 ] && zz-interactive; then
     load_saved_states
     items=
     set --

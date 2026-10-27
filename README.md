@@ -97,6 +97,7 @@ own, or installed from npm: `npm install --save-dev ./json-validate`.
 | `zz-require [-n name] <root \| os=<id>>...`                                           | check what a step needs from its host (root, OS id); exit 1 naming the first unmet requirement                                                                 |
 | `zz-vars [-S] [-n\|-a] [-e] -f <envfile> <name>=<dir>...`                                           | show, ask and resolve the inputs workspaces declare; prints `export` lines                                                                                     |
 | `zz-setup <org>/<repo>[@<ref>] [args...]`                                             | clone/update a GitHub repo, propose its runnable workspaces, offer their declared inputs, then run them (else its setup entrypoint)                            |
+| `zz-interactive`  | exit 0 when the caller may ask the user something (terminal, `ZZ_INTERACTIVE=0` off) |
 | `zz-step`                                                                             | sourced `up\|down\|summary` entry point of a step: `. zz-step` |
 
 ## JSON, YAML, Kubernetes and feature tools
