@@ -9,7 +9,10 @@
 #     -u removes the key, -g generates a value
 #     (kept once stored) and prints it, so a caller needs no random/read helper;
 #   - a secret (-s) is asked masked (zz-prompt -s), never logged, and written
-#     only to owner-only files (zz-prompt -c offers to chmod 600 on a terminal).
+#     only to owner-only files (zz-prompt -c offers to chmod 600 on a terminal);
+#   - -S is a secret in the shared secrets file ($ZZ_SECRETS_FILE, default
+#     /root/.zz-secrets.env), so a caller names neither the file nor -s;
+#   - -o prints the value (given, else stored) and never blanks a stored one.
 set -e
 
 . zz-colors
@@ -24,8 +27,11 @@ eval "$(
         s -         secret      The value is a secret: masked prompt, never logged, written only to owner-only files
         q -         quiet       Do not log the write (internal state)
         g length    generate    Value of this many random letters/digits when none is given or stored (printed on stdout)
-        r -         show        Print the stored value of the key (no write)
-        u -         remove      Remove the key (no write)
+        t type      gen_type    With -g: the characters, alnum (default) or hex
+        S -         store_secret    A secret in the shared secrets file: implies -s, and -f when none is given
+        o -         print_value Print the value (given, else stored); a stored value is kept when none is given
+        r -         show        Print the stored value of the key, else the -v default (no write)
+        u -         remove      Remove the key, or each key of a quoted list (no write)
         l -         line        The key is a whole line: append it to the file unless it is already there
         x -         exports     The key is a list of names: print an export line for each one that is stored (no write)
         - key       key         Variable name
@@ -35,6 +41,10 @@ help
 
 # --- parameters
 profile_dir=${ZZ_PROFILE_DIR:-/etc/profile.d}
+if [ -n "$store_secret" ]; then
+    secret=1
+    [ -n "$file" ] || file=${ZZ_SECRETS_FILE:-/root/.zz-secrets.env}
+fi
 
 if [ -z "$key" ]; then
     zz-log e "Usage: zz-persist [-f file] [-p profile] [-s] [-i question [-v default]] [-g length] [-r | -u] <key> [value]"
@@ -54,7 +64,7 @@ fi
 
 # A name is letters, digits and underscores, not starting with a digit
 # (so a single letter is fine: [A-Za-z_][A-Za-z0-9_]* would demand two).
-[ -n "$exports" ] || case "$key" in
+[ -n "$exports$remove" ] || case "$key" in
 "" | [0-9]* | *[!A-Za-z0-9_]*)
     zz-log e "Invalid key name: {Purple $key}"
     exit 1
@@ -151,7 +161,7 @@ persist_line() {
 
     if [ "$is_secret" = 1 ] && ! is_owner_only_mode "$target"; then
         # On a terminal, offer the fix instead of only refusing.
-        if [ -t 0 ] && [ "$(zz-prompt -c yN "$key: $target is not owner-only; chmod 600 it?")" = y ]; then
+        if zz-interactive && [ "$(zz-prompt -c yN "$key: $target is not owner-only; chmod 600 it?")" = y ]; then
             chmod 600 "$target"
         else
             zz-log w "$key: {U $target} is not owner-only (mode $(stat -c '%a' "$target" 2>/dev/null)); refusing to persist secret, run {Purple chmod 600 $target} first"
@@ -186,13 +196,21 @@ fi
 if [ -n "$show" ]; then
     current=$(read_current "$file" "$key=")
     [ -z "$current" ] && [ -n "$profile" ] && current=$(read_current "$profile_dir/$profile.sh" "export $key=")
-    printf '%s' "$current"
+    printf '%s' "${current:-$value_default}"
     exit 0
 fi
 
 if [ -n "$remove" ]; then
-    [ -z "$file" ] || { [ ! -f "$file" ] || remove_line "$file" "$key="; }
-    [ -z "$profile" ] || { [ ! -f "$profile_dir/$profile.sh" ] || remove_line "$profile_dir/$profile.sh" "export $key="; }
+    for name in $key; do
+        case "$name" in
+        "" | [0-9]* | *[!A-Za-z0-9_]*)
+            zz-log e "Invalid key name: {Purple $name}"
+            exit 1
+            ;;
+        esac
+        [ -z "$file" ] || { [ ! -f "$file" ] || remove_line "$file" "$name="; }
+        [ -z "$profile" ] || { [ ! -f "$profile_dir/$profile.sh" ] || remove_line "$profile_dir/$profile.sh" "export $name="; }
+    done
     [ -n "$quiet" ] || zz-log i "$key removed"
     exit 0
 fi
@@ -213,7 +231,7 @@ if [ -n "$question" ]; then
     fi
 
     # Asked by zz-prompt (masked with -s); off a terminal the default is used.
-    if [ -t 0 ]; then
+    if zz-interactive; then
         if [ "$is_secret" = 1 ]; then
             value=$(zz-prompt -s "  ${question}" "$default")
         else
@@ -224,14 +242,23 @@ if [ -n "$question" ]; then
     fi
 fi
 
-# -g: no value given or asked: keep the stored one, else generate (letters and digits only)
-if [ -n "$generate" ] && [ -z "${value:-}" ]; then
+# -g/-o: no value given or asked: keep the stored one; -g then generates one (letters and digits, or hex)
+if { [ -n "$generate" ] || [ -n "$print_value" ]; } && [ -z "${value:-}" ]; then
     value=$(read_current "$file" "$key=")
     [ -z "$value" ] && [ -n "$profile" ] && value=$(read_current "$profile_dir/$profile.sh" "export $key=")
-    if [ -z "$value" ]; then
-        # || true: head closing early sends tr a SIGPIPE that set -e would report.
-        value=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c "$generate" || true)
+    if [ -z "$value" ] && [ -n "$generate" ]; then
+        # || true: head closing early sends tr/od a SIGPIPE that set -e would report.
+        case "${gen_type:-alnum}" in
+        hex) value=$(od -An -tx1 /dev/urandom | tr -d ' \n' | head -c "$generate" || true) ;;
+        alnum) value=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c "$generate" || true) ;;
+        *)
+            zz-log e "-t is alnum or hex (got '$gen_type')"
+            exit 1
+            ;;
+        esac
     fi
+    # nothing given, stored or generated: nothing to write, and nothing to blank
+    [ -n "$value" ] || exit 0
 fi
 
 # One line per pair: a newline would corrupt the file (and, in a profile, run).
@@ -260,5 +287,5 @@ if [ -n "$profile" ]; then
     fi
 fi
 
-# --- -g: the value (new or kept) is the caller's result
-[ -z "$generate" ] || printf '%s' "$value"
+# --- -g/-o: the value (new or kept) is the caller's result
+[ -z "$generate$print_value" ] || printf '%s' "$value"

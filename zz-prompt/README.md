@@ -23,9 +23,20 @@ Declared via `zz-use` at the top of `run.sh` and resolved on demand
 - `-s` secret: masked input, default shown as `***`.
 - `-e` exit 1 when input ends.
 
-When stdin is not a terminal (for example under `curl ... | sh`) the answer is read from `/dev/tty` if one can be opened; `ZZ_PROMPT_TTY=0` disables this.
 - `-c Yn` accept one of these letters (any case), re-ask on anything else; the
   uppercase letter is the default. It replaces the former `zz-ask`: `zz-prompt -c Yn "Continue?"`.
+
+## Environment
+
+| Variable                   | Effect                                                                                                                                                         |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ZZ_PROMPT_TTY=0`          | when stdin is not a terminal (for example under `curl ... \| sh`) do not read `/dev/tty`                                                                       |
+| `ZZ_PROMPT_ANSWERS=<file>` | scripted answers: one line per prompt, an empty line is a bare Enter, an exhausted file is end of input; `zz-menu` asks through `zz-prompt`, so it follows too |
+
+```sh
+printf 'y\n\n' >answers
+ZZ_PROMPT_ANSWERS=answers zz-prompt -c yN "Continue?"   # prints y
+```
 
 ## Tests
 

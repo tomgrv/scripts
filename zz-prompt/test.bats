@@ -109,3 +109,13 @@ teardown() {
     run bash -c 'printf "z\ny\n" | zz-prompt -c Yn "Continue?" 2>&1 1>/dev/null'
     [[ "$output" == *"valid option"* ]]
 }
+
+@test "zz-prompt takes its answers from ZZ_PROMPT_ANSWERS, one line per prompt" {
+    printf 'first\n\nlast\n' >"$BATS_TEST_TMPDIR/ans"
+    export ZZ_PROMPT_ANSWERS="$BATS_TEST_TMPDIR/ans"
+    [ "$(zz-prompt Q1 2>/dev/null)" = "first" ]
+    [ "$(zz-prompt Q2 dflt 2>/dev/null)" = "dflt" ]
+    [ "$(zz-prompt Q3 2>/dev/null)" = "last" ]
+    run zz-prompt -e Q4
+    [ "$status" -eq 1 ]
+}

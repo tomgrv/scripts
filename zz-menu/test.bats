@@ -147,3 +147,22 @@ teardown() {
     [[ "$output" == *'C:\new\c'* ]]
     [[ "$output" == *'dir\tx\c done'* ]]
 }
+
+@test "zz-menu -z lists an item 0 first and prints its key when 0 is chosen" {
+    run bash -c 'echo 0 | zz-menu -z "del=Delete one" -t T a=Alpha b=Beta'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *") Delete one"* ]]
+    [[ "$output" == *"del" ]]
+}
+
+@test "zz-menu: 0 is not an item without -z" {
+    run bash -c 'printf "0\n1\n" | zz-menu a=Alpha b=Beta'
+    [[ "$output" == *"No such item: 0"* ]]
+    [[ "$output" == *"a" ]]
+}
+
+@test "zz-menu -b highlights the listed items in bold white, the others stay plain" {
+    run bash -c 'echo q | zz-menu -b b a=Alpha b=Beta'
+    [[ "$output" == *$'\033[1;37mBeta'* ]]
+    [[ "$output" != *$'\033[1;37mAlpha'* ]]
+}

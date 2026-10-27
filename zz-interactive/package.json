@@ -1,0 +1,12 @@
+{
+  "name": "@tomgrv/scripts-zz-interactive",
+  "version": "5.0.0",
+  "description": "Exit status: may the caller ask the user something",
+  "bin": {
+    "zz-interactive": "run.sh"
+  },
+  "scripts": {
+    "test": "bats test.bats"
+  },
+  "private": true
+}

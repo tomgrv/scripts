@@ -283,16 +283,118 @@ make_conflict_remote() {
     [ ! -d "$WORK/dir/ws" ]
 }
 
-@test "zz-setup remembers the state of each workspace it ran, down is stored as skip" {
+@test "zz-setup puts the bin of every workspace on PATH, a helper that is not a step included" {
+    make_workspace_remote
+    mkdir "$WORK/ws/helper"
+    echo '{"name":"@x/helper","bin":{"helper":"run.sh"}}' >"$WORK/ws/helper/package.json"
+    printf '#!/bin/sh\necho helper-ok\n' >"$WORK/ws/helper/run.sh"
+    chmod +x "$WORK/ws/helper/run.sh"
+    printf '#!/bin/sh\nhelper\necho "root:$ZZ_SETUP_ROOT"\n' >"$WORK/ws/str/run.sh"
+    echo '{"name":"ws","workspaces":["a","b","lib","str","helper"]}' >"$WORK/ws/package.json"
+    git -C "$WORK/ws" add -A
+    git -C "$WORK/ws" commit -q -m helper
+    git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
+    export INSTALL_BIN_DIR="$WORK/bin"
+    mkdir -p "$INSTALL_BIN_DIR"
+    PATH="$INSTALL_BIN_DIR:$PATH"
+    run zz-setup acme/ws -o str </dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"helper-ok"* ]]
+    [[ "$output" == *"root:$WORK/dir/ws"* ]]
+}
+
+@test "zz-setup tags each step's entry and exit with its name, position and duration, spaced apart" {
+    make_workspace_remote
+    run zz-setup acme/ws -o b
+    [ "$status" -eq 0 ]
+    # the tag is coloured, so the pieces are matched apart
+    [[ "$output" == *"[a]"*"up (1/2)"* ]]
+    [[ "$output" == *"[a]"*"up done in "*"s"* ]]
+    [[ "$output" == *"[b]"*"up (2/2)"* ]]
+    [[ "$output" == *"[b]"*"up done in "*"s"* ]]
+}
+
+@test "zz-setup names the step, the exit code and the duration when a step fails" {
+    make_workspace_remote
+    printf '#!/bin/sh\nexit 3\n' >"$WORK/ws/a/run.sh"
+    git -C "$WORK/ws" commit -q -am fail
+    git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
+    run zz-setup acme/ws -o a
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"[a]"*"up failed (exit 3) after "*"s"* ]]
+}
+
+@test "zz-setup exports ZZ_SETUP_UP, the workspaces this run brings up, to the steps" {
+    make_workspace_remote
+    printf '#!/bin/sh\necho "up:[$ZZ_SETUP_UP]"\n' >"$WORK/ws/str/run.sh"
+    git -C "$WORK/ws" commit -q -am up
+    git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
+    run zz-setup acme/ws -o str
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"up:[ str ]"* ]]
+}
+
+@test "zz-setup ends with a results table: ok, failed and not run steps" {
+    make_workspace_remote
+    printf '#!/bin/sh\nexit 4\n' >"$WORK/ws/b/run.sh"
+    git -C "$WORK/ws" commit -q -am failb
+    git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
+    run zz-setup acme/ws -w b,str
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Results:"* ]]
+    [[ "$output" == *"a"*"up: ok"* ]]
+    [[ "$output" == *"b"*"up: failed"* ]]
+    [[ "$output" == *"str"*"up: not run"* ]]
+}
+
+@test "zz-setup prints the results table after a successful multi-step run" {
+    make_workspace_remote
+    run zz-setup acme/ws -w b
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Results:"* ]]
+    [[ "$output" == *"b"*"up: ok"* ]]
+}
+
+@test "zz-setup remembers the state of every workspace, as is (up, skip, down)" {
     make_workspace_remote
     export ZZ_SETUP_ENV_FILE="$WORK/state.env"
     run zz-setup acme/ws -o a
     [ "$status" -eq 0 ]
     grep -qx 'ZZ_STATE_a=up' "$ZZ_SETUP_ENV_FILE"
-    ! grep -q 'ZZ_STATE_b' "$ZZ_SETUP_ENV_FILE"
+    grep -qx 'ZZ_STATE_b=skip' "$ZZ_SETUP_ENV_FILE"
     run zz-setup acme/ws -d a
     [ "$status" -eq 0 ]
+    # a down that succeeded is remembered as skip: nothing left to bring down
     grep -qx 'ZZ_STATE_a=skip' "$ZZ_SETUP_ENV_FILE"
+}
+
+@test "zz-setup keeps the state down when the down fails" {
+    make_workspace_remote
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    printf '#!/bin/sh\nexit 5\n' >"$WORK/ws/a/run.sh"
+    git -C "$WORK/ws" commit -q -am faila
+    git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
+    run zz-setup acme/ws -d a
+    [ "$status" -ne 0 ]
+    grep -qx 'ZZ_STATE_a=down' "$ZZ_SETUP_ENV_FILE"
+}
+
+@test "zz-setup menu asks before bringing a workspace down; -y does not" {
+    make_workspace_remote
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    echo 'ZZ_STATE_a=down' >"$ZZ_SETUP_ENV_FILE"
+    printf '\nn\n' >"$WORK/answers"
+    run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws
+    [[ "$output" == *"Bring a down"* ]]
+    [[ "$output" != *"a:down"* ]]
+    printf '\ny\n' >"$WORK/answers"
+    run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws
+    [[ "$output" == *"a:down"* ]]
+    echo 'ZZ_STATE_a=down' >"$ZZ_SETUP_ENV_FILE"
+    printf '\n' >"$WORK/answers"
+    run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws -y
+    [[ "$output" != *"Bring a down"* ]]
+    [[ "$output" == *"a:down"* ]]
 }
 
 @test "zz-setup ignores remembered states without a menu" {
@@ -302,6 +404,26 @@ make_conflict_remote() {
     run zz-setup acme/ws </dev/null
     [ "$status" -eq 0 ]
     [[ "$output" == *"Nothing selected"* ]]
+}
+
+@test "zz-setup starts from the remembered states when flags are given" {
+    make_workspace_remote
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    echo 'ZZ_STATE_a=up' >"$ZZ_SETUP_ENV_FILE"
+    run zz-setup acme/ws -w str </dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"a:up:bar"* ]]
+    [[ "$output" == *"str"* ]]
+}
+
+@test "zz-setup lets a flag override the remembered state it names" {
+    make_workspace_remote
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    printf 'ZZ_STATE_a=up\nZZ_STATE_str=up\n' >"$ZZ_SETUP_ENV_FILE"
+    run zz-setup acme/ws -s str </dev/null
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"a:up:bar"* ]]
+    [[ "$output" != *"│  str"* ]]
 }
 
 @test "zz-setup preselects the menu from the remembered states" {

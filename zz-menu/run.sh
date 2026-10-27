@@ -1,5 +1,5 @@
 #!/bin/sh
-# zz-menu [-t title] [-d default] [-f footer] [-c states] <item>... — interactive
+# zz-menu [-t title] [-d default] [-f footer] [-z item] [-b keys] [-c states] <item>... — interactive
 # numbered menu. Each <item> is "<key>=<label>" (or just "<label>", used as its
 # own key). The menu is drawn on stderr; results go to stdout.
 #
@@ -16,6 +16,12 @@
 # starts at the first state. A bare Enter prints one "<key>=<state>" line per
 # item and exits 0; q or end of input exits 1 without printing anything.
 #
+# -z "<key>=<label>" adds an item numbered 0, listed above the others, for an
+# action that is not one of them (pick mode only): choosing 0 prints its key.
+#
+# -b "<key>,<key>" shows those items highlighted (bold white): the menu owns its
+# style, callers only say which items matter.
+#
 # Pick mode is meant for callers that loop until the user is done:
 #   while choice=$(zz-menu -t "Steps" "a=Alpha" "b=Beta"); do ...; done
 
@@ -29,6 +35,8 @@ eval "$(
         t title   title    Title line shown above the items
         d default default  Key chosen when the user just presses Enter
         f footer  footer   Hint line replacing the default one under the items
+        z zero    zero     Item "<key>=<label>" numbered 0, listed first (pick mode)
+        b keys    highlight Comma-separated item keys shown in bold white
         c cycle   cycle    Comma-separated states; choosing an item advances its state
         # items   items    Items: <key>=<label> or <label>
 help
@@ -70,6 +78,7 @@ render() {
     local i key label mark state
 
     [ -n "$title" ] && printf '%b%s%b\n' "${BBlue}==== " "$title" " ====${End}" >&2
+    [ -z "$zero" ] || printf '%b%s\n' "  ${BBlue} 0${End}) " "${zero#*=}" >&2
     i=1
     while [ "$i" -le "$count" ]; do
         eval "key=\$key_$i label=\$label_$i state=\$state_$i"
@@ -78,6 +87,7 @@ render() {
         if [ -n "$cycle" ]; then
             label="[$(printf "%-${width}s" "$state")] ${label}"
         fi
+        case ",$highlight," in *",$key,"*) label="${BWhite}${label}${End}" ;; esac
         printf '%b%s\n' "  ${BBlue}$(printf '%2d' "$i")${End})${mark}" "$label" >&2
         i=$((i + 1))
     done
@@ -156,6 +166,10 @@ while true; do
     # Drop leading zeros ("007" -> 7); $(( )) would read them as octal.
     choice=$(printf '%s' "$choice" | sed 's/^0*//')
     choice=${choice:-0}
+    if [ "$choice" -eq 0 ] && [ -n "$zero" ] && [ -z "$cycle" ]; then
+        printf '%s\n' "${zero%%=*}"
+        exit 0
+    fi
     if [ "$choice" -lt 1 ] || [ "$choice" -gt "$count" ]; then
         zz-log w "No such item: $choice (enter a number between 1 and ${count})."
         continue
