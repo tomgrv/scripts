@@ -141,3 +141,14 @@ EOS
     script -qec "zz-vars -m -f $WORK/env a=a" /dev/null >/dev/null 2>&1 || true
     grep -q '^A_TOKEN=s3$' "$WORK/env"
 }
+
+@test "zz-vars -S shows where each value comes from (env, env* when it overrides a saved value, file, default)" {
+    echo 'A_TOKEN=saved' >"$WORK/env"
+    run env A_TOKEN=other zz-vars -S -f "$WORK/env" a=a
+    [[ "$output" == *"A_TOKEN"*"[set]"*"env*"* ]]
+    [[ "$output" == *"A_OPT"*"default"* ]] || [[ "$output" == *"A_OPT"*"-"* ]]
+    run zz-vars -S -f "$WORK/env" a=a
+    [[ "$output" == *"A_TOKEN"*"[set]"*"file"* ]]
+    run env A_TOKEN=saved zz-vars -S -f "$WORK/env" a=a
+    [[ "$output" == *"A_TOKEN"*"[set]"*"env "* ]]
+}

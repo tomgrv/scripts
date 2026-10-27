@@ -84,6 +84,20 @@ get_outputs() {
     jq -r '(.config.output // [])[] | [.var, (.as // .var)] | join("\u001f")' "$pkg_file"
 }
 
+# get_input_source <name> <default>: where the value comes from - env (the caller's environment;
+# env* when it overrides a different saved value), file (saved), default, or - when unset.
+get_input_source() {
+    local name="$1"    # variable name (mandatory)
+    local default="$2" # the input's default, may be empty (mandatory)
+    local saved
+
+    saved="$(get_env_value "$name")"
+    case "$env_names" in
+    *" $name "*) if [ -n "$saved" ] && [ "$saved" != "$(eval "printf '%s' \"\${$name:-}\"")" ]; then echo 'env*'; else echo env; fi ;;
+    *) if [ -n "$saved" ]; then echo file; elif [ -n "$default" ]; then echo default; else echo -; fi ;;
+    esac
+}
+
 # get_input_status <name> <required>: set / required / optional for a variable.
 get_input_status() {
     local name="$1"     # variable name (mandatory)
@@ -220,10 +234,10 @@ bad=$(printf '%s\n' "$all_inputs" | awk -F"$us" 'NF && ($1 !~ /^[A-Za-z_][A-Za-z
 
 # The caller's environment first, then the env file (read in one go by
 # zz-persist), for what is unset.
-unset_names=
+unset_names= env_names=" "
 while IFS="$us" read -r var rest; do
     [ -n "$var" ] || continue
-    [ -n "$(eval "printf '%s' \"\${$var:-}\"")" ] || unset_names="$unset_names $var"
+    if [ -n "$(eval "printf '%s' \"\${$var:-}\"")" ]; then env_names="$env_names$var "; else unset_names="$unset_names $var"; fi
 done <<EXPLICIT
 $all_inputs
 EXPLICIT
@@ -233,7 +247,7 @@ EXPLICIT
 if [ -n "$status_flag" ]; then
     while IFS="$us" read -r var desc req def owner secret as; do
         [ -n "$var" ] || continue
-        printf '  input %-24s [%s] %s\n' "$var" "$(get_input_status "$var" "$req")" "$owner"
+        printf '  input %-24s [%s] %-7s %s\n' "$var" "$(get_input_status "$var" "$req")" "$(get_input_source "$var" "$def")" "$owner"
     done <<STATUS
 $all_inputs
 STATUS
@@ -249,10 +263,10 @@ if [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ] && zz-interactive; then
         while IFS="$us" read -r var desc req def owner secret as; do
             st=$(get_input_status "$var" "$req")
             [ "$st" = set ] || unset_count=$((unset_count + 1))
-            row="$(printf '%-24s' "$var") [$(printf '%-8s' "$st")] $owner${desc:+ - $desc}"
+            row="$(printf '%-24s' "$var") [$(printf '%-8s' "$st")] $(printf '%-7s' "$(get_input_source "$var" "$def")") $owner${desc:+ - $desc}"
             # a value saved in the env file is shown in bold, and can be deleted (item 0)
             if [ -n "$(get_env_value "$var")" ]; then
-                row="${BWhite}${row}${End}"
+                row="${Saved}${row}${End}"
                 zero=1
             fi
             set -- "$@" "$var=$row"
@@ -263,7 +277,7 @@ ROWS
         rc=0
         # shellcheck disable=SC2086
         choice=$(zz-menu -t "Inputs" ${zero:+-z "~delete=Delete a saved value..."} \
-            -f "  Number sets that input (bold: saved, 0 deletes one); <enter> proceeds with what's set, q quits." \
+            -f "  Number sets that input (bold: saved, 0 deletes one; env* = the environment overrides the saved value); <enter> proceeds with what's set; q quits." \
             "$@") || rc=$?
         case "$rc" in
         0) ;;

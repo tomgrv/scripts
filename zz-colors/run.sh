@@ -24,6 +24,9 @@ BPurple='[1;35m'
 BCyan='[1;36m'
 BWhite='[1;37m'
 
+# Menu styles: a value saved in a file (bold white, apart from the blue item numbers).
+Saved="$BWhite"
+
 UBlack='[4;30m'
 URed='[4;31m'
 UGreen='[4;32m'
