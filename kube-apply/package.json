@@ -9,7 +9,6 @@
     "test": "bats test.bats"
   },
   "peerDependencies": {
-    "@tomgrv/scripts-kube-require": "*",
     "@tomgrv/scripts-yaml-render": "*",
     "@tomgrv/scripts-zz-args": "*",
     "@tomgrv/scripts-zz-colors": "*",
