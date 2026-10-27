@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-kube",
-  "version": "4.10.0",
+  "version": "5.2.0",
   "description": "Dispatch to kube-<subcommand> utilities",
   "bin": {
     "kube": "run.sh"

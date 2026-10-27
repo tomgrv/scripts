@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-systemd-service",
-  "version": "4.10.0",
+  "version": "5.2.0",
   "description": "Enable or disable systemd units and check they run",
   "bin": {
     "systemd-service": "run.sh"

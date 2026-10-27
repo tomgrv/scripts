@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-helm-repo",
-  "version": "4.10.0",
+  "version": "5.2.0",
   "description": "Add and refresh Helm repositories, failing with a clear message",
   "bin": {
     "helm-repo": "run.sh"
