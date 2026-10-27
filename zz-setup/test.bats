@@ -303,6 +303,27 @@ make_conflict_remote() {
     [[ "$output" == *"root:$WORK/dir/ws"* ]]
 }
 
+@test "zz-setup tags each step's entry and exit with its name, position and duration, spaced apart" {
+    make_workspace_remote
+    run zz-setup acme/ws -o b
+    [ "$status" -eq 0 ]
+    # the tag is coloured, so the pieces are matched apart
+    [[ "$output" == *"[a]"*"up (1/2)"* ]]
+    [[ "$output" == *"[a]"*"up done in "*"s"* ]]
+    [[ "$output" == *"[b]"*"up (2/2)"* ]]
+    [[ "$output" == *"[b]"*"up done in "*"s"* ]]
+}
+
+@test "zz-setup names the step, the exit code and the duration when a step fails" {
+    make_workspace_remote
+    printf '#!/bin/sh\nexit 3\n' >"$WORK/ws/a/run.sh"
+    git -C "$WORK/ws" commit -q -am fail
+    git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
+    run zz-setup acme/ws -o a
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"[a]"*"up failed (exit 3) after "*"s"* ]]
+}
+
 @test "zz-setup remembers the state of every workspace, as is (up, skip, down)" {
     make_workspace_remote
     export ZZ_SETUP_ENV_FILE="$WORK/state.env"

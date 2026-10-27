@@ -221,20 +221,28 @@ exec_bin() {
 run_step() {
     local name="$1"   # workspace name (mandatory)
     local action="$2" # up, down or a custom action (mandatory)
-    local ws_dir ws_bin
+    local ws_dir ws_bin start secs tag
     local rc=0
 
     ws_dir=$(get_dir "$name")
     ws_bin=$(get_field "$name" 8)
-    zz-log i "{B $name}: $action"
+    # A tagged, spaced entry and exit: [step] action (n/total), then how long it took.
+    step_no=$((step_no + 1))
+    tag="{B [$name]} $action"
+    [ "${step_total:-0}" -le 1 ] || tag="$tag ($step_no/$step_total)"
+    start=$(date +%s)
+    printf '\n' >&2
+    zz-log i "$tag"
     run_output exec_bin "$name" "$action" || rc=$?
+    secs=$(($(date +%s) - start))
     if [ "$rc" -ne 0 ]; then
-        zz-log e "{B $name}: $action failed (exit $rc)"
+        zz-log e "{B [$name]} $action failed (exit $rc) after ${secs}s"
         zz-log - "Script: {U $ws_dir/$ws_bin}"
         zz-log - "Re-run only this step: zz-setup $spec -o $name"
+        printf '\n' >&2
         exit 1
     fi
-    zz-log s "{B $name}: $action done"
+    zz-log s "{B [$name]} $action done in ${secs}s"
 }
 
 # print_summaries: ask every workspace declaring "config.summary" for its
@@ -514,7 +522,9 @@ if [ "$#" -gt 0 ]; then
 fi
 
 # --- -a: one custom action on the selected workspaces, nothing else.
+step_no=0 step_total=0
 if [ -n "$action_name" ]; then
+    step_total=$(printf '%s\n' $up_names | grep -c .)
     for n in $up_names; do
         run_step "$n" "$action_name"
     done
@@ -522,6 +532,9 @@ if [ -n "$action_name" ]; then
 fi
 
 # --- run: all "down" steps in reverse order, then all "up" steps in order.
+for n in $names; do
+    case "$(get_state "$n")" in up | down) step_total=$((step_total + 1)) ;; esac
+done
 for n in $(printf '%s\n' "$names" | sed '1!G;h;$!d'); do
     [ "$(get_state "$n")" = down ] && run_step "$n" down
 done
