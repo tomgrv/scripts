@@ -152,3 +152,11 @@ menu_run() {
     run env A_TOKEN=saved zz-vars -S -f "$WORK/env" a=a
     [[ "$output" == *"A_TOKEN"*"[set]"*"env "* ]]
 }
+
+@test "zz-vars menu: an env file with none of the inputs saved is read without error" {
+    printf 'OTHER=1\n' >"$WORK/env"
+    chmod 600 "$WORK/env"
+    printf 'q\n' >"$WORK/answers"
+    run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-vars -m -f "$WORK/env" a=a
+    [[ "$output" != *"not found"* ]]
+}

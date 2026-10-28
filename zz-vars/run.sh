@@ -56,6 +56,7 @@ load_saved() {
 
     for var in $input_names; do unset "saved_$var"; done
     [ ! -f "$envfile" ] || [ -z "$input_names" ] || while IFS= read -r line; do
+        [ -n "$line" ] || continue # nothing saved: the here-document is still one empty line
         eval "saved_${line#export }"
     done <<SAVED
 $(zz-persist -x -f "$envfile" "$input_names")
