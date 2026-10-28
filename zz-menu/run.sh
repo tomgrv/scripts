@@ -7,6 +7,8 @@
 # the order their groups first appear, a header line names each group, and
 # that cell is not shown again on the rows.
 #
+# -b "<key>,<key>" shows those items highlighted (the colour a changed cycle state gets).
+#
 # -z "<key>=<label>" adds an item numbered 0, listed first, for a special case that is
 # not one of the items: choosing 0 prints its key alone and exits 0 (in cycle mode too,
 # where the caller tells it from the "<key>=<state>" lines and usually redraws).
@@ -43,6 +45,7 @@ eval "$(
         f footer  footer   Hint line replacing the default one under the items
         c cycle   cycle    Comma-separated states; choosing an item advances its state
         z zero    zero     Item "<key>=<label>" numbered 0, listed first: choosing 0 prints its key
+        b bold    bold     Comma-separated item keys shown highlighted
         g group   group    Number of the TAB-separated label cell naming each item's group (as cut -f)
         # items   items    Items: <key>=<label> or <label>
 help
@@ -98,7 +101,7 @@ redraw=
 # render: the numbered rows, aligned by awk (labels are read from stdin and printed
 # verbatim; colours and options travel by the environment, not as awk escapes).
 render() {
-    printf '%s' "$rows" | NUM=$BBlue HI=$BYellow OFF=$End GRP=$BPurple DEF=$default CYC=$cycle GROUP=$group awk -F'\t' '
+    printf '%s' "$rows" | NUM=$BBlue HI=$BYellow OFF=$End GRP=$BPurple DEF=$default CYC=$cycle GROUP=$group BOLD=",$bold," awk -F'\t' '
         BEGIN { m = split(ENVIRON["CYC"], s, ","); for (i = 1; i <= m; i++) if (length(s[i]) > sw) sw = length(s[i])
                 gi = ENVIRON["GROUP"] ? ENVIRON["GROUP"] + 3 : 0 }
         { key[NR] = $1; st[NR] = $2; ini[NR] = $3
@@ -115,9 +118,10 @@ render() {
                 line = sprintf(" %s%*d%s)%s", ENVIRON["NUM"], length(NR), r, ENVIRON["OFF"], key[r] == ENVIRON["DEF"] ? "*" : " ")
                 if (ENVIRON["CYC"] != "")
                     line = line (st[r] != ini[r] ? sprintf("%s[%-*s]%s ", ENVIRON["HI"], sw, st[r], ENVIRON["OFF"]) : sprintf("[%-*s] ", sw, st[r]))
+                cellsout = ""
                 for (i = 4; i <= last[r]; i++)
-                    if (i != hid[r]) line = line (i < last[r] ? sprintf("%-*s ", w[i], c[r, i]) : c[r, i])
-                print line
+                    if (i != hid[r]) cellsout = cellsout (i < last[r] ? sprintf("%-*s ", w[i], c[r, i]) : c[r, i])
+                print line (index(ENVIRON["BOLD"], "," key[r] ",") ? ENVIRON["HI"] cellsout ENVIRON["OFF"] : cellsout)
             }
         }'
 }

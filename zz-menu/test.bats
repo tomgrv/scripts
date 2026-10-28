@@ -197,3 +197,9 @@ teardown() {
     [ "$status" -eq 0 ]
     [ "$output" = "reset" ]
 }
+
+@test "zz-menu -b highlights the listed items, the others stay plain" {
+    run bash -c 'echo q | zz-menu -b b a=Alpha b=Beta 2>&1 1>/dev/null'
+    [[ "$output" == *$'\033[1;33mBeta\033[0m'* ]]
+    [[ "$output" != *$'\033[1;33mAlpha'* ]]
+}

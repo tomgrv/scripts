@@ -285,12 +285,13 @@ saved=""
 if [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ] && zz-interactive; then
     while :; do
         set --
-        unset_count=0 saved_any=
+        unset_count=0 saved_any= highlight=
         while IFS="$us" read -r var desc req def owner secret as; do
             classify "$var" "$req" "$def"
             [ "$in_status" = set ] || unset_count=$((unset_count + 1))
-            # a value saved in the env file can be reset (item 0)
+            # a value saved in the env file can be reset (item 0); a set input is highlighted
             [ -z "$in_saved" ] || saved_any=1
+            [ "$in_status" != set ] || highlight="${highlight:+$highlight,}$var"
             case "$in_source" in 'env*') src=E ;; *) src=${in_source%"${in_source#?}"} ;; esac
             set -- "$@" "$var=$owner${tab}[$(printf '%.3s' "$in_status")]$tab$src$tab$var${desc:+ - $desc}"
         done <<ROWS
@@ -298,7 +299,7 @@ $all_inputs
 ROWS
         [ "$unset_count" -gt 0 ] || [ -n "$manage" ] || break
         rc=0
-        choice=$(zz-menu -t "Inputs" -g 1 \
+        choice=$(zz-menu -t "Inputs" -g 1 ${highlight:+-b "$highlight"} \
             -f " 0 resets a saved value; number sets that input (f file, e env, E env over file, d default, - unset); <enter> validates; q quits." \
             ${saved_any:+-z "~reset=Reset a saved value..."} "$@") || rc=$?
         case "$rc" in
