@@ -2,6 +2,7 @@
 # zz-colors — ANSI color codes. Meant to be sourced: `. zz-colors`.
 # The values hold the real ESC byte (not the text \033), so they print as colours
 # with echo, printf %s or %b alike, and sourcing forks nothing.
+# NO_COLOR (https://no-color.org), when set and non-empty, turns every code off.
 
 None='[0m'
 End='[0m'
@@ -32,3 +33,10 @@ UBlue='[4;34m'
 UPurple='[4;35m'
 UCyan='[4;36m'
 UWhite='[4;37m'
+
+if [ -n "${NO_COLOR:-}" ]; then
+    None= End=
+    Black= Red= Green= Yellow= Blue= Purple= Cyan= White=
+    BBlack= BRed= BGreen= BYellow= BBlue= BPurple= BCyan= BWhite=
+    UBlack= URed= UGreen= UYellow= UBlue= UPurple= UCyan= UWhite=
+fi

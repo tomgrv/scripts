@@ -53,3 +53,9 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"distinct"* ]]
 }
+
+@test "zz-colors prints no escape code when NO_COLOR is set" {
+    run bash -c 'NO_COLOR=1; . zz-colors; printf "[%s%s%s]" "$Red" "$BBlue" "$End"'
+    [ "$status" -eq 0 ]
+    [ "$output" = "[]" ]
+}

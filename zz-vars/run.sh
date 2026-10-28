@@ -43,6 +43,7 @@ help
     exit 1
 }
 us=$(printf '\037')
+tab=$(printf '\t')
 
 # --- functions
 
@@ -152,7 +153,7 @@ delete_saved() {
     set --
     while IFS="$us" read -r var desc req def owner secret as; do
         [ -n "$var" ] || continue
-        [ -z "$(get_env_value "$var")" ] || set -- "$@" "$var=$(printf '%-24s' "$var") $owner$([ "$secret" != true ] || printf ' (secret)')"
+        [ -z "$(get_env_value "$var")" ] || set -- "$@" "$var=$var$tab$owner$([ "$secret" != true ] || printf ' (secret)')"
     done <<ROWS
 $all_inputs
 ROWS
@@ -259,26 +260,25 @@ saved=""
 if [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ] && zz-interactive; then
     while :; do
         set --
-        unset_count=0 zero= highlight=
+        unset_count=0 saved_any=
         while IFS="$us" read -r var desc req def owner secret as; do
             st=$(get_input_status "$var" "$req")
             [ "$st" = set ] || unset_count=$((unset_count + 1))
-            row="$(printf '%-24s' "$var") [$(printf '%-8s' "$st")] $(printf '%-7s' "$(get_input_source "$var" "$def")") $owner${desc:+ - $desc}"
-            # a value saved in the env file is highlighted by the menu, and can be deleted (item 0)
+            # a value saved in the env file is marked, and can be deleted (last item)
+            mark=" "
             if [ -n "$(get_env_value "$var")" ]; then
-                highlight="${highlight:+$highlight,}$var"
-                zero=1
+                mark="+"
+                saved_any=1
             fi
-            set -- "$@" "$var=$row"
+            set -- "$@" "$var=$mark$tab$var$tab[$st]$tab$(get_input_source "$var" "$def")$tab$owner${desc:+ - $desc}"
         done <<ROWS
 $all_inputs
 ROWS
         [ "$unset_count" -gt 0 ] || [ -n "$manage" ] || break
         rc=0
-        # shellcheck disable=SC2086
-        choice=$(zz-menu -t "Inputs" ${zero:+-z "~delete=Delete a saved value..."} ${highlight:+-b "$highlight"} \
-            -f "  Number sets that input (bold: saved, 0 deletes one; env* = the environment overrides the saved value); <enter> or q proceeds with what's set." \
-            "$@") || rc=$?
+        choice=$(zz-menu -t "Inputs" \
+            -f "  Number sets that input (+ = saved; env* = the environment overrides the saved value); <enter> or q proceeds with what's set." \
+            "$@" ${saved_any:+"~delete=Delete a saved value..."}) || rc=$?
         case "$rc" in
         0) ;;
         *) break ;;

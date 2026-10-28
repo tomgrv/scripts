@@ -16,15 +16,16 @@ zz-menu [-t title] [-d default] [-f footer] [-c states] <item>...
 
 Each `<item>` is `<key>=<label>` (split at the first `=`), or just `<label>`,
 which then doubles as its own key. The menu is drawn on stderr, so stdout
-carries only the chosen key.
+carries only the chosen key. A label may hold TAB-separated cells: the menu
+aligns them in columns. On a terminal, up to 9 items take the number as one
+keypress (no Enter) and cycling redraws the menu in place. An action that is
+not one of the choices is just one more item, e.g. `"none=None"` last.
 
 | Option           | Purpose                                                                           |
 | ---------------- | --------------------------------------------------------------------------------- |
 | `-t <title>`     | title line shown above the items                                                  |
 | `-d <key>`       | key chosen when the user just presses Enter                                       |
 | `-f <text>`      | hint line replacing the default one (`\n` starts a new line)                      |
-| `-z <key=label>` | an item numbered 0, listed first; choosing 0 prints its key (pick mode)           |
-| `-b <keys>`      | comma-separated item keys shown highlighted (bold white); the menu owns its style |
 | `-c <states>`    | cycle mode: comma-separated states, see below                                     |
 
 | Exit status | Meaning                                                 |
@@ -57,7 +58,7 @@ done
 
 With `-c "s1,s2,..."` every item carries a state, shown as `[state]`.
 Choosing a number advances that item to the next state (wrapping around)
-and redraws, so the caller needs no loop of its own. Items are
+and redraws (a state that differs from where it started is highlighted), so the caller needs no loop of its own. Items are
 `<key>:<state>=<label>`; without `:<state>` an item starts at the first state.
 Enter prints one `<key>=<state>` line per item and exits `0`; `q` (or end of
 input) exits `1` and prints nothing.
@@ -85,4 +86,5 @@ bats test.bats
 - the menu is drawn on stderr, never stdout
 - `-f` footers may span several lines (`\n`)
 - cycle mode: states advance and wrap, Enter prints every `key=state`,
-  `q` prints nothing, out-of-range input changes nothing
+  `q` prints nothing, out-of-range input changes nothing, changed states are highlighted
+- TAB-separated cells are aligned in columns

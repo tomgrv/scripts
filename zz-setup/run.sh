@@ -429,10 +429,11 @@ if [ "$nflags" -eq 0 ] && zz-interactive; then
     load_saved_states
     items=
     set --
+    tab=$(printf '\t')
     for n in $names; do
         mark=" "
         [ "$(get_field "$n" 5)" = true ] && mark="*"
-        set -- "$@" "$n:$(get_state "$n")=$mark $(printf '%-20s' "$n") $(get_description "$n")"
+        set -- "$@" "$n:$(get_state "$n")=$mark$tab$n$tab$(get_description "$n")"
     done
     rc=0
     out=$(zz-menu -t "$repo workspaces" -c "skip,up,down" \

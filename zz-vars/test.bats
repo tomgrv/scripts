@@ -117,7 +117,7 @@ menu_run() {
 @test "zz-vars menu: a saved value can be deleted (a secret after a confirmation)" {
     printf 'A_TOKEN=s3\nA_OPT=keep\n' >"$WORK/env"
     chmod 600 "$WORK/env"
-    menu_run 0 1 y ''
+    menu_run 3 1 y ''
     ! grep -q '^A_TOKEN=' "$WORK/env"
     grep -q '^A_OPT=keep$' "$WORK/env"
 }
@@ -125,7 +125,7 @@ menu_run() {
 @test "zz-vars menu: nothing is deleted when the secret's confirmation is refused" {
     printf 'A_TOKEN=s3\n' >"$WORK/env"
     chmod 600 "$WORK/env"
-    menu_run 0 1 n ''
+    menu_run 3 1 n ''
     grep -q '^A_TOKEN=s3$' "$WORK/env"
 }
 

@@ -22,6 +22,7 @@ Declared via `zz-use` at the top of `run.sh` and resolved on demand
 
 - `-s` secret: masked input, default shown as `***`.
 - `-e` exit 1 when input ends.
+- `-k` single key: on a terminal the answer is one keypress, no Enter needed (`-c` implies it; arrow keys are ignored). Anywhere else a normal line is read.
 
 - `-c Yn` accept one of these letters (any case), re-ask on anything else; the
   uppercase letter is the default. It replaces the former `zz-ask`: `zz-prompt -c Yn "Continue?"`.
@@ -31,6 +32,8 @@ Declared via `zz-use` at the top of `run.sh` and resolved on demand
 | Variable                   | Effect                                                                                                                                                         |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ZZ_PROMPT_TTY=0`          | when stdin is not a terminal (for example under `curl ... \| sh`) do not read `/dev/tty`                                                                       |
+| `ZZ_PROMPT_MARK`           | leading mark of the prompt line (default `#`)                                                                                                                  |
+| `ZZ_PROMPT_HINT`           | printf format of the `[default]` / `[Yn]` hint (default `[%s]`; empty: no hint)                                                                               |
 | `ZZ_PROMPT_ANSWERS=<file>` | scripted answers: one line per prompt, an empty line is a bare Enter, an exhausted file is end of input; `zz-menu` asks through `zz-prompt`, so it follows too |
 
 ```sh

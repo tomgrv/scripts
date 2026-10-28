@@ -116,6 +116,7 @@ teardown() {
 
 @test "zz-menu -c shows each item's state and redraws after a change" {
     run bash -c 'printf "1\n\n" | zz-menu -c "skip,up" "a=Alpha" 2>&1 1>/dev/null'
+    output=$(printf '%s' "$output" | sed 's/\x1b\[[0-9;]*m//g')
     [[ "$output" == *"[skip] Alpha"* ]]
     [[ "$output" == *"[up  ] Alpha"* ]]
 }
@@ -148,21 +149,26 @@ teardown() {
     [[ "$output" == *'dir\tx\c done'* ]]
 }
 
-@test "zz-menu -z lists an item 0 first and prints its key when 0 is chosen" {
-    run bash -c 'echo 0 | zz-menu -z "del=Delete one" -t T a=Alpha b=Beta'
-    [ "$status" -eq 0 ]
-    [[ "$output" == *") Delete one"* ]]
-    [[ "$output" == *"del" ]]
-}
-
-@test "zz-menu: 0 is not an item without -z" {
+@test "zz-menu: 0 is not an item" {
     run bash -c 'printf "0\n1\n" | zz-menu a=Alpha b=Beta'
     [[ "$output" == *"No such item: 0"* ]]
     [[ "$output" == *"a" ]]
 }
 
-@test "zz-menu -b highlights the listed items in bold white, the others stay plain" {
-    run bash -c 'echo q | zz-menu -b b a=Alpha b=Beta'
-    [[ "$output" == *$'\033[1;37mBeta'* ]]
-    [[ "$output" != *$'\033[1;37mAlpha'* ]]
+@test "zz-menu aligns TAB-separated cells into columns" {
+    run bash -c 'echo q | NO_COLOR=1 zz-menu "a=x'$'\t'$'one" "b=longer'$'\t'$'two" 2>&1'
+    [[ "$output" == *"1) x       one"* ]]
+    [[ "$output" == *"2) longer  two"* ]]
+}
+
+@test "zz-menu -c highlights a state once it differs from where it started" {
+    run bash -c 'printf "1\nq\n" | zz-menu -c "skip,up" a=Alpha b=Beta 2>&1 1>/dev/null'
+    [[ "$output" == *$'\033[1;33m[up  ]'* ]]
+    [[ "$output" != *$'\033[1;33m[skip]'* ]]
+}
+
+@test "zz-menu takes a number as one keypress on a terminal, no Enter needed" {
+    command -v script >/dev/null || skip "script(1) not installed"
+    run bash -c 'printf 2 | script -qec "ZZ_PROMPT_TTY=1 zz-menu a=Alpha b=Beta 2>/dev/null" /dev/null | tr -d "\r" | tail -n1'
+    [[ "$output" == *b ]]
 }

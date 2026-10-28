@@ -1,7 +1,11 @@
 #!/bin/sh
-# zz-menu [-t title] [-d default] [-f footer] [-z item] [-b keys] [-c states] <item>... — interactive
+# zz-menu [-t title] [-d default] [-f footer] [-c states] <item>... — interactive
 # numbered menu. Each <item> is "<key>=<label>" (or just "<label>", used as its
-# own key). The menu is drawn on stderr; results go to stdout.
+# own key). The menu is drawn on stderr; results go to stdout. A label may hold
+# TAB-separated cells: the menu aligns them in columns.
+#
+# On a terminal a menu of up to 9 items takes the number as one keypress (no
+# Enter), and cycling redraws the menu in place.
 #
 # Pick mode (default): choosing a number prints that item's key.
 #   Exit status:
@@ -10,17 +14,12 @@
 #     1  the user quit (q) or input ended
 #     2  a bare Enter with no default — the caller's "proceed/done" signal
 #
-# Cycle mode (-c "s1,s2,..."): every item carries a state, shown as [state];
-# choosing a number advances that item to the next state (wrapping around)
-# and redraws. Items are "<key>:<state>=<label>"; a missing ":<state>"
-# starts at the first state. A bare Enter prints one "<key>=<state>" line per
-# item and exits 0; q or end of input exits 1 without printing anything.
-#
-# -z "<key>=<label>" adds an item numbered 0, listed above the others, for an
-# action that is not one of them (pick mode only): choosing 0 prints its key.
-#
-# -b "<key>,<key>" shows those items highlighted (bold white): the menu owns its
-# style, callers only say which items matter.
+# Cycle mode (-c "s1,s2,..."): every item carries a state, shown as [state]
+# (highlighted once it differs from where it started); choosing a number
+# advances that item to the next state (wrapping around) and redraws. Items are
+# "<key>:<state>=<label>"; a missing ":<state>" starts at the first state. A
+# bare Enter prints one "<key>=<state>" line per item and exits 0; q or end of
+# input exits 1 without printing anything.
 #
 # Pick mode is meant for callers that loop until the user is done:
 #   while choice=$(zz-menu -t "Steps" "a=Alpha" "b=Beta"); do ...; done
@@ -31,12 +30,10 @@
 # Quoted eval: unquoted, field splitting would squeeze runs of spaces inside
 # the values (item labels are often column-aligned).
 eval "$(
-    zz-args "Interactive numbered menu" $0 "$@" <<help
+    zz-args "Interactive numbered menu" "$0" "$@" <<help
         t title   title    Title line shown above the items
         d default default  Key chosen when the user just presses Enter
         f footer  footer   Hint line replacing the default one under the items
-        z zero    zero     Item "<key>=<label>" numbered 0, listed first (pick mode)
-        b keys    highlight Comma-separated item keys shown in bold white
         c cycle   cycle    Comma-separated states; choosing an item advances its state
         # items   items    Items: <key>=<label> or <label>
 help
@@ -48,106 +45,103 @@ if [ "$count" -lt 1 ]; then
     zz-log e "zz-menu: no menu items given."
     exit 1
 fi
+tab=$(printf '\t')
+nl='
+'
 
-# --- functions
-
-# next_state <state>: next state after <state> in the comma-separated cycle
-# (first one when <state> is the last or unknown).
-next_state() {
-    local current="$1" # state to advance from (mandatory)
-    local first="" take=0
-    local old_ifs state
-
-    old_ifs=$IFS
-    IFS=,
-    for state in $cycle; do
-        [ -z "$first" ] && first=$state
-        if [ "$take" -eq 1 ]; then
-            IFS=$old_ifs
-            printf '%s' "$state"
-            return
-        fi
-        [ "$state" = "$current" ] && take=1
-    done
-    IFS=$old_ifs
-    printf '%s' "$first"
-}
-
-# render: draw the menu (title, items with their state, hint line) on stderr.
-render() {
-    local i key label mark state
-
-    [ -n "$title" ] && printf '%b%s%b\n' "${BBlue}==== " "$title" " ====${End}" >&2
-    [ -z "$zero" ] || printf '%b%s\n' "  ${BBlue} 0${End}) " "${zero#*=}" >&2
-    i=1
-    while [ "$i" -le "$count" ]; do
-        eval "key=\$key_$i label=\$label_$i state=\$state_$i"
-        mark=" "
-        [ -n "$default" ] && [ "$key" = "$default" ] && mark="*"
-        if [ -n "$cycle" ]; then
-            label="[$(printf "%-${width}s" "$state")] ${label}"
-        fi
-        case ",$highlight," in *",$key,"*) label="${BWhite}${label}${End}" ;; esac
-        printf '%b%s\n' "  ${BBlue}$(printf '%2d' "$i")${End})${mark}" "$label" >&2
-        i=$((i + 1))
-    done
-    if [ -n "$footer" ]; then
-        printf '%b\n' "${footer}" >&2
-    elif [ -n "$cycle" ]; then
-        printf '%b\n' "  Enter a number to cycle its state, <enter> to proceed, q to quit." >&2
-    elif [ -n "$default" ]; then
-        printf '%b\n' "  ${BBlue}*${End} = default; <enter> picks it, q to quit." >&2
-    else
-        printf '%b\n' "  Enter a number, <enter> to proceed, q to quit." >&2
-    fi
-}
-
-# --- items
-
-# Split every item into key_<N> (key), label_<N> (label) and, in cycle mode,
-# state_<N> (state) - POSIX sh has no arrays, so they live in eval'd variables.
-i=1
+# One row per item, POSIX sh having no arrays: "<key> TAB <state> TAB <initial state> TAB <label>".
+rows=
 for item in "$@"; do
     case "$item" in
     *=*) left=${item%%=*} label=${item#*=} ;;
     *) left=$item label=$item ;;
     esac
-    state=""
+    state=
     if [ -n "$cycle" ]; then
         case "$left" in
         *:*) state=${left#*:} left=${left%%:*} ;;
         *) state=${cycle%%,*} ;;
         esac
     fi
-    eval "key_$i=\$left label_$i=\$label state_$i=\$state"
-    i=$((i + 1))
+    rows="$rows$left$tab$state$tab$state$tab$label$nl"
 done
 
-# Widest state, so the [state] column lines up.
-width=0
-if [ -n "$cycle" ]; then
-    old_ifs=$IFS
-    IFS=,
-    for cycle_state in $cycle; do
-        [ "${#cycle_state}" -gt "$width" ] && width=${#cycle_state}
-    done
-    IFS=$old_ifs
-fi
+# Redraw in place only where the cursor can move back, and never over scripted answers.
+redraw=
+[ -t 2 ] && [ -z "${ZZ_PROMPT_ANSWERS:-}" ] && redraw=1
+# One keypress is enough to pick a number up to 9 (zz-prompt falls back to a line off a terminal).
+[ "$count" -le 9 ] && key=-k || key=
+
+# --- functions
+
+# render: the numbered rows, aligned by awk (labels are read from stdin and printed
+# verbatim; colours and options travel by the environment, not as awk escapes).
+render() {
+    printf '%s' "$rows" | NUM=$BBlue HI=$BYellow OFF=$End DEF=$default CYC=$cycle awk -F'\t' '
+        BEGIN { m = split(ENVIRON["CYC"], s, ","); for (i = 1; i <= m; i++) if (length(s[i]) > sw) sw = length(s[i]) }
+        { key[NR] = $1; st[NR] = $2; ini[NR] = $3; cells[NR] = NF
+          for (i = 4; i <= NF; i++) { c[NR, i] = $i; if (length($i) > w[i]) w[i] = length($i) } }
+        END {
+            for (r = 1; r <= NR; r++) {
+                line = sprintf("  %s%2d%s)%s", ENVIRON["NUM"], r, ENVIRON["OFF"], key[r] == ENVIRON["DEF"] ? "*" : " ")
+                if (ENVIRON["CYC"] != "")
+                    line = line (st[r] != ini[r] ? sprintf("%s[%-*s]%s ", ENVIRON["HI"], sw, st[r], ENVIRON["OFF"]) : sprintf("[%-*s] ", sw, st[r]))
+                for (i = 4; i <= cells[r]; i++)
+                    line = line (i < cells[r] ? sprintf("%-*s  ", w[i], c[r, i]) : c[r, i])
+                print line
+            }
+        }'
+}
+
+# draw: the whole menu on stderr; $lines is how many lines that took.
+draw() {
+    local frame hint
+
+    if [ -n "$footer" ]; then
+        hint=$footer
+    elif [ -n "$cycle" ]; then
+        hint="  Enter a number to cycle its state, <enter> to proceed, q to quit."
+    elif [ -n "$default" ]; then
+        hint="  ${BBlue}*${End} = default; <enter> picks it, q to quit."
+    else
+        hint="  Enter a number, <enter> to proceed, q to quit."
+    fi
+    frame=$(
+        [ -z "$title" ] || printf '%b%s%b\n' "${BBlue}==== " "$title" " ====${End}"
+        render
+        printf '%b\n' "$hint"
+    )
+    printf '%s\n' "$frame" >&2
+    lines=$(printf '%s\n' "$frame" | wc -l)
+}
+
+# field <n> <column>: column <column> of row <n>.
+field() { printf '%s' "$rows" | awk -F'\t' -v n="$1" -v col="$2" 'NR == n { print $col }'; }
+
+# cycle_row <n>: advance row <n> to the next state (the first one past the last or an unknown one).
+cycle_row() {
+    rows=$(printf '%s' "$rows" | awk -F'\t' -v OFS='\t' -v n="$1" -v cyc="$cycle" '
+        BEGIN { m = split(cyc, s, ",") }
+        NR == n { for (i = 1; i <= m; i++) if (s[i] == $2) break; $2 = s[i % m + 1] }
+        { print }')$nl
+}
 
 # --- menu loop: draw, read a choice, then pick, cycle or finish.
-while true; do
-    render
+erase=0
+while :; do
+    # Take the previous frame (and the line answered under it) off the screen first.
+    [ "$erase" -eq 0 ] || printf '\033[%dA\033[J' "$erase" >&2
+    draw
+    erase=${redraw:+$((lines + 1))}
+    erase=${erase:-0}
+
     # Asked by zz-prompt; input ending quits like q.
-    choice=$(zz-prompt -e) || exit 1
+    choice=$(ZZ_PROMPT_MARK=">" ZZ_PROMPT_HINT= zz-prompt -e $key "") || exit 1
 
     case "$choice" in
     "")
         if [ -n "$cycle" ]; then
-            i=1
-            while [ "$i" -le "$count" ]; do
-                eval "printf '%s=%s\\n' \"\$key_$i\" \"\$state_$i\""
-                i=$((i + 1))
-            done
+            printf '%s' "$rows" | awk -F'\t' '{ print $1 "=" $2 }'
             exit 0
         fi
         if [ -n "$default" ]; then
@@ -159,6 +153,7 @@ while true; do
     q | Q) exit 1 ;;
     *[!0-9]*)
         zz-log w "Invalid input: '$choice' (enter a number between 1 and ${count}, <enter> or q)."
+        erase=0
         continue
         ;;
     esac
@@ -166,22 +161,15 @@ while true; do
     # Drop leading zeros ("007" -> 7); $(( )) would read them as octal.
     choice=$(printf '%s' "$choice" | sed 's/^0*//')
     choice=${choice:-0}
-    if [ "$choice" -eq 0 ] && [ -n "$zero" ] && [ -z "$cycle" ]; then
-        printf '%s\n' "${zero%%=*}"
-        exit 0
-    fi
     if [ "$choice" -lt 1 ] || [ "$choice" -gt "$count" ]; then
         zz-log w "No such item: $choice (enter a number between 1 and ${count})."
+        erase=0
         continue
     fi
 
-    if [ -n "$cycle" ]; then
-        eval "current=\$state_$choice"
-        next=$(next_state "$current")
-        eval "state_$choice=\$next"
-        continue
-    fi
-
-    eval "printf '%s\\n' \"\$key_$choice\""
-    exit 0
+    [ -n "$cycle" ] || {
+        field "$choice" 1
+        exit 0
+    }
+    cycle_row "$choice"
 done
