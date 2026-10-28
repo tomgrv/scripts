@@ -12,6 +12,10 @@
 # A row is highlighted when it is listed by -b "<key>,<key>" (the caller says what that means:
 # set, saved...), or, in cycle mode, when its state moved off where it started.
 #
+# A label may end in RS (ASCII 036) and a detail: the detail is printed on the line under the
+# item, indented to start under the n-th shown cell (-D <n>, default the first), in the same
+# highlight as its item.
+#
 # -z "<key>=<label>" adds an item numbered 0, listed first, for a special case that is
 # not one of the items: choosing 0 prints its key alone and exits 0 (in cycle mode too,
 # where the caller tells it from the "<key>=<state>" lines and usually redraws).
@@ -49,6 +53,7 @@ eval "$(
         c cycle   cycle    Comma-separated states; choosing an item advances its state
         z zero    zero     Item "<key>=<label>" numbered 0, listed first: choosing 0 prints its key
         b bold    bold     Comma-separated item keys shown highlighted
+        D detail  detail   Cell number the detail line of an item is indented under (default 1)
         g group   group    Number of the TAB-separated label cell naming each item's group (as cut -f)
         # items   items    Items: <key>=<label> or <label>
 help
@@ -60,9 +65,9 @@ if [ "$count" -lt 1 ]; then
     zz-log e "zz-menu: no menu items given."
     exit 1
 fi
-case "$group" in
+case "$group$detail" in
 *[!0-9]*)
-    zz-log e "zz-menu: -g takes a cell number (got '$group')."
+    zz-log e "zz-menu: -g and -D take a cell number (got '$group' '$detail')."
     exit 1
     ;;
 esac
@@ -111,10 +116,12 @@ redraw=
 # render: the numbered rows, aligned by awk (labels are read from stdin and printed
 # verbatim; colours and options travel by the environment, not as awk escapes).
 render() {
-    printf '%s' "$rows" | NUM=$BBlue HI=$highlight_style OFF=$End GRP=$BPurple DEF=$default CYC=$cycle GROUP=$group BOLD=",$bold," awk -F'\t' '
+    printf '%s' "$rows" | NUM=$BBlue HI=$highlight_style OFF=$End GRP=$BPurple DEF=$default CYC=$cycle GROUP=$group DETAIL=$detail BOLD=",$bold," awk -F'\t' '
         BEGIN { m = split(ENVIRON["CYC"], s, ","); for (i = 1; i <= m; i++) if (length(s[i]) > sw) sw = length(s[i])
                 gi = ENVIRON["GROUP"] ? ENVIRON["GROUP"] + 3 : 0 }
-        { key[NR] = $1; st[NR] = $2; ini[NR] = $3
+        { dpos = index($0, "\036"); det[NR] = ""   # RS starts the detail line, if any
+          if (dpos) { det[NR] = substr($0, dpos + 1); $0 = substr($0, 1, dpos - 1) }
+          key[NR] = $1; st[NR] = $2; ini[NR] = $3
           # a row with no cell past the group one (e.g. "Delete...") belongs to no group
           hid[NR] = (NF > gi) ? gi : 0; grp[NR] = hid[NR] ? $gi : ""; last[NR] = NF
           for (i = 4; i <= NF; i++) { c[NR, i] = $i; if (i != hid[NR] && i < NF && length($i) > w[i]) w[i] = length($i) } }
@@ -130,9 +137,15 @@ render() {
                 # the mark slot: * default; + highlighted when there is no colour to show it
                 mark = key[r] == ENVIRON["DEF"] ? "*" : (hl && ENVIRON["HI"] == "" ? "+" : " ")
                 body = ENVIRON["CYC"] != "" ? sprintf("[%-*s] ", sw, st[r]) : ""
+                shown = 0; indent = 3 + length(NR) + length(body)   # " " number ")" mark, then the state
                 for (i = 4; i <= last[r]; i++)
-                    if (i != hid[r]) body = body (i < last[r] ? sprintf("%-*s ", w[i], c[r, i]) : c[r, i])
+                    if (i != hid[r]) {
+                        if (++shown == (ENVIRON["DETAIL"] ? ENVIRON["DETAIL"] : 1)) indent = 3 + length(NR) + length(body)
+                        body = body (i < last[r] ? sprintf("%-*s ", w[i], c[r, i]) : c[r, i])
+                    }
+                sub(/ +$/, "", body)   # an empty last cell leaves only padding
                 print sprintf(" %s%*d%s)%s", ENVIRON["NUM"], length(NR), r, ENVIRON["OFF"], mark) (hl ? ENVIRON["HI"] body ENVIRON["OFF"] : body)
+                if (det[r] != "") print sprintf("%*s", indent, "") (hl ? ENVIRON["HI"] det[r] ENVIRON["OFF"] : det[r])
             }
         }'
 }

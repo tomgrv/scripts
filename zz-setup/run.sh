@@ -334,6 +334,7 @@ cd "$dir"
 # (config.requires: root, os=<id>; see zz-require); summary is
 # true|false (config.summary).
 us=$(printf '\037')
+rs=$(printf '\036')
 # A slow read says so (zz-progress), on the line the menu will take over.
 zz-progress "Reading the workspaces..."
 list=$(ws-list -b -e zz-setup -o . | while IFS= read -r w; do
@@ -457,7 +458,7 @@ if [ "$nflags" -eq 0 ] && zz-interactive; then
         # list rows: 1 order, 2 name, 3 dir, 4 description, 5 default (true = up)
         while IFS="$us" read -r _ n _ desc dflt _; do
             [ -n "$n" ] || continue
-            # number [state] source name description (default state); source f = remembered, d = default
+            # number [state] source name (default state), the description under the name; source f = remembered, d = default
             eval "src=\${saved_$(get_state_key "$n"):-}"
             if [ -n "$src" ]; then src=f; else src=d; fi
             if [ "$dflt" = true ]; then dflt=up; else dflt=skip; fi
@@ -466,12 +467,12 @@ if [ "$nflags" -eq 0 ] && zz-interactive; then
             # grouped by the name's prefix (svc-k3s -> svc); a name with no dash stays ungrouped
             group=
             case "$n" in *-*) group=${n%%-*} ;; esac
-            set -- "$@" "$n:$(get_state "$n")=$group$tab$src$tab$n$tab$desc ($dflt)"
+            set -- "$@" "$n:$(get_state "$n")=$group$tab$src$tab$(printf '%-20s' "$n")$tab($dflt)${desc:+$rs$desc}"
         done <<ROWS
 $list
 ROWS
         rc=0
-        out=$(zz-menu -t "$repo workspaces" -g 1 -c "skip,up,down" -z "~reset=Reset to defaults" \
+        out=$(zz-menu -t "$repo workspaces" -g 1 -D 2 -c "skip,up,down" -z "~reset=Reset to defaults" \
             -f " Number cycles skip -> up -> down (f remembered, d default; default state in brackets); <enter> validates; q quits." \
             "$@") || rc=$?
         # 0: every workspace back to its default state, then ask again

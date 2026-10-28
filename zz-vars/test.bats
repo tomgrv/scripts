@@ -161,14 +161,15 @@ menu_run() {
     [[ "$output" != *"not found"* ]]
 }
 
-@test "zz-vars menu rows: number [status] source name - description (default), a secret's default masked" {
+@test "zz-vars menu rows: number [status] source name (default), the description under the name" {
     echo '{"name":"a","config":{"inputs":{"A_TOKEN":{"description":"tok","required":true,"secret":true,"default":"zzz"},"A_OPT":{"description":"opt","default":"dflt"},"A_X":{}}}}' >"$WORK/a/package.json"
     printf 'A_TOKEN=s3\n' >"$WORK/env"
     chmod 600 "$WORK/env"
     printf 'q\n' >"$WORK/answers"
     run env NO_COLOR=1 ZZ_PROMPT_ANSWERS="$WORK/answers" zz-vars -m -f "$WORK/env" a=a
-    [[ "$output" == *"[set] f A_TOKEN - tok (***)"* ]]
-    [[ "$output" == *"[opt] d A_OPT - opt (dflt)"* ]]
+    # the name is padded to 20 characters, then the default; the description sits under the name
+    [[ "$output" == *"[set] f A_TOKEN              (***)"$'\n'"            tok"$'\n'* ]]
+    [[ "$output" == *"[opt] d A_OPT                (dflt)"$'\n'"            opt"$'\n'* ]]
     [[ "$output" == *"[opt] - A_X"* ]]
 }
 
@@ -177,6 +178,6 @@ menu_run() {
     echo '{"name":"a","config":{"inputs":{"A_OPT":{"description":"'"$long"'","default":"d"}}}}' >"$WORK/a/package.json"
     printf 'q\n' >"$WORK/answers"
     run env NO_COLOR=1 ZZ_PROMPT_ANSWERS="$WORK/answers" zz-vars -m -f "$WORK/env" a=a
-    [[ "$output" == *"A_OPT - $(printf 'x%.0s' $(seq 77))... (d)"* ]]
+    [[ "$output" == *"$(printf 'x%.0s' $(seq 77))..."$'\n'* ]]
     [[ "$output" != *"$(printf 'x%.0s' $(seq 78))"* ]]
 }

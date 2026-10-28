@@ -176,7 +176,7 @@ teardown() {
 @test "zz-menu -g rejects a non-numeric cell number" {
     run bash -c 'echo q | zz-menu -g x a=Alpha 2>&1'
     [ "$status" -eq 1 ]
-    [[ "$output" == *"-g takes a cell number"* ]]
+    [[ "$output" == *"take a cell number"* ]]
 }
 
 @test "zz-menu -z lists an item 0 first and prints its key alone when 0 is chosen" {
@@ -223,4 +223,14 @@ teardown() {
     [[ "$output" == *$'\033[1;36mAlpha'* ]]
     run bash -c 'echo q | ZZ_MENU_HIGHLIGHT="x;y" zz-menu -b a a=Alpha 2>&1 1>/dev/null'
     [[ "$output" == *$'\033[1;33mAlpha'* ]]
+}
+
+@test "zz-menu prints an item's detail (after RS) on the line under it, indented under the -D cell" {
+    run bash -c 't=$(printf "\t"); rs=$(printf "\036"); echo q | NO_COLOR=1 zz-menu -D 2 "a=f${t}name  ${t}(x)${rs}the detail" "b=d${t}other ${t}(y)" 2>&1'
+    [[ "$output" == *$' 1) f name   (x)\n      the detail\n 2) d other  (y)\n'* ]]
+}
+
+@test "zz-menu highlights an item's detail line with the item" {
+    run bash -c 'rs=$(printf "\036"); echo q | zz-menu -b a "a=Alpha${rs}detail" 2>&1 1>/dev/null'
+    [[ "$output" == *$'\033[1;33mdetail\033[0m'* ]]
 }

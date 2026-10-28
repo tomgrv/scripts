@@ -44,6 +44,7 @@ help
 }
 us=$(printf '\037')
 tab=$(printf '\t')
+rs=$(printf '\036')
 nl='
 '
 
@@ -157,9 +158,9 @@ persist_value() {
 }
 
 # menu_row <var> <desc> <req> <def> <owner> <secret>: set $row to the menu entry of an input, the same
-# grammar in every menu: <var>=<owner> TAB [status] TAB source TAB name - description (default), the
-# status on 3 letters (set/req/opt), the source on one: e(nv), E (env over a saved value), f(ile),
-# d(efault) or -; a secret's default is masked.
+# grammar in every menu: <var>=<owner> TAB [status] TAB source TAB name (default), then the
+# description on the line under the name; the status on 3 letters (set/req/opt), the source on one:
+# e(nv), E (env over a saved value), f(ile), d(efault) or -; a secret's default is masked.
 menu_row() {
     local src dflt= desc="$2"
 
@@ -169,9 +170,10 @@ menu_row() {
     classify "$1" "$3" "$4"
     case "$in_source" in 'env*') src=E ;; *) src=${in_source%"${in_source#?}"} ;; esac
     if [ -n "$4" ]; then
-        if [ "$6" = true ]; then dflt=" (***)"; else dflt=" ($4)"; fi
+        if [ "$6" = true ]; then dflt="(***)"; else dflt="($4)"; fi
     fi
-    row="$1=$5${tab}[$(printf '%.3s' "$in_status")]$tab$src$tab$1${desc:+ - $desc}$dflt"
+    # the name on 20 characters at least, then the default; the description on the line under the name
+    row="$1=$5${tab}[$(printf '%.3s' "$in_status")]$tab$src$tab$(printf '%-20s' "$1")$tab$dflt${desc:+$rs$desc}"
 }
 
 # delete_saved: let the user pick a value saved in the env file (and the profile snippet) and
@@ -194,7 +196,7 @@ ROWS
         zz-log w "No saved value to reset."
         return 0
     }
-    pick=$(zz-menu -t "Reset a saved value" -g 1 -f " Number resets that value (it falls back to its default); q quits." "$@") || return 0
+    pick=$(zz-menu -t "Reset a saved value" -g 1 -D 3 -f " Number resets that value (it falls back to its default); q quits." "$@") || return 0
     is_secret=$(printf '%s\n' "$all_inputs" | awk -F"$us" -v v="$pick" '$1 == v { print $6; exit }')
     if [ "$is_secret" = true ] && [ "$(zz-prompt -c yN "Delete the secret ${pick}?")" != y ]; then
         return 0
@@ -319,7 +321,7 @@ $all_inputs
 ROWS
         [ "$unset_count" -gt 0 ] || [ -n "$manage" ] || break
         rc=0
-        choice=$(zz-menu -t "Inputs" -g 1 ${highlight:+-b "$highlight"} \
+        choice=$(zz-menu -t "Inputs" -g 1 -D 3 ${highlight:+-b "$highlight"} \
             -f " 0 resets a saved value; number sets that input (f file, e env, E env over file, d default, - unset); <enter> validates; q quits." \
             ${saved_any:+-z "~reset=Reset a saved value..."} "$@") || rc=$?
         case "$rc" in

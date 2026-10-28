@@ -587,8 +587,8 @@ make_actions_remote() {
     echo 'ZZ_STATE_a=up' >"$ZZ_SETUP_ENV_FILE"
     printf 'q\n' >"$WORK/answers"
     run env NO_COLOR=1 ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws
-    [[ "$output" == *"[up  ] f a"*"(skip)"* ]]
-    [[ "$output" == *"[skip] d b"*"(skip)"* ]]
+    [[ "$output" == *"[up  ] f a                    (skip)"* ]]
+    [[ "$output" == *"[skip] d b                    (skip)"* ]]
 }
 
 @test "zz-setup menu rows cut a long description to 80 characters, ending in ..." {
@@ -600,6 +600,7 @@ make_actions_remote() {
     export ZZ_SETUP_ENV_FILE="$WORK/state.env"
     printf 'q\n' >"$WORK/answers"
     run env NO_COLOR=1 ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws
-    [[ "$output" == *"$(printf 'y%.0s' $(seq 77))... (skip)"* ]]
+    # the description sits on its own line under the name
+    [[ "$output" == *"$(printf 'y%.0s' $(seq 77))..."$'\n'* ]]
     [[ "$output" != *"$(printf 'y%.0s' $(seq 78))"* ]]
 }
