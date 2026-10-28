@@ -38,6 +38,20 @@ not one of the choices is just one more item, e.g. `"none=None"` last.
 
 `q` leaves the menu without choosing (status 1); what that means is the caller's: `zz-setup` and `zz-vars` treat it as "cancel everything" (`zz-vars` exits 3), the `vps-access` menus keep what is set. Tests drive any menu or prompt with `ZZ_PROMPT_ANSWERS=<file>` (one answer per line, see `zz-prompt`).
 
+### Progress line
+
+For the slow part before a menu (reading files, running `jq`...):
+
+```sh
+zz-menu -p "Reading the inputs..."   # message on stderr, on a terminal only
+# ... build the items ...
+zz-menu -P                           # clear it when no menu follows
+```
+
+A menu clears a waiting progress line itself when it draws. Both forms are
+answered before the options are parsed, so a call costs next to nothing, and
+neither writes anything off a terminal.
+
 ### Single choice
 
 ```sh

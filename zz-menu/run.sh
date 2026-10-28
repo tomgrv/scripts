@@ -11,6 +11,11 @@
 # not one of the items: choosing 0 prints its key alone and exits 0 (in cycle mode too,
 # where the caller tells it from the "<key>=<state>" lines and usually redraws).
 #
+# Progress line, for the slow part before a menu (reading files, running jq...):
+#   zz-menu -p "Reading the inputs..."   shows the message on stderr, on a terminal only
+#   zz-menu -P                           clears it (a menu clears it itself when it draws)
+# Both are answered before the options are parsed, so a call costs next to nothing.
+#
 # Keys, the same everywhere: a number acts on its item, Enter validates, q quits.
 # On a terminal a menu of up to 9 items takes the number as one keypress (no
 # Enter), and cycling redraws the menu in place.
@@ -31,6 +36,18 @@
 #
 # Pick mode is meant for callers that loop until the user is done:
 #   while choice=$(zz-menu -t "Steps" "a=Alpha" "b=Beta"); do ...; done
+
+# --- progress line: -p <message> shows it, -P clears it; a terminal only, no argument parsing
+case "${1:-}" in
+-p)
+    [ ! -t 2 ] || printf '\r\033[K%s' "${2:-}" >&2
+    exit 0
+    ;;
+-P)
+    [ ! -t 2 ] || printf '\r\033[K' >&2
+    exit 0
+    ;;
+esac
 
 . zz-colors
 
@@ -161,6 +178,7 @@ cycle_row() {
 
 # --- menu loop: draw, read a choice, then pick, cycle or finish.
 erase=0
+[ -z "$redraw" ] || printf '\r\033[K' >&2 # a progress line (-p) may be waiting here
 while :; do
     # Take the previous frame (and the line answered under it) off the screen first.
     [ "$erase" -eq 0 ] || printf '\033[%dA\033[J' "$erase" >&2
