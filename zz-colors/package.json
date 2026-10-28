@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz-colors",
-  "version": "5.0.0",
+  "version": "5.3.0",
   "description": "ANSI color variables, sourced by other zz-* scripts and functional scripts",
   "bin": {
     "zz-colors": "run.sh"

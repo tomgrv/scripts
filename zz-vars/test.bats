@@ -129,10 +129,14 @@ menu_run() {
     grep -q '^A_TOKEN=s3$' "$WORK/env"
 }
 
-@test "zz-vars menu: q leaves the menu and proceeds, it does not abort" {
+@test "zz-vars menu: q quits with status 3 and resolves nothing; Enter validates" {
     printf 'A_TOKEN=s3\n' >"$WORK/env"
     chmod 600 "$WORK/env"
     printf 'q\n' >"$WORK/answers"
+    run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-vars -m -f "$WORK/env" a=a
+    [ "$status" -eq 3 ]
+    [[ "$output" != *"export "* ]]
+    printf '\n' >"$WORK/answers"
     run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-vars -m -f "$WORK/env" a=a
     [ "$status" -eq 0 ]
     [[ "$output" == *"A_TOKEN"* ]]
@@ -147,4 +151,33 @@ menu_run() {
     [[ "$output" == *"A_TOKEN"*"[set]"*"file"* ]]
     run env A_TOKEN=saved zz-vars -S -f "$WORK/env" a=a
     [[ "$output" == *"A_TOKEN"*"[set]"*"env "* ]]
+}
+
+@test "zz-vars menu: an env file with none of the inputs saved is read without error" {
+    printf 'OTHER=1\n' >"$WORK/env"
+    chmod 600 "$WORK/env"
+    printf 'q\n' >"$WORK/answers"
+    run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-vars -m -f "$WORK/env" a=a
+    [[ "$output" != *"not found"* ]]
+}
+
+@test "zz-vars menu rows: number [status] source name (default), the description under the name" {
+    echo '{"name":"a","config":{"inputs":{"A_TOKEN":{"description":"tok","required":true,"secret":true,"default":"zzz"},"A_OPT":{"description":"opt","default":"dflt"},"A_X":{}}}}' >"$WORK/a/package.json"
+    printf 'A_TOKEN=s3\n' >"$WORK/env"
+    chmod 600 "$WORK/env"
+    printf 'q\n' >"$WORK/answers"
+    run env NO_COLOR=1 ZZ_PROMPT_ANSWERS="$WORK/answers" zz-vars -m -f "$WORK/env" a=a
+    # the name is padded to 20 characters, then the default; the description sits under the name
+    [[ "$output" == *"[set] f A_TOKEN              (***)"$'\n'"            tok"$'\n'* ]]
+    [[ "$output" == *"[opt] d A_OPT                (dflt)"$'\n'"            opt"$'\n'* ]]
+    [[ "$output" == *"[opt] - A_X"* ]]
+}
+
+@test "zz-vars menu rows cut a long description to 80 characters, ending in ..." {
+    long=$(printf 'x%.0s' $(seq 100))
+    echo '{"name":"a","config":{"inputs":{"A_OPT":{"description":"'"$long"'","default":"d"}}}}' >"$WORK/a/package.json"
+    printf 'q\n' >"$WORK/answers"
+    run env NO_COLOR=1 ZZ_PROMPT_ANSWERS="$WORK/answers" zz-vars -m -f "$WORK/env" a=a
+    [[ "$output" == *"$(printf 'x%.0s' $(seq 77))..."$'\n'* ]]
+    [[ "$output" != *"$(printf 'x%.0s' $(seq 78))"* ]]
 }

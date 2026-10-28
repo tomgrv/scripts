@@ -12,6 +12,10 @@
 #       an exhausted file is end of input): the same for zz-menu, which asks through zz-prompt
 #   -c  choices, e.g. Yn: accept one of these letters (any case), re-ask on
 #       anything else; the answer is always printed lowercased
+# The prompt line is "<mark> <question> <hint> ", both set by the environment:
+#   ZZ_PROMPT_MARK  leading mark (default #)
+#   ZZ_PROMPT_HINT  printf format of the hint, given the default or the choices
+#                   (default [%s]; empty: no hint)
 
 . zz-colors
 
@@ -29,10 +33,13 @@ help
 # --- parameters
 shown=$default
 [ -z "$secret" ] || shown=***
+hint=${ZZ_PROMPT_HINT-[%s]}
 if [ -n "$choices" ]; then
     default=$(printf '%s' "$choices" | tr -dc 'A-Z' | tr '[:upper:]' '[:lower:]')
     shown=$choices
 fi
+# No default and no choices: nothing to show.
+[ -n "$default$choices" ] || hint=
 
 # --- functions
 
@@ -45,11 +52,8 @@ has_tty() { [ "${ZZ_PROMPT_TTY:-1}" != 0 ] && (: </dev/tty) 2>/dev/null; }
 # from it.
 read_answer() {
     local tty_in=
-    if [ -n "$default" ] || [ -n "$choices" ]; then
-        printf '%b' "${BBlue}#${None} $question ${BBlue}[$shown]${None} " >&2
-    else
-        printf '%b' "${BBlue}#${None} $question " >&2
-    fi
+    # shellcheck disable=SC2059 # the hint format is the caller's to choose
+    printf '%b' "${BBlue}${ZZ_PROMPT_MARK:-#}${None}${question:+ $question}${hint:+ ${BBlue}$(printf "$hint" "$shown")${None}} " >&2
     if [ -n "${ZZ_PROMPT_ANSWERS:-}" ]; then
         eof=
         if [ -s "$ZZ_PROMPT_ANSWERS" ]; then

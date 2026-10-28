@@ -119,3 +119,13 @@ teardown() {
     run zz-prompt -e Q4
     [ "$status" -eq 1 ]
 }
+
+@test "zz-prompt ZZ_PROMPT_MARK and ZZ_PROMPT_HINT set the prompt grammar" {
+    run bash -c 'echo "" | NO_COLOR=1 ZZ_PROMPT_MARK="?" ZZ_PROMPT_HINT="(%s)" zz-prompt "Q?" dflt 2>&1 1>/dev/null'
+    [[ "$output" == "? Q? (dflt) "* ]]
+}
+
+@test "zz-prompt with an empty ZZ_PROMPT_HINT shows no hint" {
+    run bash -c 'echo "" | NO_COLOR=1 ZZ_PROMPT_HINT= zz-prompt -c Yn "Go?" 2>&1 1>/dev/null'
+    [[ "$output" == "# Go? "* && "$output" != *"["* ]]
+}

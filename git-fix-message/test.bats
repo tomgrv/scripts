@@ -94,3 +94,12 @@ teardown() {
     [[ "$output" == *"cancelled by user"* ]]
     [ "$(git log -1 --format=%s)" = "$orig" ]
 }
+
+@test "git-fix-message fails closed: no answer at all (input ended) does not rewrite history" {
+    echo one > f && git add f && git commit -qm "first"
+    orig=$(git log -1 --format=%s)
+
+    run bash -c 'git-fix-message -m "should not apply" HEAD </dev/null'
+    [ "$status" -ne 0 ]
+    [ "$(git log -1 --format=%s)" = "$orig" ]
+}

@@ -84,7 +84,7 @@ teardown() {
     printf 'API_KEY=supersecret123\n' > .env
     git add .env && git commit -qm "add env"
 
-    run bash -c 'echo y | git-fix-secrets -g "*.env" -s "supersecret123" -r "REDACTED"'
+    run bash -c 'printf "\ny\n" | git-fix-secrets -g "*.env" -s "supersecret123" -r "REDACTED"'
     [ "$status" -eq 0 ]
     [[ "$output" == *"Secret replaced"* ]]
 
@@ -108,7 +108,7 @@ teardown() {
     git add other.txt
     git commit -qm "commit mentioning supersecret123 in message"
 
-    run bash -c 'echo y | git-fix-secrets -m -g "*.env" -s "supersecret123" -r "REDACTED"'
+    run bash -c 'printf "\ny\n" | git-fix-secrets -m -g "*.env" -s "supersecret123" -r "REDACTED"'
     [ "$status" -eq 0 ]
 
     run git log -1 --format=%s

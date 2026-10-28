@@ -1,5 +1,20 @@
 # Changelog
 
+## 5.3.0 (2026-10-28)
+
+*Commits from: v5.2.0..HEAD*
+
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v5.2.0' into develop
+### 📦 scripts-zz-menu changes
+
+#### Features
+
+- ✨ revamped menus: groups, highlight, detail lines (#105)
+
 ## 5.2.0 (2026-10-27)
 
 *Commits from: v5.1.0..HEAD*
@@ -1031,5 +1046,6 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 
 
 
+
 ---
-*Generated on 2026-10-27 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
+*Generated on 2026-10-28 by [tomgrv/devcontainer-features](https://github.com/tomgrv/devcontainer-features)*
