@@ -28,7 +28,7 @@
 # core or functional, resolves and installs its own further dependencies
 # on demand via zz-use — from a local cache (ZZ_CACHE_DIR, default
 # ~/.cache/zz_scripts) when warm, or a fresh download into that cache
-# otherwise. Run `zz-update` afterwards to force a fresh download,
+# otherwise. Run `zz-use -f 'zz-*'` afterwards to force a fresh download,
 # bypassing the cache.
 #
 # Deliberately POSIX /bin/sh, no dependency on anything in this repo

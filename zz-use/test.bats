@@ -70,7 +70,7 @@ teardown() {
     zz_use_bin=$(command -v zz-use)
     run env INSTALL_BIN_DIR="$bindir" PATH="/usr/bin:/bin" "$zz_use_bin" "zz-*"
     [ "$status" -eq 0 ]
-    for tool in zz-use zz-colors zz-log zz-args zz-prompt zz-menu zz-load zz-bindir zz-dispatch zz-npx zz-persist zz-call zz-update; do
+    for tool in zz-use zz-colors zz-log zz-args zz-prompt zz-menu zz-load zz-bindir zz-dispatch zz-npx zz-persist zz-call; do
         [ -x "$bindir/$tool" ]
     done
     rm -rf "$bindir"
@@ -501,4 +501,73 @@ _sha_config() {
     run env PATH="$TEST_BIN:/usr/bin:/bin" "$(command -v zz-use)" -x echo -f hi
     [ "$status" -eq 0 ]
     [[ "$output" == *"-f hi"* ]]
+}
+
+# _isolated_zz_use <dir>: a copy of zz-use in <dir>, away from a checkout (zz-use run from one installs
+# straight from it, never downloading): prints its path.
+_isolated_zz_use() {
+    cp "$(readlink -f "$(command -v zz-use)")" "$1/zz-use"
+    printf '%s/zz-use' "$1"
+}
+
+# _stale_repo <version>: a one-script tarball (repo-main/some-tool printing <version>) as $tarball.
+_stale_repo() {
+    rm -rf "$src/repo-main" && mkdir -p "$src/repo-main/some-tool"
+    printf '#!/bin/sh\necho %s\n' "$1" >"$src/repo-main/some-tool/run.sh"
+    tar -C "$src" -czf "$tarball" repo-main
+}
+
+@test "zz-use refreshes an installed script whose stamp is older than ZZ_CACHE_TTL, and only then" {
+    src=$(mktemp -d)
+    tarball="$src/repo.tar.gz"
+    bindir=$(mktemp -d)
+    zz_use_bin=$(_isolated_zz_use "$bindir")
+    use() { env "$@" ZZ_ORIGIN=someorg/repo ZZ_ORIGIN_REF=main ZZ_USE_REPO_URL="file://$tarball" ZZ_CACHE_DIR="$(mktemp -d)" INSTALL_BIN_DIR="$bindir" PATH="$bindir:$TEST_BIN:/usr/bin:/bin" "$zz_use_bin" some-tool; }
+    _stale_repo v1
+    run use A=1
+    [ "$("$bindir/some-tool")" = v1 ]
+    # a new release is published, the installed copy is a few minutes old: left alone
+    _stale_repo v2
+    run use ZZ_DEBUG=1
+    [[ "$output" == *"already available"* ]]
+    [ "$("$bindir/some-tool")" = v1 ]
+    # a day and more later: refreshed
+    touch -d '2 days ago' "$bindir/.zz_use/some-tool"
+    run use A=1
+    [ "$status" -eq 0 ]
+    [ "$("$bindir/some-tool")" = v2 ]
+    rm -rf "$src" "$bindir"
+}
+
+@test "zz-use keeps a stale installed script, with a warning, when its source cannot be reached" {
+    src=$(mktemp -d)
+    tarball="$src/repo.tar.gz"
+    bindir=$(mktemp -d)
+    zz_use_bin=$(_isolated_zz_use "$bindir")
+    _stale_repo v1
+    run env ZZ_ORIGIN=someorg/repo ZZ_ORIGIN_REF=main ZZ_USE_REPO_URL="file://$tarball" ZZ_CACHE_DIR="$(mktemp -d)" INSTALL_BIN_DIR="$bindir" PATH="$bindir:$TEST_BIN:/usr/bin:/bin" "$zz_use_bin" some-tool
+    touch -d '2 days ago' "$bindir/.zz_use/some-tool"
+    run env ZZ_ORIGIN=someorg/repo ZZ_ORIGIN_REF=main ZZ_USE_REPO_URL="file://$src/missing.tar.gz" ZZ_CACHE_DIR="$(mktemp -d)" INSTALL_BIN_DIR="$bindir" PATH="$bindir:$TEST_BIN:/usr/bin:/bin" "$zz_use_bin" some-tool
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"keeping the installed copy"* ]]
+    [ "$("$bindir/some-tool")" = v1 ]
+    # the delay restarts: the stamp is fresh again
+    [ -z "$(find "$bindir/.zz_use/some-tool" -mmin +60)" ]
+    rm -rf "$src" "$bindir"
+}
+
+@test "zz-use never refreshes an installed script when the default ref is a tag" {
+    src=$(mktemp -d)
+    tarball="$src/repo.tar.gz"
+    bindir=$(mktemp -d)
+    zz_use_bin=$(_isolated_zz_use "$bindir")
+    mkdir -p "$src/repo-v1/some-tool"
+    printf '#!/bin/sh\necho v1\n' >"$src/repo-v1/some-tool/run.sh"
+    tar -C "$src" -czf "$tarball" repo-v1
+    env_run() { env ZZ_ORIGIN=someorg/repo ZZ_ORIGIN_REF=v1 ZZ_USE_REPO_URL="file://$tarball" ZZ_CACHE_DIR="$(mktemp -d)" INSTALL_BIN_DIR="$bindir" PATH="$bindir:$TEST_BIN:/usr/bin:/bin" "$@" "$zz_use_bin" some-tool; }
+    run env_run
+    touch -d '2 days ago' "$bindir/.zz_use/some-tool"
+    run env_run ZZ_DEBUG=1
+    [[ "$output" == *"already available"* ]]
+    rm -rf "$src" "$bindir"
 }

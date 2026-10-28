@@ -40,7 +40,7 @@ the repository `zz-setup` sets up.
 bats test.bats
 ```
 
-- skips a tool already on PATH, reporting "already available"
+- skips a tool already on PATH, reporting "already available" (unless it is a script installed from a moving ref more than `ZZ_CACHE_TTL` minutes ago: then it is refreshed, and kept with a warning when its source is unreachable)
 - requires at least one tool argument
 - prints its usage error even when zz-log isn't resolvable yet
 - rejects an unknown option instead of treating it as a tool name

@@ -41,7 +41,7 @@ zz-use -x git-release-prod          # install, then exec
 ```
 
 Git tools are installed as `git-<name>` and run as `git <name>`
-(`git-fix-up` → `git fix-up`). Refresh everything with `zz-update`.
+(`git-fix-up` → `git fix-up`). An installed tool refreshes itself once it is a day old (`ZZ_CACHE_TTL`); force the core set with `zz-use -f 'zz-*'`.
 
 ## Installing tools with `zz-use`
 
@@ -57,7 +57,7 @@ your system package manager, or from a download declared in
 | A pinned version         | `zz-use json-validate@v2`                  |
 | A tool from another repo | `zz-use someorg/otherscripts/some-tool@v1` |
 | Install, then run        | `zz-use -x json-validate some-file.json`   |
-| Force a fresh download   | `zz-update` or `zz-use --force <tool>`     |
+| Force a fresh download   | `zz-use --force <tool>`                    |
 
 Downloads are cached in `~/.cache/zz_scripts` (`ZZ_CACHE_DIR`). Use another
 fork or ref with `ZZ_ORIGIN` (default `tomgrv/scripts`) and `ZZ_ORIGIN_REF`
@@ -88,7 +88,6 @@ own, or installed from npm: `npm install --save-dev ./json-validate`.
 | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `zz <name> [args...]`                                                                                                  | front door: runs `zz-<name>` if installed, else `zz-use -x <name>` (install on demand, then run)                                                                                               |
 | `zz-use <tool>[@ref]`                                                                                                  | the activator: resolve/install a dependency, if and only if missing (see below)                                                                                                                |
-| `zz-update`                                                                                                            | force a fresh download of the zz-\* bundle, bypassing the local cache                                                                                                                          |
 | `zz-colors`                                                                                                            | ANSI color vars (`$Red` `$Green` ... `$End`); source it: `. zz-colors`                                                                                                                         |
 | `zz-log <lvl> <msg...>`                                                                                                | colored, leveled log line on stderr (`i`/`w`/`e`/`s`/`-`)                                                                                                                                      |
 | `zz-args <title> <caller> <<-help ...`                                                                                 | parse `$@` per a spec; `eval $(zz-args ...)` to bind the vars                                                                                                                                  |
