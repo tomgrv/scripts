@@ -1,5 +1,18 @@
 # Changelog
 
+## 6.0.0 (2026-10-28)
+
+*Commits from: v5.3.0..HEAD*
+
+### 💥 BREAKING CHANGES
+
+- the zz-update command is removed.
+### 📂 Unscoped changes
+
+#### Other changes
+
+- Merge tag 'v5.3.0' into develop
+
 ## 5.3.0 (2026-10-28)
 
 *Commits from: v5.2.0..HEAD*
@@ -1014,6 +1027,7 @@ _Commits from: 1f8f641ab8346b0a06735380ec9553077d56304f..HEAD_
 #### Other changes
 
 - install a script's config/ dir alongside it in the bin dir
+
 
 
 
