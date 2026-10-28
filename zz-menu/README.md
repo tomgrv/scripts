@@ -2,7 +2,7 @@
 
 # zz-menu
 
-Interactive numbered CLI menu: draws the items, reads a choice, prints the
+Interactive numbered CLI menu (keys, the same everywhere: a number acts on its item, Enter validates, `q` quits): draws the items, reads a choice, prints the
 chosen key.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed

@@ -157,8 +157,8 @@ teardown() {
 
 @test "zz-menu aligns TAB-separated cells into columns" {
     run bash -c 'echo q | NO_COLOR=1 zz-menu "a=x'$'\t'$'one" "b=longer'$'\t'$'two" 2>&1'
-    [[ "$output" == *"1) x       one"* ]]
-    [[ "$output" == *"2) longer  two"* ]]
+    [[ "$output" == *"1) x      one"* ]]
+    [[ "$output" == *"2) longer two"* ]]
 }
 
 @test "zz-menu -c highlights a state once it differs from where it started" {

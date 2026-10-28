@@ -161,7 +161,7 @@ ROWS
         zz-log w "No saved value to delete."
         return 0
     }
-    pick=$(zz-menu -t "Delete a saved value" -f "  Number deletes that value; q goes back." "$@") || return 0
+    pick=$(zz-menu -t "Delete a saved value" -f " Number deletes that value; q quits." "$@") || return 0
     is_secret=$(printf '%s\n' "$all_inputs" | awk -F"$us" -v v="$pick" '$1 == v { print $6; exit }')
     if [ "$is_secret" = true ] && [ "$(zz-prompt -c yN "Delete the secret ${pick}?")" != y ]; then
         return 0
@@ -277,7 +277,7 @@ ROWS
         [ "$unset_count" -gt 0 ] || [ -n "$manage" ] || break
         rc=0
         choice=$(zz-menu -t "Inputs" \
-            -f "  Number sets that input (+ = saved; env* = the environment overrides the saved value); <enter> or q proceeds with what's set." \
+            -f " Number sets that input (+ = saved; env* = the environment overrides it); <enter> validates; q quits." \
             "$@" ${saved_any:+"~delete=Delete a saved value..."}) || rc=$?
         case "$rc" in
         0) ;;

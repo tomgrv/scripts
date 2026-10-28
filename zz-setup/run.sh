@@ -437,7 +437,7 @@ if [ "$nflags" -eq 0 ] && zz-interactive; then
     done
     rc=0
     out=$(zz-menu -t "$repo workspaces" -c "skip,up,down" \
-        -f "  (* = default) Number cycles skip -> up -> down; <enter> proceeds, q quits." \
+        -f " (* = default) Number cycles skip -> up -> down; <enter> validates; q quits." \
         "$@") || rc=$?
     if [ "$rc" -ne 0 ]; then
         zz-log n "Aborted, nothing changed"

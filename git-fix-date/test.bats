@@ -88,7 +88,7 @@ teardown() {
     GIT_AUTHOR_DATE="2024-01-08T09:00:00" GIT_COMMITTER_DATE="2024-01-08T09:00:00" \
         git commit -qm "mon commit"
 
-    run bash -c 'echo y | git-fix-date'
+    run bash -c 'printf "\ny\n" | git-fix-date'
     [ "$status" -eq 0 ]
     [[ "$output" == *"Git date fixup completed successfully."* ]]
     [ "$(git log -1 --format=%ai)" = "2024-01-08 06:00:00 +0000" ]
@@ -99,7 +99,7 @@ teardown() {
     GIT_AUTHOR_DATE="2024-01-08T16:00:00" GIT_COMMITTER_DATE="2024-01-08T16:00:00" \
         git commit -qm "mon afternoon commit"
 
-    run bash -c 'echo y | git-fix-date'
+    run bash -c 'printf "\ny\n" | git-fix-date'
     [ "$status" -eq 0 ]
     [ "$(git log -1 --format=%ai)" = "2024-01-08 20:00:00 +0000" ]
 }
@@ -109,7 +109,7 @@ teardown() {
     GIT_AUTHOR_DATE="2024-01-06T10:00:00" GIT_COMMITTER_DATE="2024-01-06T10:00:00" \
         git commit -qm "sat commit"
 
-    run bash -c 'echo y | git-fix-date'
+    run bash -c 'printf "\ny\n" | git-fix-date'
     [ "$status" -eq 0 ]
     [ "$(git log -1 --format=%ai)" = "2024-01-06 10:00:00 +0000" ]
 }

@@ -79,7 +79,7 @@ zz-log - " 3. Cherry-pick commits from '$source'"
 zz-log - " 4. Reset '$source' to the merge base"
 zz-log - " 5. Fast-forward '$target' to include the rebased commits"
 echo ""
-if [ "$(zz-prompt -c Yn "Continue?")" != "y" ]; then
+if [ "$(zz-prompt -e -c Yn "Continue?")" != "y" ]; then
     zz-log e "Operation cancelled"
     exit 1
 fi

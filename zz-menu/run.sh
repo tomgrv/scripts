@@ -4,6 +4,7 @@
 # own key). The menu is drawn on stderr; results go to stdout. A label may hold
 # TAB-separated cells: the menu aligns them in columns.
 #
+# Keys, the same everywhere: a number acts on its item, Enter validates, q quits.
 # On a terminal a menu of up to 9 items takes the number as one keypress (no
 # Enter), and cycling redraws the menu in place.
 #
@@ -80,14 +81,14 @@ render() {
     printf '%s' "$rows" | NUM=$BBlue HI=$BYellow OFF=$End DEF=$default CYC=$cycle awk -F'\t' '
         BEGIN { m = split(ENVIRON["CYC"], s, ","); for (i = 1; i <= m; i++) if (length(s[i]) > sw) sw = length(s[i]) }
         { key[NR] = $1; st[NR] = $2; ini[NR] = $3; cells[NR] = NF
-          for (i = 4; i <= NF; i++) { c[NR, i] = $i; if (length($i) > w[i]) w[i] = length($i) } }
+          for (i = 4; i <= NF; i++) { c[NR, i] = $i; if (i < NF && length($i) > w[i]) w[i] = length($i) } }
         END {
             for (r = 1; r <= NR; r++) {
-                line = sprintf("  %s%2d%s)%s", ENVIRON["NUM"], r, ENVIRON["OFF"], key[r] == ENVIRON["DEF"] ? "*" : " ")
+                line = sprintf(" %s%*d%s)%s", ENVIRON["NUM"], length(NR), r, ENVIRON["OFF"], key[r] == ENVIRON["DEF"] ? "*" : " ")
                 if (ENVIRON["CYC"] != "")
                     line = line (st[r] != ini[r] ? sprintf("%s[%-*s]%s ", ENVIRON["HI"], sw, st[r], ENVIRON["OFF"]) : sprintf("[%-*s] ", sw, st[r]))
                 for (i = 4; i <= cells[r]; i++)
-                    line = line (i < cells[r] ? sprintf("%-*s  ", w[i], c[r, i]) : c[r, i])
+                    line = line (i < cells[r] ? sprintf("%-*s ", w[i], c[r, i]) : c[r, i])
                 print line
             }
         }'
@@ -100,11 +101,11 @@ draw() {
     if [ -n "$footer" ]; then
         hint=$footer
     elif [ -n "$cycle" ]; then
-        hint="  Enter a number to cycle its state, <enter> to proceed, q to quit."
+        hint=" Number cycles its state; <enter> validates; q quits."
     elif [ -n "$default" ]; then
-        hint="  ${BBlue}*${End} = default; <enter> picks it, q to quit."
+        hint=" ${BBlue}*${End} = default; <enter> picks it; q quits."
     else
-        hint="  Enter a number, <enter> to proceed, q to quit."
+        hint=" Number picks; <enter> validates; q quits."
     fi
     frame=$(
         [ -z "$title" ] || printf '%b%s%b\n' "${BBlue}==== " "$title" " ====${End}"
