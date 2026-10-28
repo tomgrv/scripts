@@ -264,20 +264,16 @@ if [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ] && zz-interactive; then
         while IFS="$us" read -r var desc req def owner secret as; do
             st=$(get_input_status "$var" "$req")
             [ "$st" = set ] || unset_count=$((unset_count + 1))
-            # a value saved in the env file is marked, and can be deleted (last item)
-            mark=" "
-            if [ -n "$(get_env_value "$var")" ]; then
-                mark="+"
-                saved_any=1
-            fi
-            set -- "$@" "$var=$owner$tab$mark$tab$var$tab[$st]$tab$(get_input_source "$var" "$def")$tab$desc"
+            # a value saved in the env file can be deleted (last item)
+            [ -z "$(get_env_value "$var")" ] || saved_any=1
+            set -- "$@" "$var=$owner$tab[$st]$tab$(get_input_source "$var" "$def")$tab$var${desc:+ - $desc}"
         done <<ROWS
 $all_inputs
 ROWS
         [ "$unset_count" -gt 0 ] || [ -n "$manage" ] || break
         rc=0
         choice=$(zz-menu -t "Inputs" -g 1 \
-            -f " Number sets that input (+ = saved; env* = the environment overrides it); <enter> validates; q quits." \
+            -f " Number sets that input (file = saved; env* = the environment overrides it); <enter> validates; q quits." \
             "$@" ${saved_any:+"~delete=Delete a saved value..."}) || rc=$?
         case "$rc" in
         0) ;;
