@@ -161,14 +161,17 @@ persist_value() {
 # status on 3 letters (set/req/opt), the source on one: e(nv), E (env over a saved value), f(ile),
 # d(efault) or -; a secret's default is masked.
 menu_row() {
-    local src dflt=
+    local src dflt= desc="$2"
+
+    # description at most 40 characters, ending in ... when cut (shortcut: counts bytes, fine for ASCII text)
+    [ "${#desc}" -le 40 ] || desc="$(printf '%.37s' "$desc")..."
 
     classify "$1" "$3" "$4"
     case "$in_source" in 'env*') src=E ;; *) src=${in_source%"${in_source#?}"} ;; esac
     if [ -n "$4" ]; then
         if [ "$6" = true ]; then dflt=" (***)"; else dflt=" ($4)"; fi
     fi
-    row="$1=$5${tab}[$(printf '%.3s' "$in_status")]$tab$src$tab$1${2:+ - $2}$dflt"
+    row="$1=$5${tab}[$(printf '%.3s' "$in_status")]$tab$src$tab$1${desc:+ - $desc}$dflt"
 }
 
 # delete_saved: let the user pick a value saved in the env file (and the profile snippet) and

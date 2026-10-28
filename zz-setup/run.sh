@@ -461,6 +461,8 @@ if [ "$nflags" -eq 0 ] && zz-interactive; then
             eval "src=\${saved_$(get_state_key "$n"):-}"
             if [ -n "$src" ]; then src=f; else src=d; fi
             if [ "$dflt" = true ]; then dflt=up; else dflt=skip; fi
+            # description at most 40 characters, ending in ... when cut (shortcut: counts bytes, fine for ASCII text)
+            [ "${#desc}" -le 40 ] || desc="$(printf '%.37s' "$desc")..."
             # grouped by the name's prefix (svc-k3s -> svc); a name with no dash stays ungrouped
             group=
             case "$n" in *-*) group=${n%%-*} ;; esac
