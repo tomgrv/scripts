@@ -185,10 +185,33 @@ if [ -n "$exports" ]; then
             exit 1
             ;;
         esac
-        current=$(read_current "$file" "$name=")
-        [ -z "$current" ] && [ -n "$profile" ] && current=$(read_current "$profile_dir/$profile.sh" "export $name=")
-        [ -z "$current" ] || printf "export %s='%s'\n" "$name" "$(printf '%s' "$current" | sed "s/'/'\\\\''/g")"
     done
+    # One awk pass over the file (and the profile snippet, for what the file lacks): the last
+    # "NAME=value" line wins, a quoted value is unquoted as read_current does, and the export
+    # line is quoted for eval. \047 is a single quote.
+    profile_file=
+    [ -z "$profile" ] || profile_file=$profile_dir/$profile.sh
+    set --
+    [ ! -f "$file" ] || set -- "$file"
+    [ -z "$profile_file" ] || [ ! -f "$profile_file" ] || set -- "$@" "$profile_file"
+    NAMES=$key PROFILE_FILE=$profile_file awk '
+        function squote(v,   out, i) {   # a single quote becomes the four characters '\'' for eval
+            while ((i = index(v, "\047")) > 0) { out = out substr(v, 1, i - 1) "\047\\\047\047"; v = substr(v, i + 1) }
+            return out v
+        }
+        function unquote(v) {
+            if (v ~ /^\047.*\047$/) { v = substr(v, 2, length(v) - 2); gsub(/\047\\\047\047/, "\047", v) }
+            return v
+        }
+        BEGIN { n = split(ENVIRON["NAMES"], order, " "); for (i = 1; i <= n; i++) want[order[i]] = 1 }
+        { line = $0; pre = (FILENAME == ENVIRON["PROFILE_FILE"] && ENVIRON["PROFILE_FILE"] != "") ? 1 : 0
+          if (pre) { if (substr(line, 1, 7) != "export ") next; line = substr(line, 8) }
+          eq = index(line, "="); if (eq < 2) next
+          k = substr(line, 1, eq - 1); if (k in want) val[pre, k] = substr(line, eq + 1) }
+        END { for (i = 1; i <= n; i++) {
+                  v = unquote(val[0, order[i]]); if (v == "") v = unquote(val[1, order[i]])
+                  if (v != "") printf "export %s=\047%s\047\n", order[i], squote(v) } }
+    ' "$@" /dev/null
     exit 0
 fi
 

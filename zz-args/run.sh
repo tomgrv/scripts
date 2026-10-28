@@ -14,7 +14,19 @@
 # Without this, a value containing a single quote (e.g. `'; rm -rf / #`)
 # would break out of the quoting and be executed by the caller's eval.
 _escape() {
-    printf '%s' "$1" | sed "s/'/'\\\\''/g"
+    local rest="$1" out=
+
+    # No sed: this runs once per argument and is the cost of a long argument list.
+    while :; do
+        case "$rest" in
+        *\'*)
+            out="$out${rest%%\'*}'\\''"
+            rest=${rest#*\'}
+            ;;
+        *) break ;;
+        esac
+    done
+    printf '%s' "$out$rest"
 }
 
 count="0"

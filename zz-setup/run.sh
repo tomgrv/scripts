@@ -174,7 +174,20 @@ get_conflicts() { get_field "$1" 7 | tr ',' '\n'; }
 # get_state_var <name>: the shell variable holding workspace <name>'s state.
 # get_state <name>: its state (up|skip|down), skip when unset.
 # set_state <name> <state>: set it.
-get_state_var() { printf 'STATE_%s' "$1" | tr -c 'A-Za-z0-9_\n' '_'; }
+get_state_var() {
+    local rest="$1" out= c
+
+    # character by character in the shell: it is asked for every workspace, a tr each time adds up
+    while [ -n "$rest" ]; do
+        c=${rest%"${rest#?}"}
+        rest=${rest#?}
+        case "$c" in
+        [A-Za-z0-9_]) out=$out$c ;;
+        *) out=${out}_ ;;
+        esac
+    done
+    printf 'STATE_%s' "$out"
+}
 get_state() { eval "printf '%s' \"\${$(get_state_var "$1"):-skip}\""; }
 set_state() { eval "$(get_state_var "$1")=\$2"; }
 
@@ -326,6 +339,8 @@ cd "$dir"
 # (config.requires: root, os=<id>; see zz-require); summary is
 # true|false (config.summary).
 us=$(printf '\037')
+# A slow read says so, on the line the menu will take over.
+[ ! -t 2 ] || printf 'Reading the workspaces...' >&2
 list=$(ws-list -b -e zz-setup -o . | while IFS= read -r w; do
     jq -r --arg d "${w#./}" '
       [ (.config.order // 1000 | tostring),
@@ -340,6 +355,7 @@ list=$(ws-list -b -e zz-setup -o . | while IFS= read -r w; do
         ((.config.requires // {}) | to_entries | map(if .value == true then .key else "\(.key)=\(.value)" end) | join(",")) ]
       | join("\u001f")' "$w/package.json"
 done)
+[ ! -t 2 ] || printf '\r\033[K' >&2
 [ -n "$list" ] || run_entry "$@"
 names=$(printf '%s\n' "$list" | cut -d"$us" -f2)
 
@@ -407,8 +423,21 @@ fi
 # Remembered states (the last runs' up/skip) come first, so a flag only changes what
 # it names: -s b does not forget that a was skipped last time.
 load_saved_states() {
+    local line key saved
+
+    [ -f "$envfile" ] || return 0
+    # The env file is read once (the last line of a key wins); only plain shell names are kept.
+    while IFS= read -r line; do
+        key=${line%%=*}
+        case "$line" in
+        ZZ_STATE_*=*)
+            case "$key" in *[!A-Za-z0-9_]*) continue ;; esac
+            eval "saved_$key=\${line#*=}"
+            ;;
+        esac
+    done <"$envfile"
     for n in $names; do
-        saved=$(get_env_value "$(get_state_key "$n")")
+        eval "saved=\${saved_$(get_state_key "$n"):-}"
         [ -z "$saved" ] || set_state "$n" "$saved"
     done
 }
@@ -430,14 +459,18 @@ if [ "$nflags" -eq 0 ] && zz-interactive; then
     tab=$(printf '\t')
     while :; do
         set --
-        for n in $names; do
+        # list rows: 1 order, 2 name, 3 dir, 4 description, 5 default (true = up)
+        while IFS="$us" read -r _ n _ desc dflt _; do
+            [ -n "$n" ] || continue
             mark=" "
-            [ "$(get_field "$n" 5)" = true ] && mark="*"
+            [ "$dflt" = true ] && mark="*"
             # grouped by the name's prefix (svc-k3s -> svc); a name with no dash stays ungrouped
             group=
             case "$n" in *-*) group=${n%%-*} ;; esac
-            set -- "$@" "$n:$(get_state "$n")=$group$tab$mark$tab$n$tab$(get_description "$n")"
-        done
+            set -- "$@" "$n:$(get_state "$n")=$group$tab$mark$tab$n$tab$desc"
+        done <<ROWS
+$list
+ROWS
         rc=0
         out=$(zz-menu -t "$repo workspaces" -g 1 -c "skip,up,down" -z "~reset=Reset to defaults (* up, others skip)" \
             -f " (* = default) Number cycles skip -> up -> down; <enter> validates; q quits." \

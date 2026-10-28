@@ -44,15 +44,26 @@ help
 }
 us=$(printf '\037')
 tab=$(printf '\t')
+nl='
+'
 
 # --- functions
 
-# get_env_value <key>: value of <key> in the env file, as zz-persist reads it.
-get_env_value() {
-    local key="$1" # variable name (mandatory)
+# load_saved: read the saved value of every input in one zz-persist pass into saved_<NAME> (plain
+# shell variables, not exported); run again after a value is written or removed.
+load_saved() {
+    local var line
 
-    [ ! -f "$envfile" ] || zz-persist -r -f "$envfile" "$key"
+    for var in $input_names; do unset "saved_$var"; done
+    [ ! -f "$envfile" ] || [ -z "$input_names" ] || while IFS= read -r line; do
+        eval "saved_${line#export }"
+    done <<SAVED
+$(zz-persist -x -f "$envfile" "$input_names")
+SAVED
 }
+
+# get_env_value <key>: value of <key> in the env file, as load_saved read it.
+get_env_value() { eval "printf '%s' \"\${saved_$1:-}\""; }
 
 # get_pkg <dir>: the package.json of a workspace; a file given as <dir> is used as is.
 get_pkg() {
@@ -66,16 +77,24 @@ get_pkg() {
 get_inputs() {
     local owner="$1" # workspace name (mandatory)
     local dir="$2"   # workspace directory holding package.json (mandatory)
-    local pkg_file
+    local pkg_file out
 
     pkg_file=$(get_pkg "$dir")
-    [ "$(jq '(.config.input // []) | length' "$pkg_file")" -eq 0 ] ||
-        zz-log w "config.input in {U $pkg_file} is deprecated: use config.inputs"
-    jq -r --arg n "$owner" '
-      ((.config.input // [])[] | {var, question, default, secret, as}),
+    out=$(jq -r --arg n "$owner" '
+      (if ((.config.input // []) | length) > 0 then "#deprecated" else empty end),
+      ((((.config.input // [])[] | {var, question, default, secret, as}),
       ((.config.inputs // {}) | to_entries[] | {var: .key, question: (.value.question // .value.description), default: .value.default, secret: .value.secret, required: .value.required, as: .value.as}),
-      ((.config.ports // [])[] | {var: ((.name | ascii_upcase) + "_PORT"), question: (.name + " port (" + (.access // "public") + ")"), default: (.port | tostring)})
-      | [.var, (.question // ""), ((.required // false) | tostring), (.default // ""), $n, ((.secret // false) | tostring), (.as // .var)] | join("\u001f")' "$pkg_file"
+      ((.config.ports // [])[] | {var: ((.name | ascii_upcase) + "_PORT"), question: (.name + " port (" + (.access // "public") + ")"), default: (.port | tostring)}))
+      | [.var, (.question // ""), ((.required // false) | tostring), (.default // ""), $n, ((.secret // false) | tostring), (.as // .var)] | join("\u001f"))' "$pkg_file") || return
+    # the first line flags the deprecated config.input array (the same jq run reads it)
+    case "$out" in
+    "#deprecated"*)
+        zz-log w "config.input in {U $pkg_file} is deprecated: use config.inputs"
+        out=${out#"#deprecated"}
+        out=${out#"$nl"}
+        ;;
+    esac
+    printf '%s\n' "$out"
 }
 
 # get_outputs <package.json>: "VAR US as" of each "config.output" entry.
@@ -85,41 +104,24 @@ get_outputs() {
     jq -r '(.config.output // [])[] | [.var, (.as // .var)] | join("\u001f")' "$pkg_file"
 }
 
-# get_input_source <name> <default>: where the value comes from - env (the caller's environment;
-# env* when it overrides a different saved value), file (saved), default, or - when unset.
-get_input_source() {
-    local name="$1"    # variable name (mandatory)
-    local default="$2" # the input's default, may be empty (mandatory)
-    local saved
-
-    saved="$(get_env_value "$name")"
-    case "$env_names" in
-    *" $name "*) if [ -n "$saved" ] && [ "$saved" != "$(eval "printf '%s' \"\${$name:-}\"")" ]; then echo 'env*'; else echo env; fi ;;
-    *) if [ -n "$saved" ]; then echo file; elif [ -n "$default" ]; then echo default; else echo -; fi ;;
-    esac
-}
-
-# short_source <name> <default>: get_input_source on one character for the menu: f(ile), e(nv),
-# E (env overriding a saved value), d(efault), - (unset).
-short_source() {
-    case "$(get_input_source "$1" "$2")" in
-    'env*') echo E ;;
-    *) get_input_source "$1" "$2" | cut -c1 ;;
-    esac
-}
-
-# get_input_status <name> <required>: set / required / optional for a variable.
-get_input_status() {
-    local name="$1"     # variable name (mandatory)
-    local required="$2" # "true" when the input is required (mandatory)
-
-    if [ -n "$(eval "printf '%s' \"\${$name:-}\"")" ]; then
-        echo set
-    elif [ "$required" = true ]; then
-        echo required
+# classify <name> <required> <default>: set $in_status (set / required / optional), $in_source (where
+# the value comes from: env - the caller's environment, env* when it overrides a different saved
+# value -, file when saved, default, or - when unset) and $in_saved (the saved value). Sets
+# variables instead of printing, so the menu can ask for every input without a subshell.
+classify() {
+    local val
+    eval "val=\${$1:-} in_saved=\${saved_$1:-}"
+    if [ -n "$val" ]; then
+        in_status=set
+    elif [ "$2" = true ]; then
+        in_status=required
     else
-        echo optional
+        in_status=optional
     fi
+    case "$env_names" in
+    *" $1 "*) if [ -n "$in_saved" ] && [ "$in_saved" != "$val" ]; then in_source='env*'; else in_source=env; fi ;;
+    *) if [ -n "$in_saved" ]; then in_source=file; elif [ -n "$3" ]; then in_source=default; else in_source=-; fi ;;
+    esac
 }
 
 # persist_profile <name> <value> <is_secret>: export the value from the
@@ -178,6 +180,7 @@ ROWS
     zz-persist -q -f "$envfile" -u "$pick"
     [ -z "$profile" ] || zz-persist -q -p "$profile" -u "$pick"
     unset "$pick"
+    load_saved
     zz-log i "$pick deleted from {U $envfile}"
 }
 
@@ -201,6 +204,7 @@ ask_value() {
         zz-persist -q -f "$envfile" "$var" "$(zz-prompt "$question" "$default")"
     fi
     saved=1
+    load_saved
     value=$(get_env_value "$var")
     [ -z "$value" ] || {
         export "$var=$value"
@@ -228,12 +232,19 @@ print_export() {
 command -v jq >/dev/null 2>&1 || zz-install jq || exit 1
 all_inputs=
 pkgs=
+# A slow read says so, on the line the menu will take over.
+busy=
+if [ -t 2 ] && [ -z "$noprompt$status_flag$sequential" ]; then
+    busy=1
+    printf 'Reading the inputs of %d workspaces...' "$#" >&2
+fi
 for item in "$@"; do
     all_inputs="$all_inputs$(get_inputs "${item%%=*}" "${item#*=}")
 "
     pkgs="$pkgs${pkgs:+:}$(get_pkg "${item#*=}")"
 done
 all_inputs=$(printf '%s' "$all_inputs" | awk -F"$us" 'NF && !seen[$1]++')
+[ -z "$busy" ] || printf '\r\033[K' >&2
 
 # Names go through eval and sed below: only shell identifiers are accepted.
 bad=$(printf '%s\n' "$all_inputs" | awk -F"$us" 'NF && ($1 !~ /^[A-Za-z_][A-Za-z0-9_]*$/ || $7 !~ /^[A-Za-z_][A-Za-z0-9_]*$/) { print $1 }')
@@ -243,21 +254,25 @@ bad=$(printf '%s\n' "$all_inputs" | awk -F"$us" 'NF && ($1 !~ /^[A-Za-z_][A-Za-z
 }
 
 # The caller's environment first, then the env file (read in one go by
-# zz-persist), for what is unset.
-unset_names= env_names=" "
-while IFS="$us" read -r var rest; do
-    [ -n "$var" ] || continue
-    if [ -n "$(eval "printf '%s' \"\${$var:-}\"")" ]; then env_names="$env_names$var "; else unset_names="$unset_names $var"; fi
-done <<EXPLICIT
-$all_inputs
-EXPLICIT
-[ -z "$unset_names" ] || [ ! -f "$envfile" ] || eval "$(zz-persist -x -f "$envfile" "$unset_names")"
+# zz-persist, see load_saved), for what is unset.
+input_names=$(printf '%s\n' "$all_inputs" | awk -F"$us" 'NF { printf "%s ", $1 }')
+load_saved
+env_names=" "
+for var in $input_names; do
+    eval "val=\${$var:-} in_saved=\${saved_$var:-}"
+    if [ -n "$val" ]; then
+        env_names="$env_names$var "
+    elif [ -n "$in_saved" ]; then
+        export "$var=$in_saved"
+    fi
+done
 
 # --- status view
 if [ -n "$status_flag" ]; then
     while IFS="$us" read -r var desc req def owner secret as; do
         [ -n "$var" ] || continue
-        printf '  input %-24s [%s] %-7s %s\n' "$var" "$(get_input_status "$var" "$req")" "$(get_input_source "$var" "$def")" "$owner"
+        classify "$var" "$req" "$def"
+        printf '  input %-24s [%s] %-7s %s\n' "$var" "$in_status" "$in_source" "$owner"
     done <<STATUS
 $all_inputs
 STATUS
@@ -271,11 +286,12 @@ if [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ] && zz-interactive; then
         set --
         unset_count=0 saved_any=
         while IFS="$us" read -r var desc req def owner secret as; do
-            st=$(get_input_status "$var" "$req")
-            [ "$st" = set ] || unset_count=$((unset_count + 1))
+            classify "$var" "$req" "$def"
+            [ "$in_status" = set ] || unset_count=$((unset_count + 1))
             # a value saved in the env file can be reset (item 0)
-            [ -z "$(get_env_value "$var")" ] || saved_any=1
-            set -- "$@" "$var=$owner$tab[$(printf '%.3s' "$st")]$tab$(short_source "$var" "$def")$tab$var${desc:+ - $desc}"
+            [ -z "$in_saved" ] || saved_any=1
+            case "$in_source" in 'env*') src=E ;; *) src=${in_source%"${in_source#?}"} ;; esac
+            set -- "$@" "$var=$owner$tab[$(printf '%.3s' "$in_status")]$tab$src$tab$var${desc:+ - $desc}"
         done <<ROWS
 $all_inputs
 ROWS
@@ -297,9 +313,9 @@ ROWS
             continue
         fi
         row=$(printf '%s\n' "$all_inputs" | awk -F"$us" -v v="$choice" '$1 == v { print; exit }')
-        desc=$(printf '%s' "$row" | cut -d"$us" -f2)
-        def=$(printf '%s' "$row" | cut -d"$us" -f4)
-        secret=$(printf '%s' "$row" | cut -d"$us" -f6)
+        IFS="$us" read -r _ desc _ def _ secret _ <<ROW
+$row
+ROW
         ask_value "$choice" "${choice}${desc:+ ($desc)}" "$def" "$secret"
     done
 fi
@@ -332,7 +348,8 @@ missing=0
 while IFS="$us" read -r var desc req def owner secret as; do
     [ -n "$var" ] || continue
     [ -z "$noprompt" ] || break
-    if [ "$(get_input_status "$var" "$req")" = required ]; then
+    classify "$var" "$req" "$def"
+    if [ "$in_status" = required ]; then
         zz-log e "$var is required by '$owner' but is empty: set it, or skip the workspace with -s $owner."
         missing=1
     fi

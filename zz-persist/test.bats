@@ -353,3 +353,10 @@ teardown() {
     [ "$(cat "$tmp")" = "C=3" ]
     rm -f "$tmp"
 }
+
+@test "zz-persist -x prints one export line per stored key: last line wins, quotes survive, unset keys are skipped" {
+    printf "A=1\nB='it'\\\\''s'\nC=\nA=2\n" >"$BATS_TEST_TMPDIR/env"
+    run zz-persist -x -f "$BATS_TEST_TMPDIR/env" "A B C D"
+    [ "$status" -eq 0 ]
+    [ "$output" = "$(printf "export A='2'\nexport B='it'\\\\''s'")" ]
+}
