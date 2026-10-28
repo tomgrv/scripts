@@ -339,8 +339,8 @@ cd "$dir"
 # (config.requires: root, os=<id>; see zz-require); summary is
 # true|false (config.summary).
 us=$(printf '\037')
-# A slow read says so (zz-menu -p), on the line the menu will take over.
-[ ! -t 2 ] || zz-menu -p "Reading the workspaces..."
+# A slow read says so, on the line the menu will take over.
+[ ! -t 2 ] || printf 'Reading the workspaces...' >&2
 list=$(ws-list -b -e zz-setup -o . | while IFS= read -r w; do
     jq -r --arg d "${w#./}" '
       [ (.config.order // 1000 | tostring),
@@ -355,7 +355,7 @@ list=$(ws-list -b -e zz-setup -o . | while IFS= read -r w; do
         ((.config.requires // {}) | to_entries | map(if .value == true then .key else "\(.key)=\(.value)" end) | join(",")) ]
       | join("\u001f")' "$w/package.json"
 done)
-[ ! -t 2 ] || zz-menu -P
+[ ! -t 2 ] || printf '\r\033[K' >&2
 [ -n "$list" ] || run_entry "$@"
 names=$(printf '%s\n' "$list" | cut -d"$us" -f2)
 

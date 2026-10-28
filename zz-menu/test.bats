@@ -203,21 +203,3 @@ teardown() {
     [ "$status" -eq 0 ]
     [ "$output" = "reset" ]
 }
-
-@test "zz-menu -p shows a progress line and -P clears it, on a terminal only" {
-    command -v script >/dev/null || skip "script(1) not installed"
-    run bash -c 'script -qec "zz-menu -p Working..." /dev/null | od -An -c | tr -d " \n"'
-    [[ "$output" == *'\r033[K'*'W'*'o'*'r'*'k'*'i'*'n'*'g'* ]]
-    run bash -c 'script -qec "zz-menu -P" /dev/null | od -An -c | tr -d " \n"'
-    [[ "$output" == *'\r033[K'* ]]
-    # not a terminal: nothing is written
-    run bash -c 'zz-menu -p Working... 2>&1; zz-menu -P 2>&1'
-    [ "$status" -eq 0 ]
-    [ "$output" = "" ]
-}
-
-@test "zz-menu clears a waiting progress line before it draws, on a terminal" {
-    command -v script >/dev/null || skip "script(1) not installed"
-    run bash -c 'printf q | script -qec "zz-menu a=Alpha" /dev/null | od -An -c | tr -d " \n"'
-    [[ "$output" == *'\r033[K'* ]]
-}
