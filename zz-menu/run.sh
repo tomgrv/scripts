@@ -7,7 +7,10 @@
 # the order their groups first appear, a header line names each group, and
 # that cell is not shown again on the rows.
 #
-# -b "<key>,<key>" shows those items highlighted (the colour a changed cycle state gets).
+# Highlighting is one feature: a highlighted row is shown whole in the highlight colour (yellow;
+# ZZ_MENU_HIGHLIGHT=<zz-colors name> changes it; with NO_COLOR a + takes the mark slot instead).
+# A row is highlighted when it is listed by -b "<key>,<key>" (the caller says what that means:
+# set, saved...), or, in cycle mode, when its state moved off where it started.
 #
 # -z "<key>=<label>" adds an item numbered 0, listed first, for a special case that is
 # not one of the items: choosing 0 prints its key alone and exits 0 (in cycle mode too,
@@ -92,6 +95,13 @@ if [ -n "$group" ]; then
         END { for (i = 1; i <= n; i++) for (r = 1; r <= NR; r++) if (grp[r] == order[i]) print line[r] }')$nl
 fi
 
+# The highlight colour: ZZ_MENU_HIGHLIGHT names a zz-colors variable (default BYellow); with no
+# colour at all (NO_COLOR) highlighted rows get a + in the mark slot instead.
+case "${ZZ_MENU_HIGHLIGHT:-BYellow}" in
+*[!A-Za-z]*) highlight_style=$BYellow ;;
+*) eval "highlight_style=\$${ZZ_MENU_HIGHLIGHT:-BYellow}" ;;
+esac
+
 # Redraw in place only where the cursor can move back, and never over scripted answers.
 redraw=
 [ -t 2 ] && [ -z "${ZZ_PROMPT_ANSWERS:-}" ] && redraw=1
@@ -101,7 +111,7 @@ redraw=
 # render: the numbered rows, aligned by awk (labels are read from stdin and printed
 # verbatim; colours and options travel by the environment, not as awk escapes).
 render() {
-    printf '%s' "$rows" | NUM=$BBlue HI=$BYellow OFF=$End GRP=$BPurple DEF=$default CYC=$cycle GROUP=$group BOLD=",$bold," awk -F'\t' '
+    printf '%s' "$rows" | NUM=$BBlue HI=$highlight_style OFF=$End GRP=$BPurple DEF=$default CYC=$cycle GROUP=$group BOLD=",$bold," awk -F'\t' '
         BEGIN { m = split(ENVIRON["CYC"], s, ","); for (i = 1; i <= m; i++) if (length(s[i]) > sw) sw = length(s[i])
                 gi = ENVIRON["GROUP"] ? ENVIRON["GROUP"] + 3 : 0 }
         { key[NR] = $1; st[NR] = $2; ini[NR] = $3
@@ -115,13 +125,14 @@ render() {
                     prev = grp[r]
                     if (prev != "") print " " ENVIRON["GRP"] prev ENVIRON["OFF"]; else if (r > 1) print ""
                 }
-                line = sprintf(" %s%*d%s)%s", ENVIRON["NUM"], length(NR), r, ENVIRON["OFF"], key[r] == ENVIRON["DEF"] ? "*" : " ")
-                if (ENVIRON["CYC"] != "")
-                    line = line (st[r] != ini[r] ? sprintf("%s[%-*s]%s ", ENVIRON["HI"], sw, st[r], ENVIRON["OFF"]) : sprintf("[%-*s] ", sw, st[r]))
-                cellsout = ""
+                # highlighted: listed by -b, or a cycle state that moved off where it started
+                hl = index(ENVIRON["BOLD"], "," key[r] ",") || (ENVIRON["CYC"] != "" && st[r] != ini[r])
+                # the mark slot: * default; + highlighted when there is no colour to show it
+                mark = key[r] == ENVIRON["DEF"] ? "*" : (hl && ENVIRON["HI"] == "" ? "+" : " ")
+                body = ENVIRON["CYC"] != "" ? sprintf("[%-*s] ", sw, st[r]) : ""
                 for (i = 4; i <= last[r]; i++)
-                    if (i != hid[r]) cellsout = cellsout (i < last[r] ? sprintf("%-*s ", w[i], c[r, i]) : c[r, i])
-                print line (index(ENVIRON["BOLD"], "," key[r] ",") ? ENVIRON["HI"] cellsout ENVIRON["OFF"] : cellsout)
+                    if (i != hid[r]) body = body (i < last[r] ? sprintf("%-*s ", w[i], c[r, i]) : c[r, i])
+                print sprintf(" %s%*d%s)%s", ENVIRON["NUM"], length(NR), r, ENVIRON["OFF"], mark) (hl ? ENVIRON["HI"] body ENVIRON["OFF"] : body)
             }
         }'
 }

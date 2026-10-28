@@ -25,7 +25,7 @@ not one of the choices is just one more item, e.g. `"none=None"` last.
 | `-t <title>`     | title line shown above the items                                                  |
 | `-d <key>`       | key chosen when the user just presses Enter                                       |
 | `-f <text>`      | hint line replacing the default one (`\n` starts a new line)                      |
-| `-b <keys>`      | comma-separated item keys shown highlighted (the colour a changed cycle state gets)                                  |
+| `-b <keys>`      | comma-separated item keys shown highlighted, see [Highlighting](#highlighting)                                       |
 | `-z <key=label>` | an item numbered 0, listed first; choosing 0 prints its key alone and exits 0, in cycle mode too (the caller tells it from the `key=state` lines and usually redraws) |
 | `-g <n>`         | group by the n-th TAB-separated cell (as `cut -f`): items are regrouped in order of first appearance under a header per group, that cell is not repeated on the rows; an item with a single cell stays outside any group |
 | `-c <states>`    | cycle mode: comma-separated states, see below                                     |
@@ -37,6 +37,15 @@ not one of the choices is just one more item, e.g. `"none=None"` last.
 | `2`         | bare Enter with no default — the caller's "proceed" cue |
 
 `q` leaves the menu without choosing (status 1); what that means is the caller's: `zz-setup` and `zz-vars` treat it as "cancel everything" (`zz-vars` exits 3), the `vps-access` menus keep what is set. Tests drive any menu or prompt with `ZZ_PROMPT_ANSWERS=<file>` (one answer per line, see `zz-prompt`).
+
+### Highlighting
+
+One feature, one look: a highlighted row is shown whole (everything after its number) in the highlight colour. A row is highlighted when
+
+- the caller lists it with `-b "<key>,<key>"`, and says what that means: `zz-vars` highlights the inputs that are set; or
+- in cycle mode, its state moved off where it started (`zz-setup`'s workspaces).
+
+`ZZ_MENU_HIGHLIGHT=<name>` picks the colour by its `zz-colors` name (default `BYellow`; an invalid name falls back to it). Without colour (`NO_COLOR`) a `+` takes the row's mark slot instead, so nothing relies on colour alone; `*` (the default item) wins when both apply.
 
 ### Single choice
 

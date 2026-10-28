@@ -203,3 +203,24 @@ teardown() {
     [[ "$output" == *$'\033[1;33mBeta\033[0m'* ]]
     [[ "$output" != *$'\033[1;33mAlpha'* ]]
 }
+
+@test "zz-menu highlights a whole row the same way for -b and for a changed cycle state" {
+    run bash -c 'echo q | zz-menu -b b a=Alpha b=Beta 2>&1 1>/dev/null'
+    [[ "$output" == *$'\033[1;33mBeta\033[0m'* ]]
+    run bash -c 'printf "1\nq\n" | zz-menu -c "skip,up" a=Alpha b=Beta 2>&1 1>/dev/null'
+    [[ "$output" == *$'\033[1;33m[up  ] Alpha\033[0m'* ]]
+    [[ "$output" != *$'\033[1;33m[skip] Beta'* ]]
+}
+
+@test "zz-menu marks highlighted rows with + when there is no colour (NO_COLOR)" {
+    run bash -c 'echo q | NO_COLOR=1 zz-menu -b b a=Alpha b=Beta 2>&1 1>/dev/null'
+    [[ "$output" == *" 1) Alpha"* ]]
+    [[ "$output" == *" 2)+Beta"* ]]
+}
+
+@test "zz-menu ZZ_MENU_HIGHLIGHT names the highlight colour; an invalid name falls back to yellow" {
+    run bash -c 'echo q | ZZ_MENU_HIGHLIGHT=BCyan zz-menu -b a a=Alpha 2>&1 1>/dev/null'
+    [[ "$output" == *$'\033[1;36mAlpha'* ]]
+    run bash -c 'echo q | ZZ_MENU_HIGHLIGHT="x;y" zz-menu -b a a=Alpha 2>&1 1>/dev/null'
+    [[ "$output" == *$'\033[1;33mAlpha'* ]]
+}
