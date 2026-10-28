@@ -286,7 +286,11 @@ ROWS
             ${saved_any:+-z "~reset=Reset a saved value..."} "$@") || rc=$?
         case "$rc" in
         0) ;;
-        *) break ;;
+        2) break ;; # Enter validates
+        *)
+            zz-log n "Aborted, nothing resolved"
+            exit 3
+            ;;
         esac
         if [ "$choice" = "~reset" ]; then
             delete_saved

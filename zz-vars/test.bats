@@ -129,10 +129,14 @@ menu_run() {
     grep -q '^A_TOKEN=s3$' "$WORK/env"
 }
 
-@test "zz-vars menu: q leaves the menu and proceeds, it does not abort" {
+@test "zz-vars menu: q quits with status 3 and resolves nothing; Enter validates" {
     printf 'A_TOKEN=s3\n' >"$WORK/env"
     chmod 600 "$WORK/env"
     printf 'q\n' >"$WORK/answers"
+    run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-vars -m -f "$WORK/env" a=a
+    [ "$status" -eq 3 ]
+    [[ "$output" != *"export "* ]]
+    printf '\n' >"$WORK/answers"
     run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-vars -m -f "$WORK/env" a=a
     [ "$status" -eq 0 ]
     [[ "$output" == *"A_TOKEN"* ]]

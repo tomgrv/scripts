@@ -36,7 +36,7 @@ not one of the choices is just one more item, e.g. `"none=None"` last.
 | `1`         | the user quit (`q`) or input ended                      |
 | `2`         | bare Enter with no default — the caller's "proceed" cue |
 
-`q` leaves the menu without choosing and never aborts the caller's run: a sub-menu goes back or keeps what is set (`zz-vars`, `vps-access`); only the top-level `zz-setup` workspace menu treats it as "cancel everything". Tests drive any menu or prompt with `ZZ_PROMPT_ANSWERS=<file>` (one answer per line, see `zz-prompt`).
+`q` leaves the menu without choosing (status 1); what that means is the caller's: `zz-setup` and `zz-vars` treat it as "cancel everything" (`zz-vars` exits 3), the `vps-access` menus keep what is set. Tests drive any menu or prompt with `ZZ_PROMPT_ANSWERS=<file>` (one answer per line, see `zz-prompt`).
 
 ### Single choice
 
