@@ -172,3 +172,21 @@ teardown() {
     run bash -c 'printf 2 | script -qec "ZZ_PROMPT_TTY=1 zz-menu a=Alpha b=Beta 2>/dev/null" /dev/null | tr -d "\r" | tail -n1'
     [[ "$output" == *b ]]
 }
+
+@test "zz-menu -g regroups items by the given cell, under one header per group" {
+    run bash -c 't=$(printf "\t"); printf "3\n" | NO_COLOR=1 zz-menu -g 1 "a1=g1${t}x" "b1=g2${t}y" "a2=g1${t}z" 2>&1'
+    # g1 first (a1, a2), then g2 (b1): item 3 is b1
+    [[ "$output" == *$' g1\n 1) x\n 2) z\n g2\n 3) y\n'* ]]
+    [[ "$output" == *b1 ]]
+}
+
+@test "zz-menu -g leaves a one-cell item outside any group" {
+    run bash -c 't=$(printf "\t"); echo q | NO_COLOR=1 zz-menu -g 1 "a=g1${t}x" "d=Delete" 2>&1'
+    [[ "$output" == *$' 1) x\n\n 2) Delete'* ]]
+}
+
+@test "zz-menu -g rejects a non-numeric cell number" {
+    run bash -c 'echo q | zz-menu -g x a=Alpha 2>&1'
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"-g takes a cell number"* ]]
+}

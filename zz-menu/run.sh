@@ -2,7 +2,10 @@
 # zz-menu [-t title] [-d default] [-f footer] [-c states] <item>... — interactive
 # numbered menu. Each <item> is "<key>=<label>" (or just "<label>", used as its
 # own key). The menu is drawn on stderr; results go to stdout. A label may hold
-# TAB-separated cells: the menu aligns them in columns.
+# TAB-separated cells: the menu aligns them in columns. With -g <n> the n-th
+# cell (counted like cut -f) is the group of the item: items are regrouped in
+# the order their groups first appear, a header line names each group, and
+# that cell is not shown again on the rows.
 #
 # Keys, the same everywhere: a number acts on its item, Enter validates, q quits.
 # On a terminal a menu of up to 9 items takes the number as one keypress (no
@@ -36,6 +39,7 @@ eval "$(
         d default default  Key chosen when the user just presses Enter
         f footer  footer   Hint line replacing the default one under the items
         c cycle   cycle    Comma-separated states; choosing an item advances its state
+        g group   group    Number of the TAB-separated label cell naming each item's group (as cut -f)
         # items   items    Items: <key>=<label> or <label>
 help
 )"
@@ -46,6 +50,12 @@ if [ "$count" -lt 1 ]; then
     zz-log e "zz-menu: no menu items given."
     exit 1
 fi
+case "$group" in
+*[!0-9]*)
+    zz-log e "zz-menu: -g takes a cell number (got '$group')."
+    exit 1
+    ;;
+esac
 tab=$(printf '\t')
 nl='
 '
@@ -67,6 +77,14 @@ for item in "$@"; do
     rows="$rows$left$tab$state$tab$state$tab$label$nl"
 done
 
+# -g: gather the items of a group under one header (groups in order of first appearance,
+# items keep their order inside a group). Cells 1-3 of a row are key, state, initial state.
+if [ -n "$group" ]; then
+    rows=$(printf '%s' "$rows" | awk -F'\t' -v g=$((group + 3)) '
+        { k = (NF > g) ? $g : ""; if (!(k in seen)) { seen[k] = 1; order[++n] = k } line[NR] = $0; grp[NR] = k }
+        END { for (i = 1; i <= n; i++) for (r = 1; r <= NR; r++) if (grp[r] == order[i]) print line[r] }')$nl
+fi
+
 # Redraw in place only where the cursor can move back, and never over scripted answers.
 redraw=
 [ -t 2 ] && [ -z "${ZZ_PROMPT_ANSWERS:-}" ] && redraw=1
@@ -78,17 +96,25 @@ redraw=
 # render: the numbered rows, aligned by awk (labels are read from stdin and printed
 # verbatim; colours and options travel by the environment, not as awk escapes).
 render() {
-    printf '%s' "$rows" | NUM=$BBlue HI=$BYellow OFF=$End DEF=$default CYC=$cycle awk -F'\t' '
-        BEGIN { m = split(ENVIRON["CYC"], s, ","); for (i = 1; i <= m; i++) if (length(s[i]) > sw) sw = length(s[i]) }
-        { key[NR] = $1; st[NR] = $2; ini[NR] = $3; cells[NR] = NF
-          for (i = 4; i <= NF; i++) { c[NR, i] = $i; if (i < NF && length($i) > w[i]) w[i] = length($i) } }
+    printf '%s' "$rows" | NUM=$BBlue HI=$BYellow OFF=$End GRP=$BPurple DEF=$default CYC=$cycle GROUP=$group awk -F'\t' '
+        BEGIN { m = split(ENVIRON["CYC"], s, ","); for (i = 1; i <= m; i++) if (length(s[i]) > sw) sw = length(s[i])
+                gi = ENVIRON["GROUP"] ? ENVIRON["GROUP"] + 3 : 0 }
+        { key[NR] = $1; st[NR] = $2; ini[NR] = $3
+          # a row with no cell past the group one (e.g. "Delete...") belongs to no group
+          hid[NR] = (NF > gi) ? gi : 0; grp[NR] = hid[NR] ? $gi : ""; last[NR] = NF
+          for (i = 4; i <= NF; i++) { c[NR, i] = $i; if (i != hid[NR] && i < NF && length($i) > w[i]) w[i] = length($i) } }
         END {
+            prev = "\001"
             for (r = 1; r <= NR; r++) {
+                if (gi && grp[r] != prev) {
+                    prev = grp[r]
+                    if (prev != "") print " " ENVIRON["GRP"] prev ENVIRON["OFF"]; else if (r > 1) print ""
+                }
                 line = sprintf(" %s%*d%s)%s", ENVIRON["NUM"], length(NR), r, ENVIRON["OFF"], key[r] == ENVIRON["DEF"] ? "*" : " ")
                 if (ENVIRON["CYC"] != "")
                     line = line (st[r] != ini[r] ? sprintf("%s[%-*s]%s ", ENVIRON["HI"], sw, st[r], ENVIRON["OFF"]) : sprintf("[%-*s] ", sw, st[r]))
-                for (i = 4; i <= cells[r]; i++)
-                    line = line (i < cells[r] ? sprintf("%-*s ", w[i], c[r, i]) : c[r, i])
+                for (i = 4; i <= last[r]; i++)
+                    if (i != hid[r]) line = line (i < last[r] ? sprintf("%-*s ", w[i], c[r, i]) : c[r, i])
                 print line
             }
         }'

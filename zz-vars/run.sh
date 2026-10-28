@@ -153,7 +153,7 @@ delete_saved() {
     set --
     while IFS="$us" read -r var desc req def owner secret as; do
         [ -n "$var" ] || continue
-        [ -z "$(get_env_value "$var")" ] || set -- "$@" "$var=$var$tab$owner$([ "$secret" != true ] || printf ' (secret)')"
+        [ -z "$(get_env_value "$var")" ] || set -- "$@" "$var=$owner$tab$var$tab$([ "$secret" != true ] || printf '(secret)')"
     done <<ROWS
 $all_inputs
 ROWS
@@ -161,7 +161,7 @@ ROWS
         zz-log w "No saved value to delete."
         return 0
     }
-    pick=$(zz-menu -t "Delete a saved value" -f " Number deletes that value; q quits." "$@") || return 0
+    pick=$(zz-menu -t "Delete a saved value" -g 1 -f " Number deletes that value; q quits." "$@") || return 0
     is_secret=$(printf '%s\n' "$all_inputs" | awk -F"$us" -v v="$pick" '$1 == v { print $6; exit }')
     if [ "$is_secret" = true ] && [ "$(zz-prompt -c yN "Delete the secret ${pick}?")" != y ]; then
         return 0
@@ -270,13 +270,13 @@ if [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ] && zz-interactive; then
                 mark="+"
                 saved_any=1
             fi
-            set -- "$@" "$var=$mark$tab$var$tab[$st]$tab$(get_input_source "$var" "$def")$tab$owner${desc:+ - $desc}"
+            set -- "$@" "$var=$owner$tab$mark$tab$var$tab[$st]$tab$(get_input_source "$var" "$def")$tab$desc"
         done <<ROWS
 $all_inputs
 ROWS
         [ "$unset_count" -gt 0 ] || [ -n "$manage" ] || break
         rc=0
-        choice=$(zz-menu -t "Inputs" \
+        choice=$(zz-menu -t "Inputs" -g 1 \
             -f " Number sets that input (+ = saved; env* = the environment overrides it); <enter> validates; q quits." \
             "$@" ${saved_any:+"~delete=Delete a saved value..."}) || rc=$?
         case "$rc" in

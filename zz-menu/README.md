@@ -26,6 +26,7 @@ not one of the choices is just one more item, e.g. `"none=None"` last.
 | `-t <title>`     | title line shown above the items                                                  |
 | `-d <key>`       | key chosen when the user just presses Enter                                       |
 | `-f <text>`      | hint line replacing the default one (`\n` starts a new line)                      |
+| `-g <n>`         | group by the n-th TAB-separated cell (as `cut -f`): items are regrouped in order of first appearance under a header per group, that cell is not repeated on the rows; an item with a single cell stays outside any group |
 | `-c <states>`    | cycle mode: comma-separated states, see below                                     |
 
 | Exit status | Meaning                                                 |
