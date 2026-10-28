@@ -427,21 +427,27 @@ only=$(printf '%s' "$only_list" | tr ',' ' ')
 
 if [ "$nflags" -eq 0 ] && zz-interactive; then
     load_saved_states
-    items=
-    set --
     tab=$(printf '\t')
-    for n in $names; do
-        mark=" "
-        [ "$(get_field "$n" 5)" = true ] && mark="*"
-        # grouped by the name's prefix (svc-k3s -> svc); a name with no dash stays ungrouped
-        group=
-        case "$n" in *-*) group=${n%%-*} ;; esac
-        set -- "$@" "$n:$(get_state "$n")=$group$tab$mark$tab$n$tab$(get_description "$n")"
+    while :; do
+        set --
+        for n in $names; do
+            mark=" "
+            [ "$(get_field "$n" 5)" = true ] && mark="*"
+            # grouped by the name's prefix (svc-k3s -> svc); a name with no dash stays ungrouped
+            group=
+            case "$n" in *-*) group=${n%%-*} ;; esac
+            set -- "$@" "$n:$(get_state "$n")=$group$tab$mark$tab$n$tab$(get_description "$n")"
+        done
+        rc=0
+        out=$(zz-menu -t "$repo workspaces" -g 1 -c "skip,up,down" -z "~reset=Reset to defaults (* up, others skip)" \
+            -f " (* = default) Number cycles skip -> up -> down; <enter> validates; q quits." \
+            "$@") || rc=$?
+        # 0: every workspace back to its default (up when marked *, else skip), then ask again
+        [ "$rc" -eq 0 ] && [ "$out" = "~reset" ] || break
+        for n in $names; do
+            if [ "$(get_field "$n" 5)" = true ]; then set_state "$n" up; else set_state "$n" skip; fi
+        done
     done
-    rc=0
-    out=$(zz-menu -t "$repo workspaces" -g 1 -c "skip,up,down" \
-        -f " (* = default) Number cycles skip -> up -> down; <enter> validates; q quits." \
-        "$@") || rc=$?
     if [ "$rc" -ne 0 ]; then
         zz-log n "Aborted, nothing changed"
         exit 0

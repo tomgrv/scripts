@@ -149,12 +149,6 @@ teardown() {
     [[ "$output" == *'dir\tx\c done'* ]]
 }
 
-@test "zz-menu: 0 is not an item" {
-    run bash -c 'printf "0\n1\n" | zz-menu a=Alpha b=Beta'
-    [[ "$output" == *"No such item: 0"* ]]
-    [[ "$output" == *"a" ]]
-}
-
 @test "zz-menu aligns TAB-separated cells into columns" {
     run bash -c 'echo q | NO_COLOR=1 zz-menu "a=x'$'\t'$'one" "b=longer'$'\t'$'two" 2>&1'
     [[ "$output" == *"1) x      one"* ]]
@@ -189,4 +183,23 @@ teardown() {
     run bash -c 'echo q | zz-menu -g x a=Alpha 2>&1'
     [ "$status" -eq 1 ]
     [[ "$output" == *"-g takes a cell number"* ]]
+}
+
+@test "zz-menu -z lists an item 0 first and prints its key alone when 0 is chosen" {
+    run bash -c 'echo 0 | NO_COLOR=1 zz-menu -z "del=Delete one" -t T a=Alpha b=Beta 2>/tmp/zzmenu.err; cat /tmp/zzmenu.err'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *$'==== T ====\n 0) Delete one\n 1) Alpha'* ]]
+    [[ "$output" == del* ]]
+}
+
+@test "zz-menu: 0 is not an item without -z" {
+    run bash -c 'printf "0\n1\n" | zz-menu a=Alpha b=Beta'
+    [[ "$output" == *"No such item: 0"* ]]
+    [[ "$output" == *"a" ]]
+}
+
+@test "zz-menu -z in cycle mode prints the key alone and no key=state line" {
+    run bash -c 'printf "1\n0\n" | zz-menu -c "skip,up" -z "reset=Reset" a=Alpha 2>/dev/null'
+    [ "$status" -eq 0 ]
+    [ "$output" = "reset" ]
 }

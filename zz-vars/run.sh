@@ -15,7 +15,7 @@
 #   -m  manage: show the menu even when every input is set
 #   -e  also persist the values already set in the environment
 #   (default) on a terminal, offer to set the unset ones (zz-menu, then
-#   zz-persist, secrets masked; a "Delete a saved value" entry forgets one, a
+#   zz-persist, secrets masked; item 0 resets (forgets) one, a
 #   secret after a confirmation); fail (1) when a required one is still empty
 #   (3 when the user aborted).
 # <dir> (or a package.json file) is relative to the current directory. The env file is plain KEY=VALUE
@@ -167,10 +167,10 @@ delete_saved() {
 $all_inputs
 ROWS
     [ "$#" -gt 0 ] || {
-        zz-log w "No saved value to delete."
+        zz-log w "No saved value to reset."
         return 0
     }
-    pick=$(zz-menu -t "Delete a saved value" -g 1 -f " Number deletes that value; q quits." "$@") || return 0
+    pick=$(zz-menu -t "Reset a saved value" -g 1 -f " Number resets that value (it falls back to its default); q quits." "$@") || return 0
     is_secret=$(printf '%s\n' "$all_inputs" | awk -F"$us" -v v="$pick" '$1 == v { print $6; exit }')
     if [ "$is_secret" = true ] && [ "$(zz-prompt -c yN "Delete the secret ${pick}?")" != y ]; then
         return 0
@@ -273,7 +273,7 @@ if [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ] && zz-interactive; then
         while IFS="$us" read -r var desc req def owner secret as; do
             st=$(get_input_status "$var" "$req")
             [ "$st" = set ] || unset_count=$((unset_count + 1))
-            # a value saved in the env file can be deleted (last item)
+            # a value saved in the env file can be reset (item 0)
             [ -z "$(get_env_value "$var")" ] || saved_any=1
             set -- "$@" "$var=$owner$tab[$(printf '%.3s' "$st")]$tab$(short_source "$var" "$def")$tab$var${desc:+ - $desc}"
         done <<ROWS
@@ -282,13 +282,13 @@ ROWS
         [ "$unset_count" -gt 0 ] || [ -n "$manage" ] || break
         rc=0
         choice=$(zz-menu -t "Inputs" -g 1 \
-            -f " Number sets that input (f file, e env, E env over file, d default, - unset); <enter> validates; q quits." \
-            "$@" ${saved_any:+"~delete=Delete a saved value..."}) || rc=$?
+            -f " 0 resets a saved value; number sets that input (f file, e env, E env over file, d default, - unset); <enter> validates; q quits." \
+            ${saved_any:+-z "~reset=Reset a saved value..."} "$@") || rc=$?
         case "$rc" in
         0) ;;
         *) break ;;
         esac
-        if [ "$choice" = "~delete" ]; then
+        if [ "$choice" = "~reset" ]; then
             delete_saved
             continue
         fi

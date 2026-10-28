@@ -22,7 +22,7 @@ eval "$(zz-vars -f .env -P myprofile a=packages/a b=packages/b)"
   environment, env file, default) and prints the `export` lines to `eval`.
 - `-n` never asks (defaults, required not enforced); `-a` asks each unset input on stdin without the menu; `-e` also persists values already in the environment.
 - `-m` shows the menu even when every input is set (to change or delete a saved value).
-- The menu lists each input as `[set|req|opt] x name - description` under the step that declares it (the menu's `-g`), `x` being the source: `f` file, `e` env, `E` env overriding a different saved value, `d` default, `-` unset; it ends with an item that deletes a saved value. It only runs when `zz-interactive` says so (`ZZ_INTERACTIVE=0` keeps it off).
+- The menu lists each input as `[set|req|opt] x name - description` under the step that declares it (the menu's `-g`), `x` being the source: `f` file, `e` env, `E` env overriding a different saved value, `d` default, `-` unset; item `0` resets a saved value (it falls back to its default). It only runs when `zz-interactive` says so (`ZZ_INTERACTIVE=0` keeps it off).
 - Exits 1 when a required input is still empty (or an input name is not a shell identifier). `q` in the menu leaves it and proceeds with what is set (the menu never aborts the run); Enter validates.
 
 ## Tests
@@ -33,4 +33,4 @@ bats test.bats
 
 ## Deleting a saved value
 
-On a terminal the inputs menu shows a saved value with source `f` and ends with **Delete a saved value...**: it lists the inputs stored in the env file (and the profile snippet), and the one you pick is forgotten, so its default applies again. A secret is only deleted after a `y` to the confirmation. A value that comes from the caller's environment is not touched. The menu only appears while an input is unset; `-m` shows it anyway, to change or delete a value when everything is set.
+On a terminal the inputs menu shows a saved value with source `f` and starts with item **0, Reset a saved value...**: it lists the inputs stored in the env file (and the profile snippet), and the one you pick is forgotten, so its default applies again. A secret is only deleted after a `y` to the confirmation. A value that comes from the caller's environment is not touched. The menu only appears while an input is unset; `-m` shows it anyway, to change or delete a value when everything is set.

@@ -7,6 +7,10 @@
 # the order their groups first appear, a header line names each group, and
 # that cell is not shown again on the rows.
 #
+# -z "<key>=<label>" adds an item numbered 0, listed first, for a special case that is
+# not one of the items: choosing 0 prints its key alone and exits 0 (in cycle mode too,
+# where the caller tells it from the "<key>=<state>" lines and usually redraws).
+#
 # Keys, the same everywhere: a number acts on its item, Enter validates, q quits.
 # On a terminal a menu of up to 9 items takes the number as one keypress (no
 # Enter), and cycling redraws the menu in place.
@@ -39,6 +43,7 @@ eval "$(
         d default default  Key chosen when the user just presses Enter
         f footer  footer   Hint line replacing the default one under the items
         c cycle   cycle    Comma-separated states; choosing an item advances its state
+        z zero    zero     Item "<key>=<label>" numbered 0, listed first: choosing 0 prints its key
         g group   group    Number of the TAB-separated label cell naming each item's group (as cut -f)
         # items   items    Items: <key>=<label> or <label>
 help
@@ -135,6 +140,7 @@ draw() {
     fi
     frame=$(
         [ -z "$title" ] || printf '%b%s%b\n' "${BBlue}==== " "$title" " ====${End}"
+        [ -z "$zero" ] || printf ' %b%*d%b) %s\n' "$BBlue" "${#count}" 0 "$End" "${zero#*=}"
         render
         printf '%b\n' "$hint"
     )
@@ -188,6 +194,10 @@ while :; do
     # Drop leading zeros ("007" -> 7); $(( )) would read them as octal.
     choice=$(printf '%s' "$choice" | sed 's/^0*//')
     choice=${choice:-0}
+    if [ "$choice" -eq 0 ] && [ -n "$zero" ]; then
+        printf '%s\n' "${zero%%=*}"
+        exit 0
+    fi
     if [ "$choice" -lt 1 ] || [ "$choice" -gt "$count" ]; then
         zz-log w "No such item: $choice (enter a number between 1 and ${count})."
         erase=0

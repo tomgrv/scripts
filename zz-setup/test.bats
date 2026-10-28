@@ -397,6 +397,17 @@ make_conflict_remote() {
     [[ "$output" == *"a:down"* ]]
 }
 
+@test "zz-setup menu: 0 resets every workspace to its default before validating" {
+    make_workspace_remote
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    echo 'ZZ_STATE_a=down' >"$ZZ_SETUP_ENV_FILE"
+    printf '0\n\n' >"$WORK/answers"
+    run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws
+    [[ "$output" != *"Bring a down"* ]]
+    [[ "$output" != *"a:down"* ]]
+    ! grep -qx 'ZZ_STATE_a=down' "$ZZ_SETUP_ENV_FILE"
+}
+
 @test "zz-setup ignores remembered states without a menu" {
     make_workspace_remote
     export ZZ_SETUP_ENV_FILE="$WORK/state.env"
