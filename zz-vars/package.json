@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz-vars",
-  "version": "5.2.0",
+  "version": "5.3.0",
   "description": "Show, ask and resolve the inputs declared by workspaces",
   "bin": {
     "zz-vars": "run.sh"

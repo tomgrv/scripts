@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-git-fix-date",
-  "version": "5.0.0",
+  "version": "5.3.0",
   "description": "Fix commit dates and times in git history",
   "bin": {
     "git-fix-date": "run.sh"
