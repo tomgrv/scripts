@@ -99,6 +99,15 @@ get_input_source() {
     esac
 }
 
+# short_source <name> <default>: get_input_source on one character for the menu: f(ile), e(nv),
+# E (env overriding a saved value), d(efault), - (unset).
+short_source() {
+    case "$(get_input_source "$1" "$2")" in
+    'env*') echo E ;;
+    *) get_input_source "$1" "$2" | cut -c1 ;;
+    esac
+}
+
 # get_input_status <name> <required>: set / required / optional for a variable.
 get_input_status() {
     local name="$1"     # variable name (mandatory)
@@ -266,14 +275,14 @@ if [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ] && zz-interactive; then
             [ "$st" = set ] || unset_count=$((unset_count + 1))
             # a value saved in the env file can be deleted (last item)
             [ -z "$(get_env_value "$var")" ] || saved_any=1
-            set -- "$@" "$var=$owner$tab[$st]$tab$(get_input_source "$var" "$def")$tab$var${desc:+ - $desc}"
+            set -- "$@" "$var=$owner$tab[$(printf '%.3s' "$st")]$tab$(short_source "$var" "$def")$tab$var${desc:+ - $desc}"
         done <<ROWS
 $all_inputs
 ROWS
         [ "$unset_count" -gt 0 ] || [ -n "$manage" ] || break
         rc=0
         choice=$(zz-menu -t "Inputs" -g 1 \
-            -f " Number sets that input (file = saved; env* = the environment overrides it); <enter> validates; q quits." \
+            -f " Number sets that input (f file, e env, E env over file, d default, - unset); <enter> validates; q quits." \
             "$@" ${saved_any:+"~delete=Delete a saved value..."}) || rc=$?
         case "$rc" in
         0) ;;
