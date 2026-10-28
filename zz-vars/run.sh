@@ -232,11 +232,11 @@ print_export() {
 command -v jq >/dev/null 2>&1 || zz-install jq || exit 1
 all_inputs=
 pkgs=
-# A slow read says so, on the line the menu will take over.
+# A slow read says so (zz-progress), on the line the menu will take over.
 busy=
 if [ -t 2 ] && [ -z "$noprompt$status_flag$sequential" ]; then
     busy=1
-    printf 'Reading the inputs of %d workspaces...' "$#" >&2
+    zz-progress "Reading the inputs of $# workspaces..."
 fi
 for item in "$@"; do
     all_inputs="$all_inputs$(get_inputs "${item%%=*}" "${item#*=}")
@@ -244,7 +244,7 @@ for item in "$@"; do
     pkgs="$pkgs${pkgs:+:}$(get_pkg "${item#*=}")"
 done
 all_inputs=$(printf '%s' "$all_inputs" | awk -F"$us" 'NF && !seen[$1]++')
-[ -z "$busy" ] || printf '\r\033[K' >&2
+[ -z "$busy" ] || zz-progress
 
 # Names go through eval and sed below: only shell identifiers are accepted.
 bad=$(printf '%s\n' "$all_inputs" | awk -F"$us" 'NF && ($1 !~ /^[A-Za-z_][A-Za-z0-9_]*$/ || $7 !~ /^[A-Za-z_][A-Za-z0-9_]*$/) { print $1 }')
