@@ -163,8 +163,8 @@ persist_value() {
 menu_row() {
     local src dflt= desc="$2"
 
-    # description at most 40 characters, ending in ... when cut (shortcut: counts bytes, fine for ASCII text)
-    [ "${#desc}" -le 40 ] || desc="$(printf '%.37s' "$desc")..."
+    # description at most 80 characters, ending in ... when cut (shortcut: counts bytes, fine for ASCII text)
+    [ "${#desc}" -le 80 ] || desc="$(printf '%.77s' "$desc")..."
 
     classify "$1" "$3" "$4"
     case "$in_source" in 'env*') src=E ;; *) src=${in_source%"${in_source#?}"} ;; esac

@@ -172,11 +172,11 @@ menu_run() {
     [[ "$output" == *"[opt] - A_X"* ]]
 }
 
-@test "zz-vars menu rows cut a long description to 40 characters, ending in ..." {
-    long=$(printf 'x%.0s' $(seq 60))
+@test "zz-vars menu rows cut a long description to 80 characters, ending in ..." {
+    long=$(printf 'x%.0s' $(seq 100))
     echo '{"name":"a","config":{"inputs":{"A_OPT":{"description":"'"$long"'","default":"d"}}}}' >"$WORK/a/package.json"
     printf 'q\n' >"$WORK/answers"
     run env NO_COLOR=1 ZZ_PROMPT_ANSWERS="$WORK/answers" zz-vars -m -f "$WORK/env" a=a
-    [[ "$output" == *"A_OPT - $(printf 'x%.0s' $(seq 37))... (d)"* ]]
-    [[ "$output" != *"$(printf 'x%.0s' $(seq 38))"* ]]
+    [[ "$output" == *"A_OPT - $(printf 'x%.0s' $(seq 77))... (d)"* ]]
+    [[ "$output" != *"$(printf 'x%.0s' $(seq 78))"* ]]
 }

@@ -591,15 +591,15 @@ make_actions_remote() {
     [[ "$output" == *"[skip] d b"*"(skip)"* ]]
 }
 
-@test "zz-setup menu rows cut a long description to 40 characters, ending in ..." {
+@test "zz-setup menu rows cut a long description to 80 characters, ending in ..." {
     make_workspace_remote
-    long=$(printf 'y%.0s' $(seq 60))
+    long=$(printf 'y%.0s' $(seq 100))
     echo '{"name":"@x/b","dependencies":{"@x/a":"*"},"bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"description":"'"$long"'","config":{"order":2,"default":false}}' >"$WORK/ws/b/package.json"
     git -C "$WORK/ws" commit -q -am longdesc
     git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
     export ZZ_SETUP_ENV_FILE="$WORK/state.env"
     printf 'q\n' >"$WORK/answers"
     run env NO_COLOR=1 ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws
-    [[ "$output" == *"$(printf 'y%.0s' $(seq 37))... (skip)"* ]]
-    [[ "$output" != *"$(printf 'y%.0s' $(seq 38))"* ]]
+    [[ "$output" == *"$(printf 'y%.0s' $(seq 77))... (skip)"* ]]
+    [[ "$output" != *"$(printf 'y%.0s' $(seq 78))"* ]]
 }
