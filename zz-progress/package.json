@@ -1,6 +1,6 @@
 {
   "name": "@tomgrv/scripts-zz-progress",
-  "version": "5.2.0",
+  "version": "5.3.0",
   "description": "Transient progress line on stderr, terminal only",
   "bin": {
     "zz-progress": "run.sh"
