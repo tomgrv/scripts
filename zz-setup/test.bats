@@ -580,3 +580,13 @@ make_actions_remote() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"s-file:/etc/s.env"* ]]
 }
+
+@test "zz-setup menu rows: number [state] source name description (default state); f once remembered, d otherwise" {
+    make_workspace_remote
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    echo 'ZZ_STATE_a=up' >"$ZZ_SETUP_ENV_FILE"
+    printf 'q\n' >"$WORK/answers"
+    run env NO_COLOR=1 ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws
+    [[ "$output" == *"[up  ] f a"*"(skip)"* ]]
+    [[ "$output" == *"[skip] d b"*"(skip)"* ]]
+}

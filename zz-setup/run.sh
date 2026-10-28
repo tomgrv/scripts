@@ -457,22 +457,25 @@ if [ "$nflags" -eq 0 ] && zz-interactive; then
         # list rows: 1 order, 2 name, 3 dir, 4 description, 5 default (true = up)
         while IFS="$us" read -r _ n _ desc dflt _; do
             [ -n "$n" ] || continue
-            mark=" "
-            [ "$dflt" = true ] && mark="*"
+            # number [state] source name description (default state); source f = remembered, d = default
+            eval "src=\${saved_$(get_state_key "$n"):-}"
+            if [ -n "$src" ]; then src=f; else src=d; fi
+            if [ "$dflt" = true ]; then dflt=up; else dflt=skip; fi
             # grouped by the name's prefix (svc-k3s -> svc); a name with no dash stays ungrouped
             group=
             case "$n" in *-*) group=${n%%-*} ;; esac
-            set -- "$@" "$n:$(get_state "$n")=$group$tab$mark$tab$n$tab$desc"
+            set -- "$@" "$n:$(get_state "$n")=$group$tab$src$tab$n$tab$desc ($dflt)"
         done <<ROWS
 $list
 ROWS
         rc=0
-        out=$(zz-menu -t "$repo workspaces" -g 1 -c "skip,up,down" -z "~reset=Reset to defaults (* up, others skip)" \
-            -f " (* = default) Number cycles skip -> up -> down; <enter> validates; q quits." \
+        out=$(zz-menu -t "$repo workspaces" -g 1 -c "skip,up,down" -z "~reset=Reset to defaults" \
+            -f " Number cycles skip -> up -> down (f remembered, d default; default state in brackets); <enter> validates; q quits." \
             "$@") || rc=$?
-        # 0: every workspace back to its default (up when marked *, else skip), then ask again
+        # 0: every workspace back to its default state, then ask again
         [ "$rc" -eq 0 ] && [ "$out" = "~reset" ] || break
         for n in $names; do
+            eval "unset saved_$(get_state_key "$n")" # no longer "remembered" (source f)
             if [ "$(get_field "$n" 5)" = true ]; then set_state "$n" up; else set_state "$n" skip; fi
         done
     done

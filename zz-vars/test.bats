@@ -160,3 +160,14 @@ menu_run() {
     run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-vars -m -f "$WORK/env" a=a
     [[ "$output" != *"not found"* ]]
 }
+
+@test "zz-vars menu rows: number [status] source name - description (default), a secret's default masked" {
+    echo '{"name":"a","config":{"inputs":{"A_TOKEN":{"description":"tok","required":true,"secret":true,"default":"zzz"},"A_OPT":{"description":"opt","default":"dflt"},"A_X":{}}}}' >"$WORK/a/package.json"
+    printf 'A_TOKEN=s3\n' >"$WORK/env"
+    chmod 600 "$WORK/env"
+    printf 'q\n' >"$WORK/answers"
+    run env NO_COLOR=1 ZZ_PROMPT_ANSWERS="$WORK/answers" zz-vars -m -f "$WORK/env" a=a
+    [[ "$output" == *"[set] f A_TOKEN - tok (***)"* ]]
+    [[ "$output" == *"[opt] d A_OPT - opt (dflt)"* ]]
+    [[ "$output" == *"[opt] - A_X"* ]]
+}

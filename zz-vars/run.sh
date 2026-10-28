@@ -156,6 +156,21 @@ persist_value() {
     persist_profile "$name" "$value" "$is_secret"
 }
 
+# menu_row <var> <desc> <req> <def> <owner> <secret>: set $row to the menu entry of an input, the same
+# grammar in every menu: <var>=<owner> TAB [status] TAB source TAB name - description (default), the
+# status on 3 letters (set/req/opt), the source on one: e(nv), E (env over a saved value), f(ile),
+# d(efault) or -; a secret's default is masked.
+menu_row() {
+    local src dflt=
+
+    classify "$1" "$3" "$4"
+    case "$in_source" in 'env*') src=E ;; *) src=${in_source%"${in_source#?}"} ;; esac
+    if [ -n "$4" ]; then
+        if [ "$6" = true ]; then dflt=" (***)"; else dflt=" ($4)"; fi
+    fi
+    row="$1=$5${tab}[$(printf '%.3s' "$in_status")]$tab$src$tab$1${2:+ - $2}$dflt"
+}
+
 # delete_saved: let the user pick a value saved in the env file (and the profile snippet) and
 # forget it; a secret only after a confirmation. The value stays in the caller's environment
 # if it came from there.
@@ -165,7 +180,10 @@ delete_saved() {
     set --
     while IFS="$us" read -r var desc req def owner secret as; do
         [ -n "$var" ] || continue
-        [ -z "$(get_env_value "$var")" ] || set -- "$@" "$var=$owner$tab$var$tab$([ "$secret" != true ] || printf '(secret)')"
+        [ -z "$(get_env_value "$var")" ] || {
+            menu_row "$var" "$desc" "$req" "$def" "$owner" "$secret"
+            set -- "$@" "$row"
+        }
     done <<ROWS
 $all_inputs
 ROWS
@@ -287,13 +305,12 @@ if [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ] && zz-interactive; then
         set --
         unset_count=0 saved_any= highlight=
         while IFS="$us" read -r var desc req def owner secret as; do
-            classify "$var" "$req" "$def"
+            menu_row "$var" "$desc" "$req" "$def" "$owner" "$secret"
+            set -- "$@" "$row"
             [ "$in_status" = set ] || unset_count=$((unset_count + 1))
             # a value saved in the env file can be reset (item 0); a set input is highlighted
             [ -z "$in_saved" ] || saved_any=1
             [ "$in_status" != set ] || highlight="${highlight:+$highlight,}$var"
-            case "$in_source" in 'env*') src=E ;; *) src=${in_source%"${in_source#?}"} ;; esac
-            set -- "$@" "$var=$owner${tab}[$(printf '%.3s' "$in_status")]$tab$src$tab$var${desc:+ - $desc}"
         done <<ROWS
 $all_inputs
 ROWS
