@@ -2,7 +2,7 @@
 
 # zz-menu
 
-Interactive numbered CLI menu: draws the items, reads a choice, prints the
+Interactive numbered CLI menu (keys, the same everywhere: a number acts on its item, Enter validates, `q` quits): draws the items, reads a choice, prints the
 chosen key.
 
 Part of [`tomgrv/scripts`](https://github.com/tomgrv/scripts) — installed
@@ -16,15 +16,18 @@ zz-menu [-t title] [-d default] [-f footer] [-c states] <item>...
 
 Each `<item>` is `<key>=<label>` (split at the first `=`), or just `<label>`,
 which then doubles as its own key. The menu is drawn on stderr, so stdout
-carries only the chosen key.
+carries only the chosen key. A label may hold TAB-separated cells: the menu
+aligns them in columns. On a terminal, cycling redraws the menu in place. An action that is
+not one of the choices is just one more item, e.g. `"none=None"` last.
 
 | Option           | Purpose                                                                           |
 | ---------------- | --------------------------------------------------------------------------------- |
 | `-t <title>`     | title line shown above the items                                                  |
 | `-d <key>`       | key chosen when the user just presses Enter                                       |
 | `-f <text>`      | hint line replacing the default one (`\n` starts a new line)                      |
-| `-z <key=label>` | an item numbered 0, listed first; choosing 0 prints its key (pick mode)           |
-| `-b <keys>`      | comma-separated item keys shown highlighted (bold white); the menu owns its style |
+| `-b <keys>`      | comma-separated item keys shown highlighted, see [Highlighting](#highlighting)                                       |
+| `-z <key=label>` | an item numbered 0, listed first; choosing 0 prints its key alone and exits 0, in cycle mode too (the caller tells it from the `key=state` lines and usually redraws) |
+| `-g <n>`         | group by the n-th TAB-separated cell (as `cut -f`): items are regrouped in order of first appearance under a header per group, that cell is not repeated on the rows; an item with a single cell stays outside any group |
 | `-c <states>`    | cycle mode: comma-separated states, see below                                     |
 
 | Exit status | Meaning                                                 |
@@ -33,7 +36,16 @@ carries only the chosen key.
 | `1`         | the user quit (`q`) or input ended                      |
 | `2`         | bare Enter with no default — the caller's "proceed" cue |
 
-`q` leaves the menu without choosing and never aborts the caller's run: a sub-menu goes back or keeps what is set (`zz-vars`, `vps-access`); only the top-level `zz-setup` workspace menu treats it as "cancel everything". Tests drive any menu or prompt with `ZZ_PROMPT_ANSWERS=<file>` (one answer per line, see `zz-prompt`).
+`q` leaves the menu without choosing (status 1); what that means is the caller's: `zz-setup` and `zz-vars` treat it as "cancel everything" (`zz-vars` exits 3), the `vps-access` menus keep what is set. Tests drive any menu or prompt with `ZZ_PROMPT_ANSWERS=<file>` (one answer per line, see `zz-prompt`).
+
+### Highlighting
+
+One feature, one look: a highlighted row is shown whole (everything after its number) in the highlight colour. A row is highlighted when
+
+- the caller lists it with `-b "<key>,<key>"`, and says what that means: `zz-vars` highlights the inputs that are set; or
+- in cycle mode, its state moved off where it started (`zz-setup`'s workspaces).
+
+The colour is yellow. Without colour (`NO_COLOR`) a `+` takes the row's mark slot instead, so nothing relies on colour alone; `*` (the default item) wins when both apply.
 
 ### Single choice
 
@@ -57,7 +69,7 @@ done
 
 With `-c "s1,s2,..."` every item carries a state, shown as `[state]`.
 Choosing a number advances that item to the next state (wrapping around)
-and redraws, so the caller needs no loop of its own. Items are
+and redraws (a state that differs from where it started is highlighted), so the caller needs no loop of its own. Items are
 `<key>:<state>=<label>`; without `:<state>` an item starts at the first state.
 Enter prints one `<key>=<state>` line per item and exits `0`; `q` (or end of
 input) exits `1` and prints nothing.
@@ -85,4 +97,5 @@ bats test.bats
 - the menu is drawn on stderr, never stdout
 - `-f` footers may span several lines (`\n`)
 - cycle mode: states advance and wrap, Enter prints every `key=state`,
-  `q` prints nothing, out-of-range input changes nothing
+  `q` prints nothing, out-of-range input changes nothing, changed states are highlighted
+- TAB-separated cells are aligned in columns

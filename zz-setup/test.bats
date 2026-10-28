@@ -397,6 +397,17 @@ make_conflict_remote() {
     [[ "$output" == *"a:down"* ]]
 }
 
+@test "zz-setup menu: 0 resets every workspace to its default before validating" {
+    make_workspace_remote
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    echo 'ZZ_STATE_a=down' >"$ZZ_SETUP_ENV_FILE"
+    printf '0\n\n' >"$WORK/answers"
+    run env ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws
+    [[ "$output" != *"Bring a down"* ]]
+    [[ "$output" != *"a:down"* ]]
+    ! grep -qx 'ZZ_STATE_a=down' "$ZZ_SETUP_ENV_FILE"
+}
+
 @test "zz-setup ignores remembered states without a menu" {
     make_workspace_remote
     export ZZ_SETUP_ENV_FILE="$WORK/state.env"
@@ -568,4 +579,28 @@ make_actions_remote() {
     run zz-setup acme/sm -m </dev/null
     [ "$status" -eq 0 ]
     [[ "$output" == *"s-file:/etc/s.env"* ]]
+}
+
+@test "zz-setup menu rows: number [state] source name description (default state); f once remembered, d otherwise" {
+    make_workspace_remote
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    echo 'ZZ_STATE_a=up' >"$ZZ_SETUP_ENV_FILE"
+    printf 'q\n' >"$WORK/answers"
+    run env NO_COLOR=1 ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws
+    [[ "$output" == *"[up  ] f a                    (skip)"* ]]
+    [[ "$output" == *"[skip] d b                    (skip)"* ]]
+}
+
+@test "zz-setup menu rows cut a long description to 80 characters, ending in ..." {
+    make_workspace_remote
+    long=$(printf 'y%.0s' $(seq 100))
+    echo '{"name":"@x/b","dependencies":{"@x/a":"*"},"bin":{"x":"run.sh"},"engines":{"zz-setup":"*"},"description":"'"$long"'","config":{"order":2,"default":false}}' >"$WORK/ws/b/package.json"
+    git -C "$WORK/ws" commit -q -am longdesc
+    git -C "$WORK/ws" push -q "$WORK/remote/acme/ws.git" main
+    export ZZ_SETUP_ENV_FILE="$WORK/state.env"
+    printf 'q\n' >"$WORK/answers"
+    run env NO_COLOR=1 ZZ_PROMPT_ANSWERS="$WORK/answers" zz-setup acme/ws
+    # the description sits on its own line under the name
+    [[ "$output" == *"$(printf 'y%.0s' $(seq 77))..."$'\n'* ]]
+    [[ "$output" != *"$(printf 'y%.0s' $(seq 78))"* ]]
 }

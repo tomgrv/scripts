@@ -13,6 +13,8 @@ and linked onto `PATH` as `zz-colors`.
 . zz-colors
 ```
 
+`NO_COLOR` (any non-empty value, see https://no-color.org) turns every code into an empty string.
+
 ## Dependencies
 
 Declared via `zz-use` at the top of `run.sh` and resolved on demand
@@ -28,3 +30,4 @@ bats test.bats
 - color codes are real ANSI escape sequences (`ESC [`)
 - safe to source twice with no errors
 - distinct variables carry distinct codes
+- `NO_COLOR` empties every code

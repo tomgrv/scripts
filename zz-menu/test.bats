@@ -116,6 +116,7 @@ teardown() {
 
 @test "zz-menu -c shows each item's state and redraws after a change" {
     run bash -c 'printf "1\n\n" | zz-menu -c "skip,up" "a=Alpha" 2>&1 1>/dev/null'
+    output=$(printf '%s' "$output" | sed 's/\x1b\[[0-9;]*m//g')
     [[ "$output" == *"[skip] Alpha"* ]]
     [[ "$output" == *"[up  ] Alpha"* ]]
 }
@@ -148,11 +149,41 @@ teardown() {
     [[ "$output" == *'dir\tx\c done'* ]]
 }
 
-@test "zz-menu -z lists an item 0 first and prints its key when 0 is chosen" {
-    run bash -c 'echo 0 | zz-menu -z "del=Delete one" -t T a=Alpha b=Beta'
+@test "zz-menu aligns TAB-separated cells into columns" {
+    run bash -c 'echo q | NO_COLOR=1 zz-menu "a=x'$'\t'$'one" "b=longer'$'\t'$'two" 2>&1'
+    [[ "$output" == *"1) x      one"* ]]
+    [[ "$output" == *"2) longer two"* ]]
+}
+
+@test "zz-menu -c highlights a state once it differs from where it started" {
+    run bash -c 'printf "1\nq\n" | zz-menu -c "skip,up" a=Alpha b=Beta 2>&1 1>/dev/null'
+    [[ "$output" == *$'\033[1;33m[up  ]'* ]]
+    [[ "$output" != *$'\033[1;33m[skip]'* ]]
+}
+
+@test "zz-menu -g regroups items by the given cell, under one header per group" {
+    run bash -c 't=$(printf "\t"); printf "3\n" | NO_COLOR=1 zz-menu -g 1 "a1=g1${t}x" "b1=g2${t}y" "a2=g1${t}z" 2>&1'
+    # g1 first (a1, a2), then g2 (b1): item 3 is b1
+    [[ "$output" == *$' g1\n 1) x\n 2) z\n g2\n 3) y\n'* ]]
+    [[ "$output" == *b1 ]]
+}
+
+@test "zz-menu -g leaves a one-cell item outside any group" {
+    run bash -c 't=$(printf "\t"); echo q | NO_COLOR=1 zz-menu -g 1 "a=g1${t}x" "d=Delete" 2>&1'
+    [[ "$output" == *$' 1) x\n\n 2) Delete'* ]]
+}
+
+@test "zz-menu -g rejects a non-numeric cell number" {
+    run bash -c 'echo q | zz-menu -g x a=Alpha 2>&1'
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"take a cell number"* ]]
+}
+
+@test "zz-menu -z lists an item 0 first and prints its key alone when 0 is chosen" {
+    run bash -c 'echo 0 | NO_COLOR=1 zz-menu -z "del=Delete one" -t T a=Alpha b=Beta 2>/tmp/zzmenu.err; cat /tmp/zzmenu.err'
     [ "$status" -eq 0 ]
-    [[ "$output" == *") Delete one"* ]]
-    [[ "$output" == *"del" ]]
+    [[ "$output" == *$'==== T ====\n 0) Delete one\n 1) Alpha'* ]]
+    [[ "$output" == del* ]]
 }
 
 @test "zz-menu: 0 is not an item without -z" {
@@ -161,8 +192,38 @@ teardown() {
     [[ "$output" == *"a" ]]
 }
 
-@test "zz-menu -b highlights the listed items in bold white, the others stay plain" {
-    run bash -c 'echo q | zz-menu -b b a=Alpha b=Beta'
-    [[ "$output" == *$'\033[1;37mBeta'* ]]
-    [[ "$output" != *$'\033[1;37mAlpha'* ]]
+@test "zz-menu -z in cycle mode prints the key alone and no key=state line" {
+    run bash -c 'printf "1\n0\n" | zz-menu -c "skip,up" -z "reset=Reset" a=Alpha 2>/dev/null'
+    [ "$status" -eq 0 ]
+    [ "$output" = "reset" ]
+}
+
+@test "zz-menu -b highlights the listed items, the others stay plain" {
+    run bash -c 'echo q | zz-menu -b b a=Alpha b=Beta 2>&1 1>/dev/null'
+    [[ "$output" == *$'\033[1;33mBeta\033[0m'* ]]
+    [[ "$output" != *$'\033[1;33mAlpha'* ]]
+}
+
+@test "zz-menu highlights a whole row the same way for -b and for a changed cycle state" {
+    run bash -c 'echo q | zz-menu -b b a=Alpha b=Beta 2>&1 1>/dev/null'
+    [[ "$output" == *$'\033[1;33mBeta\033[0m'* ]]
+    run bash -c 'printf "1\nq\n" | zz-menu -c "skip,up" a=Alpha b=Beta 2>&1 1>/dev/null'
+    [[ "$output" == *$'\033[1;33m[up  ] Alpha\033[0m'* ]]
+    [[ "$output" != *$'\033[1;33m[skip] Beta'* ]]
+}
+
+@test "zz-menu marks highlighted rows with + when there is no colour (NO_COLOR)" {
+    run bash -c 'echo q | NO_COLOR=1 zz-menu -b b a=Alpha b=Beta 2>&1 1>/dev/null'
+    [[ "$output" == *" 1) Alpha"* ]]
+    [[ "$output" == *" 2)+Beta"* ]]
+}
+
+@test "zz-menu prints an item's detail (after RS) on the line under it, indented under the -D cell" {
+    run bash -c 't=$(printf "\t"); rs=$(printf "\036"); echo q | NO_COLOR=1 zz-menu -D 2 "a=f${t}name  ${t}(x)${rs}the detail" "b=d${t}other ${t}(y)" 2>&1'
+    [[ "$output" == *$' 1) f name   (x)\n      the detail\n 2) d other  (y)\n'* ]]
+}
+
+@test "zz-menu highlights an item's detail line with the item" {
+    run bash -c 'rs=$(printf "\036"); echo q | zz-menu -b a "a=Alpha${rs}detail" 2>&1 1>/dev/null'
+    [[ "$output" == *$'\033[1;33mdetail\033[0m'* ]]
 }

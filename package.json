@@ -56,6 +56,7 @@
     "zz-setup",
     "zz-step",
     "zz-interactive",
+    "zz-progress",
     "json",
     "json-load",
     "json-validate",
