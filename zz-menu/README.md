@@ -45,7 +45,7 @@ One feature, one look: a highlighted row is shown whole (everything after its nu
 - the caller lists it with `-b "<key>,<key>"`, and says what that means: `zz-vars` highlights the inputs that are set; or
 - in cycle mode, its state moved off where it started (`zz-setup`'s workspaces).
 
-`ZZ_MENU_HIGHLIGHT=<name>` picks the colour by its `zz-colors` name (default `BYellow`; an invalid name falls back to it). Without colour (`NO_COLOR`) a `+` takes the row's mark slot instead, so nothing relies on colour alone; `*` (the default item) wins when both apply.
+The colour is yellow. Without colour (`NO_COLOR`) a `+` takes the row's mark slot instead, so nothing relies on colour alone; `*` (the default item) wins when both apply.
 
 ### Single choice
 

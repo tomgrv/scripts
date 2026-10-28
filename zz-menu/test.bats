@@ -218,13 +218,6 @@ teardown() {
     [[ "$output" == *" 2)+Beta"* ]]
 }
 
-@test "zz-menu ZZ_MENU_HIGHLIGHT names the highlight colour; an invalid name falls back to yellow" {
-    run bash -c 'echo q | ZZ_MENU_HIGHLIGHT=BCyan zz-menu -b a a=Alpha 2>&1 1>/dev/null'
-    [[ "$output" == *$'\033[1;36mAlpha'* ]]
-    run bash -c 'echo q | ZZ_MENU_HIGHLIGHT="x;y" zz-menu -b a a=Alpha 2>&1 1>/dev/null'
-    [[ "$output" == *$'\033[1;33mAlpha'* ]]
-}
-
 @test "zz-menu prints an item's detail (after RS) on the line under it, indented under the -D cell" {
     run bash -c 't=$(printf "\t"); rs=$(printf "\036"); echo q | NO_COLOR=1 zz-menu -D 2 "a=f${t}name  ${t}(x)${rs}the detail" "b=d${t}other ${t}(y)" 2>&1'
     [[ "$output" == *$' 1) f name   (x)\n      the detail\n 2) d other  (y)\n'* ]]

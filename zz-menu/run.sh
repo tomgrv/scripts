@@ -1,44 +1,23 @@
 #!/bin/sh
-# zz-menu [-t title] [-d default] [-f footer] [-c states] <item>... — interactive
-# numbered menu. Each <item> is "<key>=<label>" (or just "<label>", used as its
-# own key). The menu is drawn on stderr; results go to stdout. A label may hold
-# TAB-separated cells: the menu aligns them in columns. With -g <n> the n-th
-# cell (counted like cut -f) is the group of the item: items are regrouped in
-# the order their groups first appear, a header line names each group, and
-# that cell is not shown again on the rows.
+# zz-menu [-t title] [-d default] [-f footer] [-c states] [-z item] [-b keys] [-g n] [-D n] <item>... —
+# interactive numbered menu, drawn on stderr; the result goes to stdout. Details: README.md.
+# An <item> is "<key>=<label>" (or "<label>", its own key). Keys, the same everywhere: a number acts
+# on its item, Enter validates, q quits.
 #
-# Highlighting is one feature: a highlighted row is shown whole in the highlight colour (yellow;
-# ZZ_MENU_HIGHLIGHT=<zz-colors name> changes it; with NO_COLOR a + takes the mark slot instead).
-# A row is highlighted when it is listed by -b "<key>,<key>" (the caller says what that means:
-# set, saved...), or, in cycle mode, when its state moved off where it started.
+# Pick mode (default): choosing a number prints the item's key. Exit status: 0 an item was chosen
+#   (a bare Enter chooses -d <key>); 1 quit (q) or input ended; 2 a bare Enter with no default.
+# Cycle mode (-c "s1,s2,..."): items are "<key>:<state>=<label>"; a number advances that item's
+#   state (wrapping) and redraws in place; Enter prints one "<key>=<state>" line per item.
+# -z "<key>=<label>": an item numbered 0, listed first; choosing it prints its key alone (also in
+#   cycle mode).
 #
-# A label may end in RS (ASCII 036) and a detail: the detail is printed on the line under the
-# item, indented to start under the n-th shown cell (-D <n>, default the first), in the same
-# highlight as its item.
+# A label may hold TAB-separated cells, aligned in columns. -g <n> takes the n-th cell (as cut -f) as
+# the item's group: items are regrouped in order of first appearance under a header. A label may end
+# in RS (ASCII 036) and a detail, printed under the item, indented under the -D <n>th shown cell.
 #
-# -z "<key>=<label>" adds an item numbered 0, listed first, for a special case that is
-# not one of the items: choosing 0 prints its key alone and exits 0 (in cycle mode too,
-# where the caller tells it from the "<key>=<state>" lines and usually redraws).
-#
-# Keys, the same everywhere: a number acts on its item, Enter validates, q quits.
-# On a terminal, cycling redraws the menu in place.
-#
-# Pick mode (default): choosing a number prints that item's key.
-#   Exit status:
-#     0  an item was chosen (its key is on stdout; with -d <key>, a bare
-#        Enter chooses that key)
-#     1  the user quit (q) or input ended
-#     2  a bare Enter with no default — the caller's "proceed/done" signal
-#
-# Cycle mode (-c "s1,s2,..."): every item carries a state, shown as [state]
-# (highlighted once it differs from where it started); choosing a number
-# advances that item to the next state (wrapping around) and redraws. Items are
-# "<key>:<state>=<label>"; a missing ":<state>" starts at the first state. A
-# bare Enter prints one "<key>=<state>" line per item and exits 0; q or end of
-# input exits 1 without printing anything.
-#
-# Pick mode is meant for callers that loop until the user is done:
-#   while choice=$(zz-menu -t "Steps" "a=Alpha" "b=Beta"); do ...; done
+# Highlighting: a row is shown whole in yellow when -b lists its key (the caller says what that
+# means: set, saved...) or, in cycle mode, when its state moved off where it started. With NO_COLOR a
+# + takes the mark slot instead.
 
 . zz-colors
 
@@ -100,13 +79,6 @@ if [ -n "$group" ]; then
         END { for (i = 1; i <= n; i++) for (r = 1; r <= NR; r++) if (grp[r] == order[i]) print line[r] }')$nl
 fi
 
-# The highlight colour: ZZ_MENU_HIGHLIGHT names a zz-colors variable (default BYellow); with no
-# colour at all (NO_COLOR) highlighted rows get a + in the mark slot instead.
-case "${ZZ_MENU_HIGHLIGHT:-BYellow}" in
-*[!A-Za-z]*) highlight_style=$BYellow ;;
-*) eval "highlight_style=\$${ZZ_MENU_HIGHLIGHT:-BYellow}" ;;
-esac
-
 # Redraw in place only where the cursor can move back, and never over scripted answers.
 redraw=
 [ -t 2 ] && [ -z "${ZZ_PROMPT_ANSWERS:-}" ] && redraw=1
@@ -116,7 +88,7 @@ redraw=
 # render: the numbered rows, aligned by awk (labels are read from stdin and printed
 # verbatim; colours and options travel by the environment, not as awk escapes).
 render() {
-    printf '%s' "$rows" | NUM=$BBlue HI=$highlight_style OFF=$End GRP=$BPurple DEF=$default CYC=$cycle GROUP=$group DETAIL=$detail BOLD=",$bold," awk -F'\t' '
+    printf '%s' "$rows" | NUM=$BBlue HI=$BYellow OFF=$End GRP=$BPurple DEF=$default CYC=$cycle GROUP=$group DETAIL=$detail BOLD=",$bold," awk -F'\t' '
         BEGIN { m = split(ENVIRON["CYC"], s, ","); for (i = 1; i <= m; i++) if (length(s[i]) > sw) sw = length(s[i])
                 gi = ENVIRON["GROUP"] ? ENVIRON["GROUP"] + 3 : 0 }
         { dpos = index($0, "\036"); det[NR] = ""   # RS starts the detail line, if any
@@ -137,10 +109,11 @@ render() {
                 # the mark slot: * default; + highlighted when there is no colour to show it
                 mark = key[r] == ENVIRON["DEF"] ? "*" : (hl && ENVIRON["HI"] == "" ? "+" : " ")
                 body = ENVIRON["CYC"] != "" ? sprintf("[%-*s] ", sw, st[r]) : ""
-                shown = 0; indent = 3 + length(NR) + length(body)   # " " number ")" mark, then the state
+                shown = 0; pad = 3 + length(NR)   # " " number ")" mark
+                indent = pad + length(body)
                 for (i = 4; i <= last[r]; i++)
                     if (i != hid[r]) {
-                        if (++shown == (ENVIRON["DETAIL"] ? ENVIRON["DETAIL"] : 1)) indent = 3 + length(NR) + length(body)
+                        if (++shown == (ENVIRON["DETAIL"] ? ENVIRON["DETAIL"] : 1)) indent = pad + length(body)
                         body = body (i < last[r] ? sprintf("%-*s ", w[i], c[r, i]) : c[r, i])
                     }
                 sub(/ +$/, "", body)   # an empty last cell leaves only padding
@@ -172,9 +145,6 @@ draw() {
     printf '%s\n' "$frame" >&2
     lines=$(printf '%s\n' "$frame" | wc -l)
 }
-
-# field <n> <column>: column <column> of row <n>.
-field() { printf '%s' "$rows" | awk -F'\t' -v n="$1" -v col="$2" 'NR == n { print $col }'; }
 
 # cycle_row <n>: advance row <n> to the next state (the first one past the last or an unknown one).
 cycle_row() {
@@ -230,7 +200,7 @@ while :; do
     fi
 
     [ -n "$cycle" ] || {
-        field "$choice" 1
+        printf '%s' "$rows" | awk -F'\t' -v n="$choice" 'NR == n { print $1 }'
         exit 0
     }
     cycle_row "$choice"
