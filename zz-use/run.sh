@@ -31,8 +31,7 @@
 # core set in one call):
 #   1. A script from this repo — from a local checkout when running from
 #      one, otherwise the local cache (ZZ_CACHE_DIR/<origin>/<ref>,
-#      default ~/.cache/zz_scripts). `zz-update`/`--force` bypasses the
-#      cache.
+#      default ~/.cache/zz_scripts). `--force` bypasses the cache.
 #   2. Otherwise config/zz-use.json (ZZ_USE_CONFIG to override):
 #        {"apt": "<pkg>"} -> apt-get install
 #        {"url": "...", "archive": ..., "binpath": "..."} -> download,
@@ -42,7 +41,10 @@
 # Still not on PATH afterwards -> error, exit 1.
 #
 # Idempotent: resolved tools are skipped in ~0ms via `command -v`, unless
-# --force or @<ref> is given.
+# --force or @<ref> is given, or the tool is a script of this repo installed from a
+# moving ref (main) more than ZZ_CACHE_TTL minutes ago: it is then refreshed, so an
+# installed copy cannot fall behind the steps that call it. Unreachable source: the
+# installed copy is kept, with a warning, and tried again after the same delay.
 #
 # -x/--exec <tool> [arg...]: install <tool> and exec straight into it,
 # replacing this process, with everything after <tool> as its argv. Tool
@@ -454,6 +456,20 @@ get_stamp_path() {
     printf '%s/.zz_use/%s' "$(dirname "$tool_path")" "$name"
 }
 
+# True when installed script <name> (at <tool_path>) came from the default origin's moving
+# ref and was installed longer than ZZ_CACHE_TTL minutes ago: the copy on PATH may be behind.
+# Tools without a stamp (apt packages, downloads) and immutable refs are never stale.
+is_stale() {
+    local tool_path="$1" # installed tool (mandatory)
+    local name="$2"      # tool name (mandatory)
+    local stamp
+
+    [ "$ZZ_CACHE_TTL" -ne 0 ] || return 1
+    is_ref_immutable "$ZZ_ORIGIN_REF" && return 1
+    stamp=$(get_stamp_path "$tool_path" "$name")
+    [ -f "$stamp" ] && [ -n "$(find "$stamp" -mmin "+${ZZ_CACHE_TTL}" 2>/dev/null)" ]
+}
+
 # Install a single named script from this or another repo. Returns
 # non-zero (silently) when <name> isn't a script in that repo at all, so
 # the caller can fall through to the apt/config lookup for external tools.
@@ -483,7 +499,7 @@ install_repo_script() {
     esac
     # Write to a temp file and `mv` into place rather than `cp` over the
     # target directly: <name> can be zz-use itself (e.g. under
-    # zz-update), and an in-place cp can truncate a script the shell is
+    # --force), and an in-place cp can truncate a script the shell is
     # still mid-read on. mv (same filesystem) is an atomic rename instead.
     cp "${src}/${name}/run.sh" "${dir}/.${name}.$$"
     chmod +x "${dir}/.${name}.$$"
@@ -501,7 +517,7 @@ install_repo_script() {
 # Recursion (peers) may change src, so each iteration installs its peers as
 # its very last step, reading nothing afterwards.
 use_tools() {
-    local apt_pkg at_sigil dir entry field g_name g_names g_origin g_ref name_part origin peers_pending ref rest_ref stamp tool tool_ref url val
+    local apt_pkg at_sigil dir entry field refresh g_name g_names g_origin g_ref name_part origin peers_pending ref rest_ref stamp tool tool_ref url val
 
     if [ $# -eq 0 ]; then
         # Plain stderr, not zz-log: this can run before zz-log itself has
@@ -511,6 +527,7 @@ use_tools() {
     fi
 
     for tool_ref in "$@"; do
+        refresh=""
         # This repo's own packages are named "@tomgrv/scripts-<tool>", so
         # unwrap that scoped-npm shape back to the plain name up front, or
         # it'd be mistaken for an actual npm-registry package by the "@*"
@@ -600,8 +617,12 @@ use_tools() {
         if [ "$force" -eq 0 ] || { [ "${tool#zz-}" = "$tool" ] && [ "$tool" != "zz" ]; }; then
             if [ -z "$ref" ] && [ "$origin" = "$ZZ_ORIGIN" ]; then
                 if has_tool "$tool"; then
-                    zz-log d "{Purple $tool} already available"
-                    continue
+                    if is_stale "$have_path" "$tool"; then
+                        refresh=1
+                    else
+                        zz-log d "{Purple $tool} already available"
+                        continue
+                    fi
                 fi
             elif [ "$force" -eq 0 ] && has_tool "$tool"; then
                 case "$origin" in
@@ -645,6 +666,10 @@ use_tools() {
             fi
         elif install_repo_script "$tool" "$origin" "$ref"; then
             peers_pending=1
+        elif [ -n "$refresh" ]; then
+            # The source is unreachable: keep the installed copy and look again after the delay.
+            zz-log w "Could not refresh {Purple $tool}, keeping the installed copy"
+            touch "$(get_stamp_path "$have_path" "$tool")"
         else
             install_package "$tool" || true
         fi
