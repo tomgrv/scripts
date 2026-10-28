@@ -161,12 +161,6 @@ teardown() {
     [[ "$output" != *$'\033[1;33m[skip]'* ]]
 }
 
-@test "zz-menu takes a number as one keypress on a terminal, no Enter needed" {
-    command -v script >/dev/null || skip "script(1) not installed"
-    run bash -c 'printf 2 | script -qec "ZZ_PROMPT_TTY=1 zz-menu a=Alpha b=Beta 2>/dev/null" /dev/null | tr -d "\r" | tail -n1'
-    [[ "$output" == *b ]]
-}
-
 @test "zz-menu -g regroups items by the given cell, under one header per group" {
     run bash -c 't=$(printf "\t"); printf "3\n" | NO_COLOR=1 zz-menu -g 1 "a1=g1${t}x" "b1=g2${t}y" "a2=g1${t}z" 2>&1'
     # g1 first (a1, a2), then g2 (b1): item 3 is b1

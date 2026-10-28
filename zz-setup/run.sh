@@ -191,11 +191,6 @@ get_state_var() {
 get_state() { eval "printf '%s' \"\${$(get_state_var "$1"):-skip}\""; }
 set_state() { eval "$(get_state_var "$1")=\$2"; }
 
-# get_env_value <key>: the env file is plain KEY=VALUE (zz-persist's format),
-# read literally and never sourced, so a value can hold spaces/quotes without
-# being executed.
-get_env_value() { [ ! -f "$envfile" ] || sed -n "s/^$1=//p" "$envfile" | tail -n1; }
-
 # get_state_key <name>: the env file key under which the last successful run
 # is remembered per workspace (up, skip or down, as is) and preselects the menu
 # and starts runs given flags from it.

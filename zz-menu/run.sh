@@ -12,8 +12,7 @@
 # where the caller tells it from the "<key>=<state>" lines and usually redraws).
 #
 # Keys, the same everywhere: a number acts on its item, Enter validates, q quits.
-# On a terminal a menu of up to 9 items takes the number as one keypress (no
-# Enter), and cycling redraws the menu in place.
+# On a terminal, cycling redraws the menu in place.
 #
 # Pick mode (default): choosing a number prints that item's key.
 #   Exit status:
@@ -93,8 +92,6 @@ fi
 # Redraw in place only where the cursor can move back, and never over scripted answers.
 redraw=
 [ -t 2 ] && [ -z "${ZZ_PROMPT_ANSWERS:-}" ] && redraw=1
-# One keypress is enough to pick a number up to 9 (zz-prompt falls back to a line off a terminal).
-[ "$count" -le 9 ] && key=-k || key=
 
 # --- functions
 
@@ -169,7 +166,7 @@ while :; do
     erase=${erase:-0}
 
     # Asked by zz-prompt; input ending quits like q.
-    choice=$(ZZ_PROMPT_MARK=">" ZZ_PROMPT_HINT= zz-prompt -e $key "") || exit 1
+    choice=$(ZZ_PROMPT_MARK=">" ZZ_PROMPT_HINT= zz-prompt -e "") || exit 1
 
     case "$choice" in
     "")

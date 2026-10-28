@@ -17,8 +17,7 @@ zz-menu [-t title] [-d default] [-f footer] [-c states] <item>...
 Each `<item>` is `<key>=<label>` (split at the first `=`), or just `<label>`,
 which then doubles as its own key. The menu is drawn on stderr, so stdout
 carries only the chosen key. A label may hold TAB-separated cells: the menu
-aligns them in columns. On a terminal, up to 9 items take the number as one
-keypress (no Enter) and cycling redraws the menu in place. An action that is
+aligns them in columns. On a terminal, cycling redraws the menu in place. An action that is
 not one of the choices is just one more item, e.g. `"none=None"` last.
 
 | Option           | Purpose                                                                           |

@@ -129,16 +129,3 @@ teardown() {
     run bash -c 'echo "" | NO_COLOR=1 ZZ_PROMPT_HINT= zz-prompt -c Yn "Go?" 2>&1 1>/dev/null'
     [[ "$output" == "# Go? "* && "$output" != *"["* ]]
 }
-
-# The keypress path needs a terminal: script(1) gives zz-prompt a pty and types into it.
-@test "zz-prompt -c answers on one keypress, no Enter needed" {
-    command -v script >/dev/null || skip "script(1) not installed"
-    run bash -c 'printf n | script -qec "ZZ_PROMPT_TTY=1 zz-prompt -c Yn \"Go?\"" /dev/null | tr -d "\r" | tail -n1'
-    [ "$output" = "n" ]
-}
-
-@test "zz-prompt -c ignores an arrow key instead of reading it as an answer" {
-    command -v script >/dev/null || skip "script(1) not installed"
-    run bash -c '{ printf "\033[A"; sleep 1; printf y; } | script -qec "ZZ_PROMPT_TTY=1 zz-prompt -c Yn \"Go?\"" /dev/null | tr -d "\r" | tail -n1'
-    [ "$output" = "y" ]
-}

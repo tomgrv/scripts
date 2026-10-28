@@ -22,7 +22,6 @@ Declared via `zz-use` at the top of `run.sh` and resolved on demand
 
 - `-s` secret: masked input, default shown as `***`.
 - `-e` exit 1 when input ends.
-- `-k` single key: on a terminal the answer is one keypress, no Enter needed (`-c` implies it; arrow keys are ignored). Anywhere else a normal line is read.
 
 - `-c Yn` accept one of these letters (any case), re-ask on anything else; the
   uppercase letter is the default. It replaces the former `zz-ask`: `zz-prompt -c Yn "Continue?"`.

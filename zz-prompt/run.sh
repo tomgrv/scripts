@@ -12,8 +12,6 @@
 #       an exhausted file is end of input): the same for zz-menu, which asks through zz-prompt
 #   -c  choices, e.g. Yn: accept one of these letters (any case), re-ask on
 #       anything else; the answer is always printed lowercased
-#   -k  single key: on a terminal the answer is one keypress, no Enter needed
-#       (-c implies it); anywhere else a normal line is read
 # The prompt line is "<mark> <question> <hint> ", both set by the environment:
 #   ZZ_PROMPT_MARK  leading mark (default #)
 #   ZZ_PROMPT_HINT  printf format of the hint, given the default or the choices
@@ -27,7 +25,6 @@ eval "$(
 s - secret Secret: masked input, default shown as ***
 e - eof_fail Exit 1 when input ends (no answer at all)
 c choices choices Accepted single letters (uppercase = default), e.g. Yn
-k - key_flag Single keypress on a terminal, no Enter needed (-c implies it)
 - question question Question to ask
 - default default Value used when the user just presses Enter
 help
@@ -48,28 +45,6 @@ fi
 
 # has_tty: a controlling terminal can be read (and is not disabled).
 has_tty() { [ "${ZZ_PROMPT_TTY:-1}" != 0 ] && (: </dev/tty) 2>/dev/null; }
-
-# read_key <tty>: read one keypress from <tty> into $value, no Enter needed (Enter
-# or Ctrl-D give an empty value, Ctrl-D also sets $eof), and echo it so the
-# line looks as if it was typed. Raw mode is restored even when the read fails.
-read_key() {
-    local saved
-    eof=
-    saved=$(stty -g <"$1" 2>/dev/null) || saved=
-    [ -z "$saved" ] || stty -icanon -echo min 1 time 0 <"$1" 2>/dev/null
-    value=$(dd bs=1 count=1 <"$1" 2>/dev/null)
-    case $value in
-    "$(printf '\004')") value= eof=1 ;;
-    # An arrow key sends ESC plus two more bytes: swallow them, they are not answers.
-    "$(printf '\033')")
-        stty min 0 time 1 <"$1" 2>/dev/null
-        dd bs=1 count=2 <"$1" >/dev/null 2>&1
-        value=?
-        ;;
-    esac
-    [ -z "$saved" ] || stty "$saved" <"$1" 2>/dev/null
-    printf '%s\n' "$value" >&2
-}
 
 # Ask once and read one line into $value ($eof set when input ended). A
 # secret is read with echo off, restored even when read fails; echo is
@@ -92,11 +67,6 @@ read_answer() {
         return 0
     fi
     [ -t 0 ] || ! has_tty || tty_in=/dev/tty
-    # A terminal and a single-key question: one keypress is the answer.
-    if [ -z "$secret" ] && [ -n "$key_flag$choices" ] && { [ -n "$tty_in" ] || [ -t 0 ]; }; then
-        read_key "${tty_in:-/dev/fd/0}"
-        return 0
-    fi
     stty_orig=
     if [ -n "$secret" ]; then
         stty_orig=$(stty -g <"${tty_in:-/dev/fd/0}" 2>/dev/null) || stty_orig=

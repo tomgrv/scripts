@@ -292,7 +292,7 @@ if [ -z "$noprompt$sequential" ] && [ -n "$all_inputs" ] && zz-interactive; then
             # a value saved in the env file can be reset (item 0)
             [ -z "$in_saved" ] || saved_any=1
             case "$in_source" in 'env*') src=E ;; *) src=${in_source%"${in_source#?}"} ;; esac
-            set -- "$@" "$var=$owner$tab[$(printf '%.3s' "$in_status")]$tab$src$tab$var${desc:+ - $desc}"
+            set -- "$@" "$var=$owner${tab}[$(printf '%.3s' "$in_status")]$tab$src$tab$var${desc:+ - $desc}"
         done <<ROWS
 $all_inputs
 ROWS
