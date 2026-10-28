@@ -433,10 +433,13 @@ if [ "$nflags" -eq 0 ] && zz-interactive; then
     for n in $names; do
         mark=" "
         [ "$(get_field "$n" 5)" = true ] && mark="*"
-        set -- "$@" "$n:$(get_state "$n")=$mark$tab$n$tab$(get_description "$n")"
+        # grouped by the name's prefix (svc-k3s -> svc); a name with no dash stays ungrouped
+        group=
+        case "$n" in *-*) group=${n%%-*} ;; esac
+        set -- "$@" "$n:$(get_state "$n")=$group$tab$mark$tab$n$tab$(get_description "$n")"
     done
     rc=0
-    out=$(zz-menu -t "$repo workspaces" -c "skip,up,down" \
+    out=$(zz-menu -t "$repo workspaces" -g 1 -c "skip,up,down" \
         -f " (* = default) Number cycles skip -> up -> down; <enter> validates; q quits." \
         "$@") || rc=$?
     if [ "$rc" -ne 0 ]; then
