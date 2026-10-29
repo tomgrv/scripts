@@ -33,6 +33,14 @@ Declared via `zz-use` at the top of `run.sh` and resolved on demand
 (installed if and only if missing) — see `run.sh` for the exact list. Needs
 the `gh` CLI, authenticated (`GH_TOKEN`).
 
+## GitLab CI
+
+Inside GitLab CI (`GITLAB_CI=true`) the merge requests are listed through the
+GitLab REST API (`curl`, `jq`, up to 1000) instead of `gh`, and with `-p` the
+remote is switched to `https://oauth2:$GITLAB_TOKEN@$CI_SERVER_HOST/$CI_PROJECT_PATH.git`
+to push the renames. Set `GITLAB_TOKEN` to a project access token with the
+`api` and `write_repository` scopes. If the API cannot be read, nothing is renamed.
+
 ## Tests
 
 ```sh

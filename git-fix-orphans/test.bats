@@ -95,3 +95,35 @@ remote_branches() { git -C "$ORIGIN" for-each-ref --format='%(refname:short)' re
     [ "$status" -eq 0 ]
     [[ "$(remote_branches)" == *"stale/wip-nopr"* ]]
 }
+
+# GitLab: merge requests come from the REST API (curl), gh is not used.
+# curl stub: page 1 lists the source branches in $MR_BRANCHES, later pages are empty.
+gitlab_env() {
+    stub_script curl <<'STUB'
+#!/bin/sh
+[ -n "$CURL_FAIL" ] && exit 1
+case "$*" in
+*"page=1") printf '[%s]' "$MR_JSON" ;;
+*) printf '[]' ;;
+esac
+STUB
+    export GITLAB_CI=true CI_API_V4_URL=https://gitlab.test/api/v4 CI_PROJECT_ID=7 CI_PROJECT_PATH=g/p CI_SERVER_HOST=gitlab.test GITLAB_TOKEN=tok
+    # the push goes to the tokenized project URL: point it back at the local bare repo
+    git config url."$ORIGIN".insteadOf "https://oauth2:tok@gitlab.test/g/p.git"
+}
+
+@test "git-fix-orphans on GitLab keeps branches with a merge request" {
+    gitlab_env
+    MR_JSON='{"source_branch":"has-pr"}' run git-fix-orphans -p
+    [ "$status" -eq 0 ]
+    [[ "$(remote_branches)" == *"orphan/wip-nopr"* ]]
+    [[ "$(remote_branches)" == *"has-pr"* ]]
+    [[ "$(remote_branches)" != *"orphan/has-pr"* ]]
+}
+
+@test "git-fix-orphans on GitLab renames nothing when the API fails" {
+    gitlab_env
+    CURL_FAIL=1 run git-fix-orphans -p
+    [ "$status" -eq 1 ]
+    [[ "$(remote_branches)" == *"wip-nopr"* ]]
+}
