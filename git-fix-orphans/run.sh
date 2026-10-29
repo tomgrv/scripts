@@ -38,10 +38,31 @@ allowed_names="$allowed_names $default"
 
 # Branches that ever had a pull request (open, merged or closed) are associated.
 # Without a reliable answer, rename nothing.
-with_pr=$(gh pr list --state all --limit 1000 --json headRefName --jq '.[].headRefName') || {
-    zz-log e "Unable to list pull requests with gh, aborting"
-    exit 1
-}
+# Inside GitLab CI the merge requests are listed through the REST API instead
+# (GITLAB_TOKEN: a project access token with the api and write_repository scopes).
+if [ "${GITLAB_CI:-}" = "true" ]; then
+    with_pr=$(
+        page=1
+        while [ "$page" -le 10 ]; do
+            json=$(curl -fsS --header "PRIVATE-TOKEN: ${GITLAB_TOKEN:-}" \
+                "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests?state=all&per_page=100&page=$page") || exit 1
+            names=$(printf '%s' "$json" | jq -r '.[].source_branch') || exit 1
+            [ -n "$names" ] || break
+            printf '%s\n' "$names"
+            page=$((page + 1))
+        done
+    ) || {
+        zz-log e "Unable to list merge requests with the GitLab API, aborting"
+        exit 1
+    }
+    # The CI checkout token is read-only: rename with the access token.
+    [ -z "$push" ] || git remote set-url "$remote" "https://oauth2:${GITLAB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+else
+    with_pr=$(gh pr list --state all --limit 1000 --json headRefName --jq '.[].headRefName') || {
+        zz-log e "Unable to list pull requests with gh, aborting"
+        exit 1
+    }
+fi
 
 is_compliant() {
     for n in $allowed_names; do
